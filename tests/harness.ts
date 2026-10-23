@@ -88,6 +88,10 @@ export function roleFile(id: string, overrides: RoleOverrides = {}, body?: strin
     context_budget_tokens: 20000,
     max_calls: 5,
     enabled: true,
+    // A role that writes files and requires evidence must declare a
+    // verification command, so the default fixture carries one. Tests that
+    // exercise that rule override it explicitly.
+    verify_commands: ["<project test command>"],
     ...overrides,
   };
 

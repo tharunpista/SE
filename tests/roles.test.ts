@@ -98,6 +98,33 @@ describe("fail-closed validation", () => {
     }
   });
 
+  test("a file-writing role must declare how its work is verified", () => {
+    const repo = tempRepo();
+    try {
+      repo.builtin("orchestration/a.md", roleFile("a", {
+        writes_files: true,
+        verify_commands: [],
+      }));
+      // Evidence means a recorded command and exit code. Without a declared
+      // command the role has no way to produce one, and will report success
+      // it never checked.
+      expect(hasCode(repo.check().diagnostics, "role/no-verify-commands")).toBe(true);
+    } finally {
+      repo.dispose();
+    }
+  });
+
+  test("a role cannot hand its own stuck work back to itself", () => {
+    const repo = tempRepo();
+    try {
+      repo.builtin("orchestration/a.md", roleFile("a", { escalates_on_failure_to: "a" }));
+      // That is precisely the retry loop the three-strike rule exists to break.
+      expect(hasCode(repo.check().diagnostics, "role/self-escalation")).toBe(true);
+    } finally {
+      repo.dispose();
+    }
+  });
+
   test("rejects placeholder text in the body", () => {
     const repo = tempRepo();
     try {
