@@ -2,10 +2,17 @@
 .se/state/
 .se/cache/
 .se/workspaces/
+.se/project.json
 *.sqlite
 *.sqlite-journal
 *.sqlite-wal
 *.sqlite-shm
+
+# Memory records are runtime/user data, not the memory implementation.
+# Keep the storage code, schemas, and reviewed documentation under src/,
+# schemas/, and docs/ in version control. Do not publish local memory records.
+memory/*
+!memory/README.md
 
 # Secrets
 .env
@@ -13,6 +20,16 @@
 !.env.example
 *.pem
 *.key
+*.p12
+*.pfx
+*.ppk
+*.jks
+*.keystore
+.netrc
+credentials.json
+*.tfstate
+*.tfstate.*
+.terraform/
 
 # Dependencies and build output
 node_modules/
@@ -32,4 +49,18 @@ Thumbs.db
 # Rendered host integrations are generated from se/agents/ by `se render`.
 # Not committed: they are a build output, and committing them invites edits
 # in the wrong place.
+.agents/skills/
+.agents/agents/
 .claude/agents/
+.claude/skills/
+.codex/agents/
+.cursor/agents/
+.gemini/agents/
+.gemini/config/agents/
+.opencode/agents/
+.opencode/.gitignore
+.github/agents/
+/AGENTS.md
+
+# Local diagnostics and logs
+debug.log

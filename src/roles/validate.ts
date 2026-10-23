@@ -300,6 +300,37 @@ export function validateRole(
     }
   }
 
+  /*
+   * A role must not declare a file-writing capability while declaring that it
+   * does not write files. The two are read by different consumers -- the
+   * renderer maps `tools` to host tools, and gates workspace isolation on
+   * `writes_files` -- so the contradiction previously produced the worst
+   * available outcome: Write and Edit granted, with no isolated workspace,
+   * because the same false flag that failed to withhold the tools also skipped
+   * `isolation: worktree`.
+   *
+   * Rejected here, at the single source of truth, rather than compensated for
+   * in each consumer.
+   */
+  if (fm["writes_files"] === false) {
+    const declaredTools = strArray(ctx, "tools", fm["tools"]);
+    const writeCapabilities = declaredTools.filter(
+      (t) => t === "write-files" || t === "edit-notebook",
+    );
+    if (writeCapabilities.length > 0) {
+      diags.error({
+        code: "role/contradictory-write-declaration", file, key: "writes_files",
+        message:
+          `Role declares writes_files: false but lists the file-writing capability ` +
+          `${writeCapabilities.join(", ")}.`,
+        hint:
+          "Pick one: set writes_files: true if the role genuinely edits files (it then also " +
+          "gets an isolated workspace), or drop the capability. A read-only declaration that " +
+          "carries write tools is the one combination that grants write access without isolation.",
+      });
+    }
+  }
+
   // Hardcoded per role, overridable by the project layer. A role that has to
   // infer its own verification command gets it wrong on any non-standard
   // project, and then reports success it never checked.

@@ -3,6 +3,33 @@ import vocab from "../../schemas/vocabulary.json" with { type: "json" };
 export const DEPARTMENTS = vocab.departments as readonly string[];
 export const DEPARTMENT_EXPECTED_COUNTS = vocab.department_expected_counts as Record<string, number>;
 export const DEFERRED_DEPARTMENTS = new Set(vocab.deferred_departments as readonly string[]);
+
+const DEPARTMENT_LABELS: Readonly<Record<string, string>> = {
+  orchestration: "Orchestration",
+  "product-and-requirements": "Product & Requirements",
+  "design-and-ux": "Design & UX",
+  architecture: "Architecture",
+  frontend: "Frontend",
+  "backend-and-data": "Backend & Data",
+  integration: "Integration",
+  "ai-and-agent-systems": "AI & Agent Systems",
+  "quality-and-testing": "Quality & Testing",
+  "security-and-privacy": "Security & Privacy",
+  "platform-and-operations": "Platform & Operations",
+  "mobile-and-desktop": "Mobile & Desktop",
+  "hardware-and-embedded": "Hardware & Embedded",
+  "agent-platform-engineering": "Agent Platform Engineering",
+  "documentation-and-support": "Documentation & Support",
+  "business-and-product-operations": "Business & Product Operations",
+};
+
+/** Human-facing label for a canonical department id. */
+export function departmentLabel(id: string): string {
+  return DEPARTMENT_LABELS[id] ?? id.split("-").map((word) =>
+    word.length <= 2 ? word.toUpperCase() : word[0]!.toUpperCase() + word.slice(1),
+  ).join(" ");
+}
+
 export const ARTIFACT_KINDS = new Set(vocab.artifact_kinds as readonly string[]);
 export const INTERFACE_KINDS = new Set(vocab.interface_kinds as readonly string[]);
 export const MEMORY_SCOPES = new Set(vocab.memory_scopes as readonly string[]);

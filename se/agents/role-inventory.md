@@ -2,9 +2,9 @@
 
 # Role inventory
 
-30 roles across 16 departments.
+191 roles across 16 departments.
 
-## orchestration (7)
+## Orchestration (7)
 
 | id | name | tier | mission |
 |---|---|---|---|
@@ -16,19 +16,59 @@
 | `technical-program-manager` | Technical Program Manager | catalogue | Own cross-component dependencies and integration checkpoints, so that components built in parallel actually meet, and nothing reaches release sequencing untested across its boundaries. |
 | `workload-capacity-planner` | Workload and Capacity Planner | catalogue | Decide how much work should run at once, so that parallelism buys real throughput instead of contention, rework and an unreviewable pile of simultaneous changes. |
 
-## product-and-requirements (1)
+## Product & Requirements (10)
 
 | id | name | tier | mission |
 |---|---|---|---|
+| `business-analyst` | Business Analyst | catalogue | Model the process as it actually runs, including the actors, the exceptions and the manual repairs, so the system being built does not assume a happy path nobody follows. |
+| `experimentation-specialist` | Experimentation Specialist | catalogue | Design experiments that can return a negative result, fix the decision rule before the data arrives, and stop an experiment that is harming users. |
+| `market-competitive-analyst` | Market and Competitive Analyst | catalogue | Research market context and competitors on request, keep every source attached to every claim, and never let an inference be read as a measurement. |
+| `product-data-analyst` | Product Data Analyst | catalogue | Define each product metric precisely enough to be computed the same way twice, specify the instrumentation it needs, and refuse to report a number the data cannot support. |
+| `product-discovery-researcher` | Product Discovery Researcher | catalogue | Investigate the problem before anyone commits to a solution, and report what the evidence does not cover as plainly as what it does. |
+| `product-manager` | Product Manager | catalogue | Decide what is built next and in what order, and keep the reason for each decision attached to it so that a later reversal is a decision rather than a surprise. |
+| `product-operations-specialist` | Product Operations Specialist | catalogue | Keep the product's recurring processes running and its feedback loops closed, so that what customers report reaches the role that can act on it and what ships is communicated to the people affected. |
+| `product-strategist` | Product Strategist | catalogue | State who the product is for, what it must be better at than the alternative, and what it deliberately will not do, so that scope decisions later have something to be measured against. |
 | `requirements-engineer` | Requirements Engineer | starter | Convert stated needs into requirements that can be tested, and separate what the user actually said from what anyone inferred. |
+| `user-researcher` | User Researcher | catalogue | Plan studies that could disprove the plan, synthesise what participants actually did and said, and keep the sample's limits attached to every conclusion. |
 
-## architecture (1)
+## Design & UX (13)
 
 | id | name | tier | mission |
 |---|---|---|---|
-| `solution-architect` | Solution Architect | starter | Turn requirements into a coherent, deployable system with explicit boundaries, and name the trade-off behind every significant choice. |
+| `accessibility-specialist` | Accessibility Specialist | catalogue | Define what accessible means for this product in testable terms, and verify it against assistive technology rather than against an opinion about compliance. |
+| `design-qa-reviewer` | Design QA Reviewer | catalogue | Compare what was built with what was approved and record the differences as specific, located findings, so the gap is a list rather than an argument. |
+| `design-systems-architect` | Design Systems Architect | catalogue | Define the tokens, the component set and the composition rules, and keep the system small enough that it stays true, so that reuse reduces work instead of multiplying exceptions. |
+| `design-systems-engineer` | Design Systems Engineer | catalogue | Turn design definitions into component APIs and token artifacts an implementation can consume, so the system in code and the system in design cannot drift apart unnoticed. |
+| `information-architect` | Information Architect | catalogue | Decide where things live and what they are called, so that a user looking for something has exactly one sensible place to look. |
+| `interaction-designer` | Interaction Designer | catalogue | Specify exactly how each control behaves, including while it is waiting and when it fails, so that no implementer has to invent the behaviour under deadline. |
+| `journey-workflow-designer` | Journey and Workflow Designer | catalogue | Map the end-to-end journey including the failures, the waits and the handoffs between people, so the product is designed for the path users actually take rather than the demo. |
+| `prototype-specialist` | Prototype Specialist | catalogue | Build the cheapest artifact that answers an uncertain interaction question, and make sure it is thrown away rather than promoted into production. |
+| `responsive-design-specialist` | Responsive Design Specialist | catalogue | Decide how each surface behaves across sizes, input modes and device constraints, so that a small screen gets a designed layout rather than a squeezed one. |
+| `ux-content-designer` | UX Content Designer | catalogue | Write the words in the interface so that every label says what will happen and every error tells the user how to fix it. |
+| `ux-lead` | UX Lead | catalogue | Keep the product coherent across flows, so that the same action behaves the same way everywhere, and hold the line that every state a user can reach is designed rather than inherited. |
+| `ux-researcher` | UX Researcher | catalogue | Answer a specific design question by watching people use the thing, and report where they failed rather than whether they liked it. |
+| `visual-ui-designer` | Visual/UI Designer | catalogue | Compose layout, type, spacing and colour so that the important thing is visibly the important thing, and so the composition survives real content at every viewport. |
 
-## frontend (15)
+## Architecture (14)
+
+| id | name | tier | mission |
+|---|---|---|---|
+| `api-architect` | API Architect | catalogue | Decide the shape of the product's interfaces as a whole — style, versioning, error model and evolution rules — so that every endpoint added next year still looks like it belongs. |
+| `application-architect` | Application Architect | catalogue | Decide the internal structure of an application — its layers, dependency direction and extension points — so that a change lands in one place instead of five. |
+| `architecture-decision-analyst` | Architecture Decision Analyst | catalogue | Lay out the real options for a decision already known to be viable, with their trade-offs and reversal costs, so the decision is made on comparison rather than on familiarity. |
+| `data-architect` | Data Architect | catalogue | Decide where each kind of data lives, how it moves, and which copy is authoritative, so that two stores never both claim to be the source of truth. |
+| `distributed-systems-architect` | Distributed Systems Architect | catalogue | Decide how the system behaves when a part of it is slow, unreachable or duplicated, and name the consistency the product actually gets rather than the one everyone assumes. |
+| `domain-architect` | Domain Architect | catalogue | Model the domain as the business actually works, with bounded contexts and one agreed meaning per term, so that two components never disagree about what an entity is. |
+| `integration-architect` | Integration Architect | catalogue | Decide how this system connects to the ones it does not control, and contain every external dependency behind a boundary the product can survive the failure of. |
+| `migration-modernization-architect` | Migration and Modernization Architect | catalogue | Replace a live system in stages that each keep working, with a rollback available at every step, so the cutover is a decision rather than a leap. |
+| `performance-architect` | Performance Architect | catalogue | Set the performance budget per user-visible operation before it is built, and keep performance a number that is tracked rather than an opinion revisited after a complaint. |
+| `principal-architect` | Principal Architect | catalogue | Hold the system coherent across components and over time, decide the cross-cutting questions nobody else can settle, and make the cost of each decision visible before it is paid. |
+| `reliability-architect` | Reliability Architect | catalogue | State how reliable each user-visible capability must be, design the system to fail in a survivable way, and make sure the target is measured from the user's side rather than from the server's. |
+| `solution-architect` | Solution Architect | starter | Turn requirements into a coherent, deployable system with explicit boundaries, and name the trade-off behind every significant choice. |
+| `technical-debt-analyst` | Technical Debt Analyst | catalogue | Keep a register of what was deliberately left unfinished, with the interest it charges and the cost of repaying it, so debt is paid down by decision rather than by crisis. |
+| `technical-feasibility-engineer` | Technical Feasibility and Spike Engineer | catalogue | Answer whether something can be done at all, and at what cost, with a time-boxed throwaway spike and recorded evidence rather than an opinion. |
+
+## Frontend (15)
 
 | id | name | tier | mission |
 |---|---|---|---|
@@ -48,29 +88,185 @@
 | `routing-navigation-engineer` | Routing and Navigation Engineer | catalogue | Own the route structure and navigation behaviour so that every meaningful view has an address, and arriving at one directly works exactly as arriving at it by clicking. |
 | `seo-web-metadata-engineer` | SEO and Web Metadata Engineer | catalogue | Make public pages correctly discoverable and correctly previewed, and make sure nothing private is indexable. |
 
-## backend-and-data (1)
+## Backend & Data (22)
 
 | id | name | tier | mission |
 |---|---|---|---|
+| `analytics-engineer` | Analytics Engineer | catalogue | Build the modelled datasets people actually query, with one agreed definition per measure, so two reports of the same thing cannot disagree. |
 | `backend-lead` | Backend Lead | starter | Own backend service boundaries, endpoint implementation and data access, and guarantee that every operation is correct under retry, concurrency and partial failure. |
+| `backend-performance-engineer` | Backend Performance Engineer | catalogue | Hold the service-side performance budget with measurements rather than intuition, and fix the cause instead of the symptom. |
+| `backend-service-engineer` | Backend Service Engineer | catalogue | Implement endpoints that behave correctly on the second attempt as well as the first, and that fail with a precise, non-leaking answer rather than a stack trace. |
+| `background-job-engineer` | Background Job Engineer | catalogue | Run deferred work so that every job either completes, is retried safely, or ends up somewhere a human will see it, and never silently disappears. |
+| `caching-engineer` | Caching Engineer | catalogue | Add caching only where the staleness is acceptable and stated, and make invalidation and key scoping explicit so a cache never serves one user another user's data. |
+| `concurrency-transaction-engineer` | Concurrency and Transaction Engineer | catalogue | Make operations correct when two of them run at once, by naming the invariant, the isolation level it needs, and the test that proves it. |
+| `data-governance-steward` | Data Governance Steward | catalogue | Classify every field, name its owner, and decide which systems may hold which class of data, so that permission to store is a decision rather than an accident of implementation. |
+| `data-modeling-engineer` | Data Modeling Engineer | catalogue | Design the physical schema so that the database itself refuses to hold data the domain says is impossible. |
+| `data-pipeline-engineer` | Data Pipeline Engineer | catalogue | Move data between systems so that a rerun produces the same result, a failure can be resumed, and a broken day can be reprocessed without duplicating anything. |
+| `data-quality-engineer` | Data Quality Engineer | catalogue | Decide whether the data is fit to use, by running checks on completeness, validity, uniqueness, timeliness and consistency that alert someone when they fail. |
+| `data-retention-deletion-engineer` | Data Retention and Deletion Engineer | catalogue | Delete what must be deleted, everywhere it exists, and be able to prove it, so that a deletion request is a completed operation rather than a hidden row. |
+| `database-engineer` | Database Engineer | catalogue | Write queries that stay fast as the data grows, and make sure every query reaching production has an index that serves it and a bound on what it can return. |
+| `database-migration-engineer` | Database Migration Engineer | catalogue | Apply schema changes to a live system without downtime or data loss, in steps that are each reversible, and never let a deployment and a schema disagree. |
+| `domain-logic-engineer` | Domain Logic Engineer | catalogue | Encode the business rules so that an invalid state cannot be represented, and so that the rule lives in one place rather than being re-derived in every caller. |
+| `external-integration-engineer` | External Integration Engineer | catalogue | Implement each third-party integration so that the vendor's model stays at the boundary and their outage is a degraded mode rather than an incident. |
+| `file-object-storage-engineer` | File and Object Storage Engineer | catalogue | Handle uploads, downloads and stored objects so that an untrusted file cannot harm the system, and so a stored object is never readable by someone who was never granted it. |
+| `identity-access-integration-engineer` | Identity and Access Integration Engineer | catalogue | Wire up authentication and session handling so that the system always knows who is calling, and so that revoking access actually revokes it. |
+| `messaging-event-engineer` | Messaging and Event Engineer | catalogue | Own the event contracts between services and the delivery semantics behind them, so that a consumer written next year can still read an event published today. |
+| `notification-delivery-engineer` | Notification and Transactional Delivery Engineer | catalogue | Deliver email, SMS and transactional messages so that a retry never double-sends, a bounce is acted on, and a person who opted out is never contacted again. |
+| `realtime-systems-engineer` | Realtime Systems Engineer | catalogue | Keep live connections correct across reconnection, so that a client which dropped for twenty seconds ends up with the same state as one that never disconnected. |
+| `search-engineer` | Search Engineer | catalogue | Make search return the right things in a defensible order, keep the index honest about what it contains, and never return a record the searcher may not see. |
 
-## integration (2)
+## Integration (9)
 
 | id | name | tier | mission |
 |---|---|---|---|
 | `api-contract-owner` | API Contract Owner | starter | Own the authoritative request and response contract between producer and consumer, and make it exist before either side builds against an assumption. |
 | `contract-test-engineer` | Contract Test Engineer | starter | Prove that each producer and each consumer independently conform to the agreed interface, and catch a breaking change at the boundary that introduced it rather than in production. |
+| `data-flow-state-consistency-engineer` | Data-Flow and State-Consistency Engineer | catalogue | Trace where each fact lives across client, services and stores, and make sure the copies converge, so no screen shows a number another system has already changed. |
+| `end-to-end-workflow-engineer` | End-to-End Workflow Engineer | catalogue | Make a complete user workflow work across every system it touches, and prove it with the whole path rather than with each component's own tests. |
+| `error-recovery-integration-specialist` | Error and Recovery Integration Specialist | catalogue | Make failure across a boundary produce a specific, recoverable outcome, so that every error the user meets has a cause, an owner, and a next action. |
+| `frontend-backend-integration-engineer` | Frontend-Backend Integration Engineer | catalogue | Make the two sides actually work together against the real server, and fix the mismatches found there rather than papering over them in the client. |
+| `full-stack-integration-architect` | Full-Stack Integration Architect | catalogue | Own the shape of the seam between client and server as a whole, so that components built in parallel meet without either side having guessed. |
+| `integration-environment-engineer` | Integration Environment Engineer | catalogue | Provide an environment where the whole system can be exercised reproducibly, so that "it works on my machine" and "it fails in staging" both become answerable questions. |
+| `integration-release-coordinator` | Integration Release Coordinator | catalogue | Sequence the release of components that depend on each other so that no deployment order leaves a consumer talking to a producer that does not understand it. |
 
-## quality-and-testing (2)
+## AI & Agent Systems (15)
 
 | id | name | tier | mission |
 |---|---|---|---|
+| `agent-systems-engineer` | Agent Systems Engineer | catalogue | Build agent loops that terminate, stay inside their granted authority, and leave a record of every action, so an autonomous run is auditable rather than mysterious. |
+| `agent-tooling-engineer` | Agent Tooling Engineer | catalogue | Define the tools an agent may call so that each one is unambiguous, bounded in blast radius, and returns a result the agent can act on correctly. |
+| `ai-data-engineer` | AI Data Engineer | catalogue | Prepare the datasets AI work depends on, with provenance, consent and licensing recorded, so a model is never trained or evaluated on data the product had no right to use. |
+| `ai-evaluation-engineer` | AI Evaluation Engineer | catalogue | Measure whether an AI feature actually does its task, on a held-out set with stated criteria, so a prompt or model change is a measured trade rather than a vibe. |
+| `ai-systems-architect` | AI Systems Architect | catalogue | Decide where a model belongs in the system and what the product does when it is wrong, slow, or unavailable, so that a probabilistic component sits behind a deterministic boundary. |
+| `ai-workflow-engineer` | AI Workflow Engineer | catalogue | Compose multi-step AI work into a workflow that can be resumed, inspected and bounded, so a failure at step four does not mean starting again or silently skipping it. |
+| `context-engineer` | Context Engineer | catalogue | Decide what goes into a model's context and in what order, within a fixed budget, so the most decision-relevant material is present and nothing irrelevant is paid for. |
+| `llm-application-engineer` | LLM Application Engineer | catalogue | Build the invocation path so that a model call is bounded, validated, retryable and traceable, and so a bad response degrades the feature instead of corrupting the system. |
+| `ml-engineer` | ML Engineer | catalogue | Train and ship models whose reported performance survives contact with production data, and never let a metric measured on leaked data become a product claim. |
+| `model-integration-engineer` | Model Integration Engineer | catalogue | Connect the product to model providers behind one internal interface, so that a provider outage, limit, or price change is a configuration decision rather than a rewrite. |
+| `model-lifecycle-deprecation-engineer` | Model Lifecycle and Deprecation Engineer | catalogue | Own the fact that the same prompt returns different output next quarter: pin versions, detect behavioural drift, and migrate before a provider retires a model. |
+| `model-performance-engineer` | Model Performance Engineer | catalogue | Make inference fast enough and cheap enough for the product's budget, without quietly trading away the quality that was measured. |
+| `prompt-role-definition-engineer` | Prompt and Role Definition Engineer | catalogue | Treat prompts and role definitions as versioned, content-addressed artifacts with evaluations pinned to their hashes, so an edit to an instruction is a measured change rather than an untracked one. |
+| `responsible-ai-risk-engineer` | Responsible AI and Model Risk Engineer | catalogue | Measure the harm an AI feature can do rather than the tasks it can pass, and make sure a person can always override it. |
+| `retrieval-knowledge-engineer` | Retrieval and Knowledge Engineer | catalogue | Find the right material for a query and return it with its source, so that an answer can be attributed, and so permission is enforced before anything is retrieved. |
+
+## Quality & Testing (19)
+
+| id | name | tier | mission |
+|---|---|---|---|
+| `accessibility-test-engineer` | Accessibility Test Engineer | catalogue | Turn verified accessible behaviour into an automated suite that fails when a barrier is reintroduced, so accessibility stops being an audit that goes stale. |
+| `chaos-and-resilience-test-engineer` | Chaos and Resilience Test Engineer | catalogue | Inject the failures the system claims to survive and check that it does, including crash-consistency of anything that persists state. |
+| `compatibility-test-engineer` | Compatibility Test Engineer | catalogue | Establish which browsers, devices, platforms and versions the product actually works on, and keep that matrix honest rather than aspirational. |
+| `defect-triage-engineer` | Defect Triage Engineer | catalogue | Turn incoming reports into reproducible, owned, severity-rated defects, so nothing severe waits behind something trivial and nothing sits unowned. |
+| `e2e-test-engineer` | End-to-End Test Engineer | catalogue | Keep a small suite of whole-journey tests that are trustworthy enough to block a release, which means deterministic or deleted. |
+| `exploratory-test-engineer` | Exploratory Test Engineer | catalogue | Find the defects no one wrote a case for, by using the product adversarially and recording exactly how each failure was produced. |
+| `fuzz-property-test-engineer` | Fuzz and Property-Based Test Engineer | catalogue | Generate the inputs nobody thought to write a case for, state the properties that must hold for all of them, and keep every discovered failure as a permanent case. |
+| `independent-technical-reviewer` | Independent Technical Reviewer | catalogue | Review work that someone else produced, against the requirement rather than against taste, and record findings that can be acted on or refuted. |
+| `integration-test-engineer` | Integration Test Engineer | catalogue | Test across the boundaries that unit tests fake, with the real database and the real wire format, because that is where the assumptions live. |
+| `localization-qa-engineer` | Localization QA Engineer | catalogue | Verify the product in each supported locale, where text length, script, sort order and locale-dependent logic break things that passed in English. |
+| `performance-load-test-engineer` | Performance and Load Test Engineer | catalogue | Measure the system under realistic load and report the point at which it stops meeting its budget, with the bottleneck named rather than guessed. |
 | `qa-lead` | QA Lead | starter | Define the verification strategy and the quality gates, allocate test effort by risk rather than by coverage, and refuse completion claims that no evidence supports. |
+| `regression-test-engineer` | Regression Test Engineer | catalogue | Make sure a defect that has been fixed once cannot return unnoticed, and keep the corpus of past failures small enough to stay fast. |
+| `release-readiness-reviewer` | Release Readiness Reviewer | catalogue | Decide whether a release has the evidence to go, by checking the gates against recorded results rather than against anyone's confidence. |
 | `root-cause-investigator` | Root Cause Investigator | starter | Take over work that is stuck, find the actual cause with evidence rather than guessing at fixes, and hand a diagnosis back to the role that owns the code so it can finish. |
+| `test-architect` | Test Architect | catalogue | Decide what is tested at which level and why, so that coverage buys confidence instead of a slow suite that fails for reasons nobody trusts. |
+| `test-data-engineer` | Test Data Engineer | catalogue | Provide the data tests need — including the awkward shapes — without ever putting real personal data in a test environment. |
+| `test-infrastructure-engineer` | Test Infrastructure Engineer | catalogue | Keep the test suite fast, parallel-safe and trustworthy to run, so a red build means the code is wrong rather than the infrastructure. |
+| `unit-test-engineer` | Unit Test Engineer | catalogue | Cover the rules and the edges at the cheapest level, with tests that fail when the behaviour is wrong and survive a refactor that keeps it right. |
 
-## agent-platform-engineering (1)
+## Security & Privacy (13)
 
 | id | name | tier | mission |
 |---|---|---|---|
+| `application-security-engineer` | Application Security Engineer | catalogue | Review code against a recorded checklist and report findings with reproductions, so secure coding is a check with evidence rather than an impression of carefulness. |
+| `authorization-model-engineer` | Authorization Model Engineer | catalogue | Decide who may do what, make the enforcement point single and default-deny, and prove it with tests for the cases that must fail. |
+| `compliance-control-engineer` | Compliance Control Engineer | catalogue | Map each required control to the implemented thing that satisfies it, with inspectable evidence, and report the gaps honestly rather than describing intentions as controls. |
+| `cryptography-key-management-engineer` | Cryptography and Key Management Engineer | catalogue | Use vetted primitives correctly and keep the key hierarchy rotatable, so encryption is a managed capability rather than a one-off that nobody can change later. |
+| `license-compliance-engineer` | Open Source License Compliance Engineer | catalogue | Keep inbound licences compatible with how this project ships, and keep the attribution file accurate, so an obligation is met rather than discovered. |
+| `offensive-security-engineer` | Offensive Security Engineer | catalogue | Test the system adversarially within a written, authorised scope, and report what was achieved with reproducible evidence. |
+| `privacy-engineer` | Privacy Engineer | catalogue | Know what personal data the product holds, why it is allowed to hold it, and where it flows, and make subject requests something the system can actually fulfil. |
+| `secrets-management-engineer` | Secrets Management Engineer | catalogue | Keep secrets out of the repository, the logs and the agent's context, and make rotation and revocation routine rather than an emergency. |
+| `security-architect` | Security Architect | catalogue | Decide where the trust boundaries are and what must be true at each of them before implementation starts, and never accept a security risk on the operator's behalf. |
+| `security-incident-responder` | Security Incident Responder | catalogue | Handle a suspected compromise so that evidence survives, access is contained and the disclosure obligation is met, in that order. |
+| `security-test-engineer` | Security Test Engineer | catalogue | Put the security checks in the pipeline so a regression fails a build rather than waiting for the next assessment, including the planted-payload suites that prove untrusted content cannot give instructions. |
+| `supply-chain-security-engineer` | Software Supply Chain Security Engineer | catalogue | Know exactly what goes into a build and be able to prove it, so a dependency or a build machine cannot quietly become the attack. |
+| `vulnerability-management-engineer` | Vulnerability and Dependency Management Engineer | catalogue | Separate the vulnerabilities that are actually reachable from the noise, and make sure the reachable ones are patched inside a stated service level. |
+
+## Platform & Operations (17)
+
+| id | name | tier | mission |
+|---|---|---|---|
+| `capacity-cost-engineer` | Capacity and Cost Engineer | catalogue | Know what the system costs per unit of work and where it runs out of headroom, so capacity and spend are decisions rather than surprises. |
+| `cicd-engineer` | CI/CD Engineer | catalogue | Own the pipeline from commit to production so that it is fast, honest about what it verified, and impossible to bypass accidentally. |
+| `cloud-infrastructure-engineer` | Cloud Infrastructure Engineer | catalogue | Provision cloud resources with least privilege, no public exposure by accident, and a cost that someone has seen before the invoice. |
+| `database-reliability-engineer` | Database Reliability Engineer | catalogue | Own replication, failover, connection limits, maintenance, backup verification, and safe online schema changes under load. |
+| `developer-experience-engineer` | Developer Experience Engineer | catalogue | Make the local loop fast and the setup reproducible, so time goes into the work rather than into getting the project to run. |
+| `devops-engineer` | DevOps Engineer | catalogue | Operate the deployment path day to day, so deploying is boring, reversible and available to the people who wrote the change. |
+| `disaster-recovery-engineer` | Disaster Recovery Engineer | catalogue | Prove the system can be restored, by restoring it, because an untested backup is not a backup. |
+| `environment-configuration-engineer` | Environment and Configuration Engineer | catalogue | Keep configuration explicit, validated at startup and consistent across environments, so a service never runs half-configured and fails somewhere unrelated. |
+| `feature-flag-engineer` | Feature Flag and Progressive Delivery Engineer | catalogue | Own flag lifecycle, targeting, kill switches, canary rollout, retirement, and required ownership and expiry for every flag. |
+| `incident-response-coordinator` | Incident Response Coordinator | catalogue | Run an availability incident so that someone is in charge, mitigation comes before diagnosis, and the record afterwards is accurate. |
+| `infrastructure-as-code-engineer` | Infrastructure-as-Code Engineer | catalogue | Express infrastructure as reviewable definitions whose plan is read before it is applied, so the running system matches what is written down. |
+| `multi-tenancy-isolation-engineer` | Multi-Tenancy Isolation Engineer | catalogue | Own tenant isolation across queries, caches, limits, and configuration; prove one tenant cannot access another tenant's data. |
+| `networking-engineer` | Networking Engineer | catalogue | Own DNS, certificates, routing and timeouts, so that traffic arrives where it should and nothing expires without warning. |
+| `observability-engineer` | Observability Engineer | catalogue | Instrument the product so a new failure can be diagnosed from what is already recorded, without shipping a change to find out what happened. |
+| `platform-architect` | Platform Architect | catalogue | Decide how the system is deployed, configured and operated, and own the seam between development and operations so a change reaches production the same way every time. |
+| `release-rollback-engineer` | Release and Rollback Engineer | catalogue | Get a change into production in a way that can be taken back out, and know what rollback means for the data before it is needed. |
+| `site-reliability-engineer` | Site Reliability Engineer | catalogue | Run the system against measured objectives, so reliability work is driven by an error budget rather than by whoever complained most recently. |
+
+## Mobile & Desktop (11)
+
+| id | name | tier | mission |
+|---|---|---|---|
+| `android-application-engineer` | Android Application Engineer | catalogue | Implement Android screens and flows with lifecycle, permissions, background and process-death handling, and API/OEM compatibility. |
+| `cross-platform-mobile-engineer` | Cross-Platform Mobile Engineer | catalogue | Own shared mobile code and native boundaries; specify bridge contracts and identify behavior that must remain platform-specific. |
+| `deep-linking-attribution-engineer` | Deep Linking and Attribution Engineer | catalogue | Own universal/app links, deferred deep links, cold-start routing, and attribution correctness. |
+| `desktop-application-engineer` | Desktop Application Engineer | catalogue | Own desktop windowing, menus, filesystem and OS integration, multi-window state, and native conventions. |
+| `desktop-packaging-update-engineer` | Desktop Packaging, Signing and Update Engineer | catalogue | Own platform installers, signing and notarization, update channels, rollback, and local-state migration. |
+| `ios-application-engineer` | iOS Application Engineer | catalogue | Implement iOS screens and flows with correct lifecycle, permissions, background modes, accessibility, and platform conventions. |
+| `mobile-lead` | Mobile Lead and Architect | catalogue | Own mobile architecture, module boundaries, navigation, state and data layers, supported platform matrix, and minimum-version policy. |
+| `mobile-offline-sync-engineer` | Mobile Offline and Sync Engineer | catalogue | Own local persistence, queued mutations, optimistic updates, conflict resolution, and correctness across reinstall and multiple devices. |
+| `mobile-performance-engineer` | Mobile Performance, Battery and Network Engineer | catalogue | Set and measure startup, frame rate, memory, binary size, battery, data use, and poor-network behavior budgets. |
+| `mobile-release-compliance-engineer` | Mobile Release and Store Compliance Engineer | catalogue | Own mobile build and signing, phased rollout, store requirements, privacy declarations, age ratings, and upgrade paths. |
+| `push-notification-engineer` | Push Notification and Messaging Engineer | catalogue | Own device-token lifecycle, payload contracts, delivery expectations, permission prompts, quiet hours, and deep-link payload handling. |
+
+## Agent Platform Engineering (7)
+
+| id | name | tier | mission |
+|---|---|---|---|
+| `agent-observability-engineer` | Agent Observability Engineer | catalogue | Instrument agent runs with stable identifiers, invocation spans, structured events, cross-agent trace correlation, and diagnostic dashboards. |
+| `agent-safety-guardrails-engineer` | Agent Safety and Guardrails Engineer | catalogue | Own provenance trust tiers, data-not-instruction handling, quarantine, write-path containment, tool allowlists, blast-radius limits, and injection acceptance tests. |
+| `harness-integration-engineer` | Harness Integration Engineer | catalogue | Own host adapters, author-once rendering, host capability detection, conformance tests, and accurate support tiers. |
 | `memory-systems-engineer` | Memory Systems Engineer | starter | Build and operate the memory layer so that it cannot corrupt a record, cannot lose an agent's work, and cannot report a write as saved when it was not. |
+| `orchestration-runtime-engineer` | Orchestration Runtime Engineer | catalogue | Own the task graph, cycle detection, topological scheduling, failure propagation, run journal, idempotent replay, resumability, and stop-the-line behavior. |
+| `token-cost-governance-engineer` | Token and Cost Governance Engineer | catalogue | Enforce per-role context budgets, call caps, delegation depth, pre-invocation limits, and inference cost accounting. |
+| `workspace-isolation-engineer` | Workspace Isolation Engineer | catalogue | Own per-agent workspace provisioning, path ownership enforcement, merge gating, and refusal to run parallel writers without isolation. |
+
+## Documentation & Support (8)
+
+| id | name | tier | mission |
+|---|---|---|---|
+| `api-documentation-engineer` | API Documentation Engineer | catalogue | Keep API reference documentation accurate against authoritative schemas, contracts, versions, and examples. |
+| `developer-onboarding-engineer` | Developer Onboarding Engineer | catalogue | Create and maintain a reproducible contributor path from prerequisites through a verified first change. |
+| `documentation-qa-reviewer` | Documentation QA Reviewer | catalogue | Verify documentation against current behavior, links, commands, version scope, and release evidence. |
+| `knowledge-engineer` | Knowledge Engineer | catalogue | Maintain navigable knowledge structures and links while preserving source records as the authority. |
+| `release-notes-engineer` | Release Notes Engineer | catalogue | Summarize user-visible changes, migration actions, compatibility effects, and known limitations for a specific release. |
+| `support-knowledge-engineer` | Customer Support Knowledge Engineer | catalogue | Structure support knowledge, identify stale answers, and route unresolved product defects to engineering. |
+| `technical-documentation-engineer` | Technical Documentation Engineer | catalogue | Produce architecture, setup, operational, and technical user documentation from verified system behavior. |
+| `troubleshooting-engineer` | Troubleshooting Engineer | catalogue | Turn reproduced failures and verified resolutions into diagnostic procedures with clear decision points. |
+
+## Business & Product Operations (11)
+
+| id | name | tier | mission |
+|---|---|---|---|
+| `business-operations-coordinator` | Business Operations Coordinator | catalogue | Track cross-functional business dependencies, owners, due dates, decisions, and unresolved operational risks. |
+| `business-strategy-analyst` | Business Strategy Analyst | catalogue | Evaluate business-model assumptions, strategic options, constraints, and evidence when requested. |
+| `content-specialist` | Content Specialist | catalogue | Create product content consistent with approved positioning, audience needs, terminology, and factual evidence. |
+| `customer-feedback-analyst` | Customer Feedback Analyst | catalogue | Synthesize customer feedback with provenance, distinguish frequency from severity, and route evidence to product owners. |
+| `customer-success-specialist` | Customer Success Specialist | catalogue | Plan customer onboarding, adoption support, and feedback loops without promising unsupported capabilities. |
+| `finance-unit-economics-analyst` | Finance and Unit Economics Analyst | catalogue | Model costs, margins, and financial assumptions; label measured evidence, estimates, and uncertainty separately. |
+| `open-source-community-manager` | Open Source Community and Contributor Manager | catalogue | Own contribution paths, issue and pull-request triage, maintainer responsiveness, governance communication, and code-of-conduct routing. |
+| `partnership-integration-specialist` | Partnership Integration Specialist | catalogue | Define partner responsibilities, technical dependencies, data boundaries, and acceptance conditions for integrations. |
+| `pricing-packaging-analyst` | Pricing and Packaging Analyst | catalogue | Evaluate pricing structures, package boundaries, value metrics, and customer-facing trade-offs. |
+| `product-marketing-specialist` | Product Marketing Specialist | catalogue | Translate verified product value and capabilities into accurate positioning and launch material. |
+| `sales-engineer` | Sales Engineer | catalogue | Explain verified technical capabilities, limits, integrations, deployment needs, and product fit. |
 

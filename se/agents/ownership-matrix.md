@@ -6,46 +6,176 @@ Exactly one role is accountable per artifact kind. Others contribute.
 
 | artifact | accountable owner | co-owners | contributors |
 |---|---|---|---|
-| `acceptance-criteria` | `requirements-engineer` | — | `decision-recorder`, `qa-lead` |
-| `accessibility-test` | `frontend-accessibility-engineer` | — | `component-library-engineer`, `forms-validation-engineer`, `frontend-test-engineer` |
-| `api-convention` | `api-contract-owner` | — | — |
-| `api-endpoint` | `backend-lead` | — | `api-contract-owner` |
-| `architecture-decision` | `solution-architect` | — | `chief-orchestrator`, `decision-recorder`, `root-cause-investigator` |
-| `backend-service` | `backend-lead` | — | — |
-| `client-cache-policy` | `frontend-data-fetching-engineer` | — | `frontend-performance-engineer`, `frontend-state-engineer`, `offline-pwa-engineer` |
-| `component-test` | `frontend-test-engineer` | — | `component-library-engineer`, `forms-validation-engineer`, `frontend-application-engineer`, `frontend-state-engineer` |
-| `contract-test` | `contract-test-engineer` | — | `api-contract-owner`, `frontend-data-fetching-engineer` |
-| `defect-report` | `qa-lead` | — | `contract-test-engineer`, `root-cause-investigator` |
-| `delivery-plan` | `project-manager` | — | `operations-coordinator`, `technical-program-manager`, `workload-capacity-planner` |
-| `design-fidelity-report` | `design-implementation-engineer` | — | `internationalization-engineer` |
-| `error-taxonomy` | `api-contract-owner` | — | — |
+| `acceptance-criteria` | `requirements-engineer` | — | `business-analyst`, `decision-recorder`, `product-manager`, `qa-lead` |
+| `accessibility-spec` | `accessibility-specialist` | — | `frontend-accessibility-engineer`, `interaction-designer`, `responsive-design-specialist`, `user-researcher`, `ux-lead`, `ux-researcher`, `visual-ui-designer` |
+| `accessibility-test` | `frontend-accessibility-engineer` | — | `accessibility-specialist`, `accessibility-test-engineer`, `component-library-engineer`, `design-qa-reviewer`, `forms-validation-engineer`, `frontend-test-engineer`, `localization-qa-engineer` |
+| `agent-tool-spec` | `agent-tooling-engineer` | — | `agent-systems-engineer` |
+| `agent-trace` | `agent-observability-engineer` | — | `agent-systems-engineer`, `agent-tooling-engineer`, `ai-workflow-engineer`, `observability-engineer`, `prompt-role-definition-engineer` |
+| `ai-evaluation-set` | `ai-evaluation-engineer` | — | `ai-data-engineer`, `ai-systems-architect`, `llm-application-engineer`, `ml-engineer`, `model-lifecycle-deprecation-engineer`, `model-performance-engineer`, `prompt-role-definition-engineer`, `responsible-ai-risk-engineer`, `retrieval-knowledge-engineer` |
+| `ai-system-design` | `ai-systems-architect` | — | `ai-evaluation-engineer`, `llm-application-engineer`, `ml-engineer`, `responsible-ai-risk-engineer` |
+| `ai-workflow` | `ai-workflow-engineer` | — | `agent-systems-engineer`, `agent-tooling-engineer` |
+| `analytical-dataset` | `analytics-engineer` | — | `ai-data-engineer`, `data-pipeline-engineer`, `data-quality-engineer`, `ml-engineer`, `product-data-analyst` |
+| `api-convention` | `api-contract-owner` | — | `api-architect` |
+| `api-documentation` | `api-documentation-engineer` | — | `agent-tooling-engineer`, `api-architect`, `api-contract-owner` |
+| `api-endpoint` | `backend-lead` | — | `api-contract-owner`, `backend-service-engineer`, `file-object-storage-engineer`, `frontend-backend-integration-engineer`, `identity-access-integration-engineer` |
+| `architecture-decision` | `solution-architect` | — | `ai-systems-architect`, `api-architect`, `application-architect`, `architecture-decision-analyst`, `chief-orchestrator`, `decision-recorder`, `distributed-systems-architect`, `full-stack-integration-architect`, `integration-architect`, `migration-modernization-architect`, `performance-architect`, `principal-architect`, `reliability-architect`, `root-cause-investigator`, `technical-debt-analyst`, `technical-feasibility-engineer` |
+| `authorization-model` | `authorization-model-engineer` | — | `identity-access-integration-engineer`, `security-architect` |
+| `backend-performance-budget` | `backend-performance-engineer` | — | `caching-engineer`, `database-engineer`, `observability-engineer`, `performance-architect`, `performance-load-test-engineer`, `realtime-systems-engineer`, `search-engineer` |
+| `backend-service` | `backend-lead` | — | `backend-service-engineer`, `background-job-engineer`, `concurrency-transaction-engineer`, `domain-logic-engineer` |
+| `background-job` | `background-job-engineer` | — | `ai-workflow-engineer`, `external-integration-engineer`, `file-object-storage-engineer`, `messaging-event-engineer`, `notification-delivery-engineer` |
+| `business-dependency-record` | `business-operations-coordinator` | — | `product-operations-specialist` |
+| `business-model-analysis` | `business-strategy-analyst` | — | — |
+| `cache-policy` | `caching-engineer` | — | `backend-performance-engineer`, `data-flow-state-consistency-engineer` |
+| `capacity-model` | `capacity-cost-engineer` | — | `backend-performance-engineer`, `cloud-infrastructure-engineer`, `model-performance-engineer`, `observability-engineer`, `performance-architect`, `performance-load-test-engineer`, `platform-architect`, `site-reliability-engineer` |
+| `chaos-experiment` | `chaos-and-resilience-test-engineer` | — | `concurrency-transaction-engineer`, `memory-systems-engineer`, `reliability-architect` |
+| `ci-pipeline` | `cicd-engineer` | — | `developer-experience-engineer`, `devops-engineer`, `frontend-build-tooling-engineer`, `infrastructure-as-code-engineer`, `platform-architect`, `release-rollback-engineer`, `secrets-management-engineer`, `security-test-engineer`, `supply-chain-security-engineer`, `test-infrastructure-engineer` |
+| `client-cache-policy` | `frontend-data-fetching-engineer` | — | `caching-engineer`, `frontend-performance-engineer`, `frontend-state-engineer`, `offline-pwa-engineer` |
+| `cloud-resource` | `cloud-infrastructure-engineer` | — | `capacity-cost-engineer`, `infrastructure-as-code-engineer`, `networking-engineer` |
+| `community-contribution-process` | `open-source-community-manager` | — | `license-compliance-engineer` |
+| `compatibility-matrix` | `compatibility-test-engineer` | — | `localization-qa-engineer` |
+| `compliance-control-map` | `compliance-control-engineer` | — | `cryptography-key-management-engineer`, `data-governance-steward`, `data-retention-deletion-engineer`, `privacy-engineer`, `responsible-ai-risk-engineer`, `security-architect`, `security-incident-responder` |
+| `component-test` | `frontend-test-engineer` | — | `accessibility-test-engineer`, `component-library-engineer`, `forms-validation-engineer`, `frontend-application-engineer`, `frontend-state-engineer` |
+| `concurrency-review` | `concurrency-transaction-engineer` | — | `data-flow-state-consistency-engineer`, `distributed-systems-architect` |
+| `context-assembly-policy` | `context-engineer` | — | `ai-workflow-engineer`, `memory-systems-engineer`, `prompt-role-definition-engineer`, `retrieval-knowledge-engineer` |
+| `contract-test` | `contract-test-engineer` | — | `api-contract-owner`, `external-integration-engineer`, `frontend-data-fetching-engineer`, `integration-test-engineer`, `messaging-event-engineer` |
+| `cost-ledger` | `token-cost-governance-engineer` | — | `capacity-cost-engineer`, `context-engineer`, `model-integration-engineer`, `model-performance-engineer`, `workload-capacity-planner` |
+| `customer-feedback-analysis` | `customer-feedback-analyst` | — | `defect-triage-engineer`, `product-operations-specialist`, `user-researcher` |
+| `customer-onboarding-plan` | `customer-success-specialist` | — | — |
+| `data-architecture` | `data-architect` | — | `data-governance-steward`, `data-modeling-engineer`, `data-pipeline-engineer` |
+| `data-classification` | `data-governance-steward` | — | `ai-data-engineer`, `data-architect`, `data-retention-deletion-engineer`, `privacy-engineer` |
+| `data-flow-map` | `data-flow-state-consistency-engineer` | — | `end-to-end-workflow-engineer`, `full-stack-integration-architect`, `integration-architect`, `migration-modernization-architect` |
+| `data-pipeline` | `data-pipeline-engineer` | — | `ai-data-engineer`, `analytics-engineer`, `data-architect`, `data-quality-engineer`, `messaging-event-engineer`, `ml-engineer`, `search-engineer` |
+| `data-quality-rule` | `data-quality-engineer` | — | `analytics-engineer`, `data-pipeline-engineer`, `test-data-engineer` |
+| `database-migration` | `database-migration-engineer` | — | `data-modeling-engineer`, `migration-modernization-architect`, `release-rollback-engineer` |
+| `database-operations-runbook` | `database-reliability-engineer` | — | `data-retention-deletion-engineer`, `database-engineer`, `database-migration-engineer`, `disaster-recovery-engineer`, `site-reliability-engineer` |
+| `database-query` | `database-engineer` | — | `backend-performance-engineer`, `backend-service-engineer`, `caching-engineer`, `concurrency-transaction-engineer`, `data-modeling-engineer`, `search-engineer` |
+| `database-schema` | `data-modeling-engineer` | — | `backend-lead`, `data-architect`, `database-engineer`, `database-migration-engineer`, `domain-architect` |
+| `deep-link-map` | `deep-linking-attribution-engineer` | — | `routing-navigation-engineer` |
+| `defect-report` | `qa-lead` | — | `accessibility-test-engineer`, `application-security-engineer`, `chaos-and-resilience-test-engineer`, `compatibility-test-engineer`, `contract-test-engineer`, `data-quality-engineer`, `defect-triage-engineer`, `design-qa-reviewer`, `e2e-test-engineer`, `end-to-end-workflow-engineer`, `exploratory-test-engineer`, `frontend-backend-integration-engineer`, `fuzz-property-test-engineer`, `independent-technical-reviewer`, `integration-test-engineer`, `localization-qa-engineer`, `offensive-security-engineer`, `performance-load-test-engineer`, `regression-test-engineer`, `root-cause-investigator`, `security-test-engineer`, `unit-test-engineer` |
+| `delivery-plan` | `project-manager` | — | `integration-release-coordinator`, `operations-coordinator`, `product-manager`, `technical-debt-analyst`, `technical-program-manager`, `workload-capacity-planner` |
+| `deployment-platform` | `platform-architect` | — | `cicd-engineer`, `devops-engineer`, `environment-configuration-engineer` |
+| `design-component-spec` | `design-systems-engineer` | — | `component-library-engineer`, `design-systems-architect`, `interaction-designer`, `responsive-design-specialist`, `visual-ui-designer` |
+| `design-fidelity-report` | `design-implementation-engineer` | — | `design-qa-reviewer`, `internationalization-engineer` |
+| `design-token` | `design-systems-architect` | — | `accessibility-specialist`, `design-implementation-engineer`, `design-systems-engineer`, `visual-ui-designer` |
+| `desktop-application` | `desktop-application-engineer` | — | — |
+| `desktop-package` | `desktop-packaging-update-engineer` | — | — |
+| `developer-environment` | `developer-experience-engineer` | — | `environment-configuration-engineer`, `frontend-build-tooling-engineer`, `integration-environment-engineer`, `test-infrastructure-engineer` |
+| `disaster-recovery-plan` | `disaster-recovery-engineer` | — | `chaos-and-resilience-test-engineer`, `incident-response-coordinator`, `infrastructure-as-code-engineer`, `reliability-architect` |
+| `documentation-review` | `documentation-qa-reviewer` | — | `analytics-engineer` |
+| `domain-model` | `domain-architect` | — | `business-analyst`, `data-modeling-engineer` |
+| `domain-rule` | `domain-logic-engineer` | — | `backend-lead`, `domain-architect`, `unit-test-engineer` |
+| `e2e-test` | `e2e-test-engineer` | — | `end-to-end-workflow-engineer`, `exploratory-test-engineer`, `qa-lead`, `regression-test-engineer`, `test-architect` |
+| `environment-config` | `environment-configuration-engineer` | — | `devops-engineer`, `infrastructure-as-code-engineer`, `integration-environment-engineer`, `secrets-management-engineer` |
+| `error-taxonomy` | `api-contract-owner` | — | `error-recovery-integration-specialist`, `external-integration-engineer`, `full-stack-integration-architect`, `integration-architect`, `journey-workflow-designer`, `ux-content-designer` |
 | `escalation-record` | `operations-coordinator` | — | — |
-| `form-spec` | `forms-validation-engineer` | — | `frontend-application-engineer` |
+| `event-schema` | `messaging-event-engineer` | — | `backend-lead`, `background-job-engineer`, `data-flow-state-consistency-engineer`, `distributed-systems-architect`, `realtime-systems-engineer` |
+| `experiment-design` | `experimentation-specialist` | — | `product-data-analyst` |
+| `external-integration` | `external-integration-engineer` | — | `integration-architect`, `model-integration-engineer`, `notification-delivery-engineer` |
+| `feasibility-verdict` | `technical-feasibility-engineer` | — | `architecture-decision-analyst`, `prototype-specialist` |
+| `feature-flag` | `feature-flag-engineer` | — | `environment-configuration-engineer`, `experimentation-specialist`, `release-rollback-engineer` |
+| `form-spec` | `forms-validation-engineer` | — | `frontend-application-engineer`, `interaction-designer` |
 | `frontend-architecture` | `frontend-lead` | — | `frontend-performance-engineer`, `frontend-state-engineer`, `offline-pwa-engineer`, `seo-web-metadata-engineer` |
-| `frontend-build-config` | `frontend-build-tooling-engineer` | — | `frontend-performance-engineer` |
-| `frontend-component` | `component-library-engineer` | — | `design-implementation-engineer`, `forms-validation-engineer`, `frontend-accessibility-engineer`, `frontend-application-engineer`, `frontend-lead`, `internationalization-engineer` |
-| `frontend-performance-budget` | `frontend-performance-engineer` | — | `frontend-build-tooling-engineer` |
-| `frontend-route` | `routing-navigation-engineer` | — | `frontend-application-engineer`, `frontend-lead`, `seo-web-metadata-engineer` |
-| `frontend-screen` | `frontend-application-engineer` | — | `design-implementation-engineer`, `frontend-lead`, `routing-navigation-engineer` |
-| `frontend-state-model` | `frontend-state-engineer` | — | `frontend-data-fetching-engineer`, `frontend-lead`, `routing-navigation-engineer` |
+| `frontend-build-config` | `frontend-build-tooling-engineer` | — | `design-systems-engineer`, `developer-experience-engineer`, `frontend-performance-engineer` |
+| `frontend-component` | `component-library-engineer` | — | `design-implementation-engineer`, `design-systems-architect`, `design-systems-engineer`, `forms-validation-engineer`, `frontend-accessibility-engineer`, `frontend-application-engineer`, `frontend-lead`, `internationalization-engineer` |
+| `frontend-performance-budget` | `frontend-performance-engineer` | — | `frontend-build-tooling-engineer`, `performance-architect` |
+| `frontend-route` | `routing-navigation-engineer` | — | `frontend-application-engineer`, `frontend-lead`, `information-architect`, `seo-web-metadata-engineer` |
+| `frontend-screen` | `frontend-application-engineer` | — | `design-implementation-engineer`, `frontend-backend-integration-engineer`, `frontend-lead`, `responsive-design-specialist`, `routing-navigation-engineer`, `visual-ui-designer` |
+| `frontend-state-model` | `frontend-state-engineer` | — | `data-flow-state-consistency-engineer`, `frontend-data-fetching-engineer`, `frontend-lead`, `realtime-systems-engineer`, `routing-navigation-engineer` |
+| `fuzz-corpus` | `fuzz-property-test-engineer` | — | — |
+| `guardrail-policy` | `agent-safety-guardrails-engineer` | — | `agent-systems-engineer`, `agent-tooling-engineer`, `responsible-ai-risk-engineer`, `secrets-management-engineer`, `security-test-engineer` |
 | `handoff-record` | `chief-orchestrator` | — | `operations-coordinator` |
-| `i18n-catalogue` | `internationalization-engineer` | — | — |
-| `interface-contract` | `api-contract-owner` | — | `backend-lead`, `contract-test-engineer`, `frontend-data-fetching-engineer`, `frontend-lead`, `solution-architect`, `technical-program-manager` |
-| `knowledge-index` | `knowledge-steward` | — | — |
+| `host-adapter` | `harness-integration-engineer` | — | — |
+| `i18n-catalogue` | `internationalization-engineer` | — | `localization-qa-engineer`, `notification-delivery-engineer`, `ux-content-designer` |
+| `identity-integration` | `identity-access-integration-engineer` | — | `authorization-model-engineer`, `cryptography-key-management-engineer` |
+| `incident-record` | `incident-response-coordinator` | — | `disaster-recovery-engineer`, `error-recovery-integration-specialist`, `observability-engineer`, `release-rollback-engineer`, `security-incident-responder`, `site-reliability-engineer` |
+| `information-architecture` | `information-architect` | — | `journey-workflow-designer`, `search-engineer`, `ux-lead` |
+| `infrastructure-definition` | `infrastructure-as-code-engineer` | — | `cloud-infrastructure-engineer`, `devops-engineer`, `disaster-recovery-engineer`, `environment-configuration-engineer`, `networking-engineer`, `platform-architect` |
+| `integration-environment` | `integration-environment-engineer` | — | `developer-experience-engineer`, `test-infrastructure-engineer` |
+| `integration-test` | `integration-test-engineer` | — | `backend-service-engineer`, `concurrency-transaction-engineer`, `data-flow-state-consistency-engineer`, `end-to-end-workflow-engineer`, `error-recovery-integration-specialist`, `frontend-backend-integration-engineer`, `test-architect`, `test-data-engineer` |
+| `interaction-spec` | `interaction-designer` | — | `accessibility-specialist`, `journey-workflow-designer`, `prototype-specialist`, `ux-content-designer`, `ux-lead`, `ux-researcher` |
+| `interface-contract` | `api-contract-owner` | — | `api-architect`, `backend-lead`, `contract-test-engineer`, `error-recovery-integration-specialist`, `external-integration-engineer`, `frontend-backend-integration-engineer`, `frontend-data-fetching-engineer`, `frontend-lead`, `full-stack-integration-architect`, `integration-architect`, `integration-release-coordinator`, `messaging-event-engineer`, `realtime-systems-engineer`, `solution-architect`, `technical-program-manager` |
+| `key-management-policy` | `cryptography-key-management-engineer` | — | `cloud-infrastructure-engineer`, `secrets-management-engineer`, `security-architect` |
+| `knowledge-index` | `knowledge-steward` | — | `retrieval-knowledge-engineer` |
+| `license-compliance-record` | `license-compliance-engineer` | — | `supply-chain-security-engineer` |
+| `market-analysis` | `market-competitive-analyst` | — | `product-strategist` |
+| `marketing-content` | `content-specialist` | — | — |
 | `memory-record` | `memory-systems-engineer` | — | `knowledge-steward` |
-| `memory-schema` | `memory-systems-engineer` | — | — |
-| `module-boundary` | `solution-architect` | — | — |
+| `memory-schema` | `memory-systems-engineer` | — | `chaos-and-resilience-test-engineer`, `context-engineer`, `retrieval-knowledge-engineer` |
+| `migration-plan` | `migration-modernization-architect` | — | `database-migration-engineer`, `principal-architect`, `technical-debt-analyst` |
+| `mobile-architecture` | `mobile-lead` | — | — |
+| `mobile-performance-budget` | `mobile-performance-engineer` | — | `compatibility-test-engineer` |
+| `model-binding` | `model-integration-engineer` | — | `llm-application-engineer`, `model-lifecycle-deprecation-engineer` |
+| `model-invocation` | `llm-application-engineer` | — | `agent-systems-engineer`, `ai-systems-architect`, `ai-workflow-engineer`, `context-engineer`, `model-integration-engineer`, `model-performance-engineer` |
+| `model-risk-assessment` | `responsible-ai-risk-engineer` | — | `ai-evaluation-engineer`, `ai-systems-architect`, `ml-engineer`, `privacy-engineer` |
+| `model-version-pin` | `model-lifecycle-deprecation-engineer` | — | `ai-evaluation-engineer`, `model-integration-engineer` |
+| `module-boundary` | `solution-architect` | — | `application-architect`, `domain-architect`, `principal-architect` |
+| `network-config` | `networking-engineer` | — | `cloud-infrastructure-engineer` |
+| `notification-template` | `notification-delivery-engineer` | — | `background-job-engineer` |
+| `object-storage-flow` | `file-object-storage-engineer` | — | — |
+| `observability-config` | `observability-engineer` | — | `backend-performance-engineer`, `background-job-engineer`, `data-pipeline-engineer`, `data-quality-engineer`, `llm-application-engineer`, `product-data-analyst`, `site-reliability-engineer` |
+| `offline-sync-policy` | `mobile-offline-sync-engineer` | — | `offline-pwa-engineer` |
+| `onboarding-guide` | `developer-onboarding-engineer` | — | `developer-experience-engineer` |
+| `ownership-matrix` | `prompt-role-definition-engineer` | — | — |
+| `partnership-requirement` | `partnership-integration-specialist` | — | — |
+| `pentest-report` | `offensive-security-engineer` | — | — |
+| `performance-budget` | `performance-architect` | — | `capacity-cost-engineer`, `model-performance-engineer`, `performance-load-test-engineer`, `solution-architect`, `technical-feasibility-engineer` |
+| `performance-test` | `performance-load-test-engineer` | — | `backend-performance-engineer`, `performance-architect` |
+| `positioning` | `product-marketing-specialist` | — | `market-competitive-analyst` |
+| `pricing-model` | `pricing-packaging-analyst` | — | `market-competitive-analyst` |
+| `privacy-data-map` | `privacy-engineer` | — | `ai-data-engineer`, `compliance-control-engineer`, `data-governance-steward`, `data-retention-deletion-engineer`, `notification-delivery-engineer`, `test-data-engineer` |
+| `product-metric` | `product-data-analyst` | — | `analytics-engineer`, `experimentation-specialist`, `product-manager` |
+| `product-vision` | `product-strategist` | — | `market-competitive-analyst`, `product-discovery-researcher` |
 | `project-snapshot` | `memory-systems-engineer` | — | `knowledge-steward` |
 | `promotion-record` | `knowledge-steward` | — | — |
-| `provenance-record` | `decision-recorder` | — | `knowledge-steward` |
-| `release-checklist` | `technical-program-manager` | — | `chief-orchestrator`, `project-manager` |
-| `release-readiness-record` | `qa-lead` | — | — |
-| `requirement` | `requirements-engineer` | — | `decision-recorder` |
-| `root-cause-diagnosis` | `root-cause-investigator` | — | — |
+| `prompt-template` | `prompt-role-definition-engineer` | — | `context-engineer`, `llm-application-engineer` |
+| `prototype` | `prototype-specialist` | — | `technical-feasibility-engineer` |
+| `provenance-record` | `decision-recorder` | — | `architecture-decision-analyst`, `knowledge-steward`, `prompt-role-definition-engineer` |
+| `push-notification-config` | `push-notification-engineer` | — | — |
+| `realtime-channel` | `realtime-systems-engineer` | — | — |
+| `realtime-protocol` | `realtime-systems-engineer` | — | `networking-engineer` |
+| `regression-test` | `regression-test-engineer` | — | `defect-triage-engineer`, `e2e-test-engineer`, `exploratory-test-engineer`, `frontend-test-engineer`, `fuzz-property-test-engineer`, `qa-lead`, `root-cause-investigator` |
+| `release-checklist` | `technical-program-manager` | — | `chief-orchestrator`, `compatibility-test-engineer`, `e2e-test-engineer`, `end-to-end-workflow-engineer`, `integration-release-coordinator`, `project-manager`, `release-readiness-reviewer`, `release-rollback-engineer` |
+| `release-notes` | `release-notes-engineer` | — | `product-operations-specialist` |
+| `release-plan` | `release-rollback-engineer` | — | `cicd-engineer`, `database-migration-engineer`, `devops-engineer`, `integration-release-coordinator`, `license-compliance-engineer`, `migration-modernization-architect`, `model-lifecycle-deprecation-engineer`, `release-readiness-reviewer`, `supply-chain-security-engineer`, `vulnerability-management-engineer` |
+| `release-readiness-record` | `qa-lead` | — | `independent-technical-reviewer`, `release-readiness-reviewer` |
+| `reliability-target` | `reliability-architect` | — | `chaos-and-resilience-test-engineer`, `disaster-recovery-engineer`, `distributed-systems-architect`, `site-reliability-engineer`, `solution-architect` |
+| `requirement` | `requirements-engineer` | — | `business-analyst`, `decision-recorder`, `domain-logic-engineer`, `experimentation-specialist`, `journey-workflow-designer`, `product-data-analyst`, `product-discovery-researcher`, `product-manager`, `product-strategist`, `user-researcher` |
+| `retention-policy` | `data-retention-deletion-engineer` | — | `compliance-control-engineer`, `data-architect`, `data-governance-steward`, `disaster-recovery-engineer`, `file-object-storage-engineer`, `privacy-engineer` |
+| `retrieval-index` | `retrieval-knowledge-engineer` | — | `context-engineer`, `memory-systems-engineer` |
+| `review-record` | `independent-technical-reviewer` | — | `application-security-engineer`, `compliance-control-engineer`, `release-readiness-reviewer`, `technical-debt-analyst` |
+| `roadmap` | `product-manager` | — | `product-operations-specialist`, `product-strategist`, `project-manager` |
+| `role-definition` | `prompt-role-definition-engineer` | — | — |
+| `root-cause-diagnosis` | `root-cause-investigator` | — | `defect-triage-engineer`, `incident-response-coordinator` |
 | `roster-selection` | `chief-orchestrator` | — | — |
-| `seo-metadata` | `seo-web-metadata-engineer` | — | — |
+| `run-journal` | `orchestration-runtime-engineer` | — | — |
+| `sales-technical-brief` | `sales-engineer` | — | — |
+| `sbom` | `supply-chain-security-engineer` | — | `cicd-engineer`, `license-compliance-engineer`, `vulnerability-management-engineer` |
+| `search-index` | `search-engineer` | — | `retrieval-knowledge-engineer` |
+| `secret-store-config` | `secrets-management-engineer` | — | `cicd-engineer`, `cryptography-key-management-engineer`, `environment-configuration-engineer`, `identity-access-integration-engineer`, `security-incident-responder` |
+| `secure-coding-review` | `application-security-engineer` | — | `offensive-security-engineer`, `security-architect`, `security-test-engineer` |
+| `security-incident-record` | `security-incident-responder` | — | — |
+| `security-test-suite` | `security-test-engineer` | — | `application-security-engineer`, `authorization-model-engineer`, `fuzz-property-test-engineer`, `offensive-security-engineer`, `vulnerability-management-engineer` |
+| `seo-metadata` | `seo-web-metadata-engineer` | — | `information-architect` |
 | `service-worker` | `offline-pwa-engineer` | — | — |
-| `system-architecture` | `solution-architect` | — | — |
+| `slo-definition` | `site-reliability-engineer` | — | `capacity-cost-engineer`, `incident-response-coordinator`, `networking-engineer`, `observability-engineer`, `platform-architect`, `reliability-architect` |
+| `store-submission-record` | `mobile-release-compliance-engineer` | — | — |
+| `support-article` | `support-knowledge-engineer` | — | `incident-response-coordinator`, `ux-content-designer` |
+| `system-architecture` | `solution-architect` | — | `ai-systems-architect`, `application-architect`, `data-architect`, `distributed-systems-architect`, `domain-architect`, `full-stack-integration-architect`, `platform-architect`, `principal-architect`, `reliability-architect`, `security-architect` |
 | `task-record` | `chief-orchestrator` | — | `operations-coordinator`, `project-manager`, `requirements-engineer`, `technical-program-manager`, `workload-capacity-planner` |
-| `test-strategy` | `qa-lead` | — | `contract-test-engineer`, `frontend-test-engineer`, `requirements-engineer` |
+| `technical-debt-record` | `technical-debt-analyst` | — | `application-architect`, `architecture-decision-analyst`, `independent-technical-reviewer`, `migration-modernization-architect`, `model-lifecycle-deprecation-engineer`, `principal-architect`, `root-cause-investigator`, `technical-feasibility-engineer`, `vulnerability-management-engineer` |
+| `technical-documentation` | `technical-documentation-engineer` | — | `license-compliance-engineer` |
+| `tenancy-isolation-model` | `multi-tenancy-isolation-engineer` | — | `authorization-model-engineer`, `caching-engineer`, `cloud-infrastructure-engineer`, `networking-engineer` |
+| `test-data-fixture` | `test-data-engineer` | — | `frontend-test-engineer`, `integration-environment-engineer`, `integration-test-engineer`, `test-infrastructure-engineer` |
+| `test-infrastructure` | `test-infrastructure-engineer` | — | `cicd-engineer`, `developer-experience-engineer`, `integration-environment-engineer`, `test-architect`, `test-data-engineer` |
+| `test-strategy` | `qa-lead` | — | `accessibility-test-engineer`, `ai-evaluation-engineer`, `compatibility-test-engineer`, `contract-test-engineer`, `e2e-test-engineer`, `exploratory-test-engineer`, `frontend-test-engineer`, `independent-technical-reviewer`, `integration-test-engineer`, `regression-test-engineer`, `requirements-engineer`, `test-architect`, `unit-test-engineer` |
+| `threat-model` | `security-architect` | — | `application-security-engineer`, `authorization-model-engineer`, `compliance-control-engineer`, `cryptography-key-management-engineer`, `file-object-storage-engineer`, `identity-access-integration-engineer`, `offensive-security-engineer`, `privacy-engineer`, `security-incident-responder` |
+| `troubleshooting-guide` | `troubleshooting-engineer` | — | — |
+| `unit-economics-model` | `finance-unit-economics-analyst` | — | `capacity-cost-engineer` |
+| `unit-test` | `unit-test-engineer` | — | `backend-service-engineer`, `domain-logic-engineer`, `fuzz-property-test-engineer`, `regression-test-engineer`, `test-architect` |
+| `user-journey` | `journey-workflow-designer` | — | `business-analyst`, `information-architect`, `interaction-designer`, `product-discovery-researcher`, `user-researcher`, `ux-lead`, `ux-researcher` |
+| `user-research` | `user-researcher` | — | `product-discovery-researcher`, `prototype-specialist`, `ux-researcher` |
+| `ux-copy` | `ux-content-designer` | — | `accessibility-specialist`, `error-recovery-integration-specialist`, `forms-validation-engineer`, `frontend-accessibility-engineer`, `information-architect`, `internationalization-engineer`, `seo-web-metadata-engineer` |
+| `visual-design` | `visual-ui-designer` | — | `design-implementation-engineer`, `design-systems-architect`, `responsive-design-specialist`, `ux-lead` |
+| `vulnerability-assessment` | `vulnerability-management-engineer` | — | `supply-chain-security-engineer` |
 | `workload-plan` | `workload-capacity-planner` | — | — |
+| `workspace-allocation` | `workspace-isolation-engineer` | — | — |

@@ -1,5 +1,5 @@
 import { dirname, join, relative, resolve, sep } from "node:path";
-import { existsSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 
 /** Forward-slash a path for display and for use as a stable key on any OS. */
@@ -23,6 +23,96 @@ export function findRepoRoot(from = process.cwd()): string | null {
     if (parent === dir) return null;
     dir = parent;
   }
+}
+
+/** `~/.se`, or `SE_HOME` when set. Holds user-global overrides and config. */
+export function seHome(): string {
+  return process.env["SE_HOME"] ?? join(homedir(), ".se");
+}
+
+export const GLOBAL_CONFIG_PATH = "config.json";
+
+interface GlobalConfig {
+  readonly schema_version: 1;
+  /** Absolute path to the repository holding the role catalogue. */
+  readonly catalogue_root: string;
+}
+
+/**
+ * Where the role catalogue lives, which is a different question from where the
+ * user is working.
+ *
+ * `findRepoRoot` answers "am I inside the se repository", and the two were
+ * originally the same thing because every command ran from inside it. Once the
+ * CLI is installed globally they diverge: the catalogue stays in one place while
+ * the project being worked on is wherever the user is. Conflating them means
+ * either the roles cannot be found, or project memory gets written into the
+ * catalogue repository -- both silent.
+ *
+ * Resolution order, most explicit first:
+ *   1. `SE_CATALOGUE` --- an operator saying so for this invocation.
+ *   2. Walking up from the cwd --- working inside the catalogue repo itself.
+ *   3. `~/.se/config.json` --- registered once by `se link`.
+ */
+export function findCatalogueRoot(from = process.cwd()): string | null {
+  const fromEnv = process.env["SE_CATALOGUE"];
+  if (fromEnv && isCatalogueRoot(fromEnv)) return resolve(fromEnv);
+
+  const local = findRepoRoot(from);
+  if (local) return local;
+
+  const config = readGlobalConfig();
+  if (config && isCatalogueRoot(config.catalogue_root)) return resolve(config.catalogue_root);
+
+  return null;
+}
+
+/**
+ * The root of the project being worked on, which is where rendered host
+ * integrations and project memory belong.
+ *
+ * Distinct from the catalogue root. With the CLI installed globally these are
+ * usually different directories, and anchoring output on the catalogue root
+ * instead would write one project's agents into the catalogue repository.
+ */
+export function findProjectRoot(from = process.cwd()): string {
+  let dir = resolve(from);
+  for (;;) {
+    if (existsSync(join(dir, "package.json")) || existsSync(join(dir, ".git"))) return dir;
+    const parent = dirname(dir);
+    // No marker anywhere up the tree: the cwd is the best available answer.
+    if (parent === dir) return resolve(from);
+    dir = parent;
+  }
+}
+
+/** A directory is a catalogue root when it carries the specification tree. */
+export function isCatalogueRoot(dir: string): boolean {
+  return existsSync(join(dir, "se", "agents")) && existsSync(join(dir, "package.json"));
+}
+
+export function readGlobalConfig(): GlobalConfig | null {
+  const path = join(seHome(), GLOBAL_CONFIG_PATH);
+  if (!existsSync(path)) return null;
+  try {
+    const parsed = JSON.parse(readFileSync(path, "utf8")) as GlobalConfig;
+    if (parsed?.schema_version !== 1) return null;
+    return parsed;
+  } catch {
+    // A corrupt global config must not break a command that can resolve the
+    // catalogue another way; `se link` reports and rewrites it.
+    return null;
+  }
+}
+
+/** Register a catalogue root for use from any directory. */
+export function writeGlobalConfig(catalogueRoot: string): string {
+  const home = seHome();
+  mkdirSync(home, { recursive: true });
+  const path = join(home, GLOBAL_CONFIG_PATH);
+  const config: GlobalConfig = { schema_version: 1, catalogue_root: resolve(catalogueRoot) };
+  writeFileSync(path, `${JSON.stringify(config, null, 2)}\n`, "utf8");
+  return path;
 }
 
 export interface LayerPaths {

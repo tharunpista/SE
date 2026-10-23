@@ -1,15 +1,32 @@
 #!/usr/bin/env bun
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
-import { findRepoRoot } from "./util/paths.ts";
+import { homedir } from "node:os";
+import { dirname, isAbsolute, join } from "node:path";
+import {
+  findCatalogueRoot,
+  findProjectRoot,
+  isCatalogueRoot,
+  readGlobalConfig,
+  seHome,
+  writeGlobalConfig,
+} from "./util/paths.ts";
 import { resolveRoles } from "./roles/resolve.ts";
 import { checkIntegrity } from "./roles/integrity.ts";
 import type { OwnershipRow } from "./roles/integrity.ts";
 import type { Registry } from "./roles/resolve.ts";
 import { Diagnostics } from "./util/diagnostics.ts";
-import { DEPARTMENTS, DEPARTMENT_EXPECTED_COUNTS, EXPECTED_ROLE_TOTAL } from "./roles/vocabulary.ts";
+import { DEPARTMENTS, DEPARTMENT_EXPECTED_COUNTS, EXPECTED_ROLE_TOTAL, departmentLabel } from "./roles/vocabulary.ts";
 import type { Role } from "./roles/types.ts";
 import { ADAPTERS, findAdapter } from "./render/claude-code.ts";
+import { effectiveRoster, hostSites } from "./render/sites.ts";
+import { cmdMemory } from "./memory/cli.ts";
+import {
+  chooseBinDir,
+  isOnPath,
+  pathInstructions,
+  shims,
+  writeShims,
+} from "./install.ts";
 
 const USAGE = `se --- AI engineering organization and project-memory layer
 
@@ -22,10 +39,28 @@ commands:
   ownership [--artifact <k>] Show the artifact ownership matrix.
   departments               Show department counts against the specification.
   doctor                    Report environment and catalogue health.
+  memory <subcommand>       Project memory: status, doctor, list, get, put,
+                            recall, graph. Run "se memory help" for its options.
+  install                   Put "se" on PATH for every shell and register this
+                            catalogue. Run this once after cloning.
+                            --bin-dir <dir>  --add-path  --dry-run
+  setup                     Register the catalogue, install the CLI, and enable
+                            the starter roster in supported global client folders.
+                            --add-path  --host <id>  --roster a,b,c  --all --force
+  link [--path <dir>]       Register this catalogue so se works from anywhere.
+                            --show   report what is registered
+  where [--host <id>]       Report every directory the host reads for a session
+                            rooted here, and which roles it will actually load.
   render --host <id>        Render a roster for a coding agent.
                             --dept <name>   whole department
                             --roster a,b,c  explicit roles
+                            --global        install for every project
+                            --project <dir> the directory the host has open
                             --out <dir>  --dry-run  --all  --force
+  agents enable             Install the starter roster globally in supported clients.
+                            --host <id>  --roster a,b,c  --all  --force
+  agents disable            Remove generated global agents; --host <id> for one.
+  agents status             Show generated global agents in each client folder.
 
 options:
   --json                    Machine-readable output.
@@ -63,10 +98,21 @@ function useColor(flags: Args["flags"]): boolean {
   return process.stdout.isTTY === true;
 }
 
+/**
+ * The catalogue root. Resolved from SE_CATALOGUE, then by walking up from the
+ * cwd, then from the globally registered path -- so the command works from
+ * inside the catalogue repository and from any other project alike.
+ */
 function requireRoot(): string {
-  const root = findRepoRoot();
+  const root = findCatalogueRoot();
   if (!root) {
-    console.error("error: not inside an se repository (looked for package.json beside an se/ directory).");
+    console.error(
+      "error: cannot find the role catalogue.\n\n" +
+      "It is not above the current directory, and no catalogue is registered.\n" +
+      "Register one once, from inside the catalogue repository:\n\n" +
+      "  se link\n\n" +
+      "Or point at it for this command: SE_CATALOGUE=/path/to/se-org",
+    );
     process.exit(2);
   }
   return root;
@@ -165,13 +211,21 @@ function cmdRoles(root: string, flags: Args["flags"]): number {
     return 0;
   }
 
-  for (const r of roles) {
-    const marks = [
-      r.tier === "starter" ? "*" : " ",
-      r.enabled ? " " : "x",
-      r.status === "deprecated" ? "D" : " ",
-    ].join("");
-    console.log(`${marks} ${r.id.padEnd(44)} ${r.department}`);
+  for (const department of DEPARTMENTS) {
+    const section = roles
+      .filter((role) => role.department === department)
+      .slice()
+      .sort((a, b) => a.id.localeCompare(b.id));
+    if (section.length === 0) continue;
+    console.log(`\n${departmentLabel(department)} (${section.length})`);
+    for (const r of section) {
+      const marks = [
+        r.tier === "starter" ? "*" : " ",
+        r.enabled ? " " : "x",
+        r.status === "deprecated" ? "D" : " ",
+      ].join("");
+      console.log(`${marks} ${r.id.padEnd(44)} ${r.name}`);
+    }
   }
   if (!flags.has("quiet")) {
     console.error(`
@@ -195,7 +249,7 @@ function renderInventory(registry: Registry, only?: readonly Role[]): string {
     for (const d of DEPARTMENTS) {
       const inDept = roles.filter((r) => r.department === d);
       if (inDept.length === 0) continue;
-      lines.push(`## ${d} (${inDept.length})`, "", "| id | name | tier | mission |", "|---|---|---|---|");
+      lines.push(`## ${departmentLabel(d)} (${inDept.length})`, "", "| id | name | tier | mission |", "|---|---|---|---|");
       for (const r of inDept) {
         lines.push(`| \`${r.id}\` | ${r.name} | ${r.tier} | ${r.mission.replace(/\|/g, "\\|")} |`);
       }
@@ -334,6 +388,277 @@ function cmdDoctor(root: string, flags: Args["flags"]): number {
 }
 
 
+/**
+ * Register a catalogue root so every other command can find it from any
+ * directory. This registers the source path; rendered client definitions are
+ * separate copies and must be regenerated after catalogue updates.
+ */
+function cmdLink(flags: Args["flags"]): number {
+  if (flags.has("show")) {
+    const config = readGlobalConfig();
+    if (!config) {
+      console.log(`no catalogue registered (looked in ${join(seHome(), "config.json")})`);
+      return 0;
+    }
+    const valid = isCatalogueRoot(config.catalogue_root);
+    console.log(`catalogue:  ${config.catalogue_root}`);
+    console.log(`config:     ${join(seHome(), "config.json")}`);
+    console.log(`state:      ${valid ? "ok" : "MISSING -- the path no longer holds a catalogue"}`);
+    return valid ? 0 : 1;
+  }
+
+  const target = typeof flags.get("path") === "string" ? (flags.get("path") as string) : process.cwd();
+  const resolved = findCatalogueRoot(target);
+
+  if (!resolved || !isCatalogueRoot(resolved)) {
+    console.error(
+      `error: ${target} is not a role catalogue.\n\n` +
+      "Expected a directory containing se/agents/ beside a package.json.\n" +
+      "Run this from inside the catalogue repository, or pass --path <dir>.",
+    );
+    return 2;
+  }
+
+  const path = writeGlobalConfig(resolved);
+  console.log(`registered catalogue: ${resolved}`);
+  console.log(`wrote ${path}`);
+  console.log("");
+  console.log("`se` now finds the role catalogue from any directory.");
+  console.log("Rendered client agent files are copies; rerun `se agents enable` after updates.");
+  return 0;
+}
+
+/**
+ * The one command a fresh clone runs.
+ *
+ * It replaces a paragraph of per-machine PATH surgery that previously lived in
+ * the documentation. That paragraph was the bug: the shims it described were
+ * written by hand on one machine, so the command worked in the shell that
+ * installed it and reported "command not found" everywhere else -- which looks,
+ * from outside, exactly like the catalogue being broken.
+ */
+function cmdInstall(flags: Args["flags"]): number {
+  const catalogue = findCatalogueRoot();
+  if (!catalogue || !isCatalogueRoot(catalogue)) {
+    console.error(
+      "error: run this from inside the catalogue repository.\n\n" +
+      "`se install` records where the catalogue lives, so it has to be run from\n" +
+      "within it at least once:\n\n" +
+      "  git clone <repo> se-org\n" +
+      "  cd se-org\n" +
+      "  bun install\n" +
+      "  bun run src/cli.ts install",
+    );
+    return 2;
+  }
+
+  // The running interpreter, not the string "bun". A winget or scoop install of
+  // bun sits in a directory that is not itself reliably on PATH, so a shim that
+  // only says `bun` works in the shell that ran the install and fails in the
+  // next one.
+  const bunPath = process.execPath;
+  const explicit = typeof flags.get("bin-dir") === "string" ? (flags.get("bin-dir") as string) : undefined;
+  const { dir, reason } = chooseBinDir(explicit);
+
+  console.log(`catalogue:  ${catalogue}`);
+  console.log(`bun:        ${bunPath}`);
+  console.log(`bin dir:    ${dir}   (${reason})`);
+  console.log("");
+
+  if (flags.has("dry-run")) {
+    for (const shim of shims(catalogue, bunPath)) console.log(`would write ${join(dir, shim.name)}`);
+    console.log(`would write ${join(seHome(), "config.json")}`);
+    return 0;
+  }
+
+  const written = writeShims(dir, catalogue, bunPath);
+  for (const w of written) {
+    const note = w.state === "refused-foreign"
+      ? "REFUSED -- not generated by se; left untouched"
+      : w.state;
+    console.log(`${note.padEnd(12)} ${w.path}   (${w.shells})`);
+  }
+
+  const foreign = written.filter((w) => w.state === "refused-foreign");
+  if (foreign.length === written.length) {
+    console.error(
+      `\nerror: every shim name in ${dir} is already taken by a file se did not\n` +
+      "write, and overwriting another program's launcher is not something this\n" +
+      "command will do silently. Choose another directory:\n\n" +
+      "  se install --bin-dir <dir>",
+    );
+    return 1;
+  }
+
+  const configPath = writeGlobalConfig(catalogue);
+  console.log(`written      ${configPath}   (catalogue registration)`);
+
+  const onPath = isOnPath(dir);
+  if (!onPath && flags.has("add-path")) {
+    const added = addToUserPath(dir);
+    console.log("");
+    if (added.ok) {
+      console.log(`added ${dir} to your user PATH (${added.detail}).`);
+      console.log("Open a new terminal for it to take effect; this one keeps the old PATH.");
+    } else {
+      console.error(`warning: could not add it automatically: ${added.detail}`);
+      console.error("");
+      for (const line of pathInstructions(dir)) console.error(line);
+    }
+  } else if (!onPath) {
+    console.log("");
+    console.log(`${dir} is NOT on your PATH, so \`se\` will not be found yet.`);
+    console.log("");
+    for (const line of pathInstructions(dir)) console.log(line);
+  } else {
+    console.log("");
+    console.log("`se` is now on PATH in every shell. Verify from another directory:");
+    console.log("");
+    console.log("  se where");
+  }
+
+  console.log("");
+  console.log("Then enable the global starter roster for supported coding clients:");
+  console.log("");
+  console.log("  se agents enable                        # install in all supported clients");
+  console.log("  se agents status                        # verify global installation");
+  return 0;
+}
+
+/**
+ * Persist a directory onto the user's PATH. Opt-in via `--add-path`, because it
+ * edits the environment outside this process and outlives it.
+ */
+function addToUserPath(dir: string): { ok: boolean; detail: string } {
+  try {
+    if (process.platform === "win32") {
+      // The user-scoped registry value, not the machine one: no elevation, and
+      // no chance of corrupting a system PATH.
+      const script =
+        "$d = $env:SE_ADD_DIR; " +
+        "$p = [Environment]::GetEnvironmentVariable('Path','User'); " +
+        "if ($p -split ';' -notcontains $d) { " +
+        "[Environment]::SetEnvironmentVariable('Path', ($p.TrimEnd(';') + ';' + $d), 'User'); " +
+        "'added' } else { 'already present' }";
+      const proc = Bun.spawnSync(["powershell", "-NoProfile", "-NonInteractive", "-Command", script], {
+        env: { ...process.env, SE_ADD_DIR: dir },
+      });
+      const out = new TextDecoder().decode(proc.stdout).trim();
+      if (proc.exitCode !== 0) {
+        return { ok: false, detail: new TextDecoder().decode(proc.stderr).trim() || `exit ${proc.exitCode}` };
+      }
+      return { ok: true, detail: `user environment: ${out}` };
+    }
+
+    const profile = join(homedir(), ".profile");
+    const line = `export PATH="${dir}:$PATH"`;
+    const existing = existsSync(profile) ? readFileSync(profile, "utf8") : "";
+    if (existing.includes(line)) return { ok: true, detail: "~/.profile already had it" };
+    writeFileSync(profile, `${existing}${existing.endsWith("\n") || existing === "" ? "" : "\n"}${line}\n`, "utf8");
+    return { ok: true, detail: "appended to ~/.profile" };
+  } catch (cause) {
+    return { ok: false, detail: (cause as Error).message };
+  }
+}
+
+/**
+ * Answer "why can't the session I am sitting in see my roles?" in one command.
+ *
+ * `se render` can only report where it wrote. That is a different question from
+ * which directory the host will read, and when the two differ a successful
+ * render is invisible -- the failure this command exists to make legible.
+ */
+function cmdWhere(root: string, flags: Args["flags"]): number {
+  const hostId = typeof flags.get("host") === "string" ? (flags.get("host") as string) : "claude-code";
+  const adapter = findAdapter(hostId);
+  if (!adapter) {
+    console.error(`error: unknown host "${hostId}".\nknown: ${ADAPTERS.map((a) => a.id).join(", ")}`);
+    return 2;
+  }
+
+  const { registry } = loadCatalogue(root);
+  const projectRoot = resolveProjectTarget(flags);
+  const sites = hostSites(adapter, projectRoot, registry.all);
+  const roster = effectiveRoster(sites);
+  const known = new Set(registry.all.map((r) => r.id));
+
+  if (flags.has("json")) {
+    console.log(JSON.stringify({
+      host: adapter.id,
+      cwd: process.cwd(),
+      project_root: projectRoot,
+      catalogue_root: root,
+      sites,
+      loaded: [...roster.keys()].sort(),
+    }, null, 2));
+    return 0;
+  }
+
+  console.log(`host             ${adapter.displayName}`);
+  console.log(`cwd              ${process.cwd()}`);
+  console.log(`project root     ${projectRoot}`);
+  console.log(`catalogue root   ${root}`);
+  console.log("");
+
+  for (const site of sites) {
+    const label = site.kind === "project"
+      ? "project-level (this project only)"
+      : "user-level (every project)";
+    console.log(`${site.dir}`);
+    console.log(`  ${label}`);
+    if (!site.exists) {
+      console.log("  absent -- nothing installed here");
+    } else {
+      const stale = site.generated.filter((d) => d.stale);
+      const orphan = site.generated.filter((d) => !known.has(d.roleId));
+      console.log(`  ${site.generated.length} rendered role(s)` +
+        (stale.length > 0 ? `, ${stale.length} STALE` : "") +
+        (orphan.length > 0 ? `, ${orphan.length} no longer in the catalogue` : "") +
+        (site.foreign.length > 0 ? `, ${site.foreign.length} hand-written (never touched)` : ""));
+      for (const d of stale) console.log(`    stale   ${d.roleId} -- the role has changed since it was rendered`);
+      for (const d of orphan) console.log(`    orphan  ${d.roleId} -- no such role in the catalogue now`);
+    }
+    console.log("");
+  }
+
+  if (roster.size === 0) {
+    console.log("No roles are installed for this host, so a session rooted here loads none.");
+    console.log("");
+    console.log(`  se render --host ${adapter.id}            # into ${projectRoot}`);
+    if (adapter.userOut) console.log(`  se render --host ${adapter.id} --global   # for every project`);
+    return 1;
+  }
+
+  console.log(`A session rooted at ${projectRoot} loads ${roster.size} role(s):`);
+  for (const [id, site] of [...roster].sort(([a], [b]) => a.localeCompare(b))) {
+    console.log(`  ${id.padEnd(30)} from ${site.kind}-level`);
+  }
+
+  if (adapter.id === "claude-code") {
+    console.log("");
+    console.log("In Claude Code, `/agents` lists these definitions. `/list-agents` is a");
+    console.log("different command: it lists other running sessions you can message, and");
+    console.log("says nothing about whether a roster is installed.");
+    console.log("A running session does not pick up new files -- restart it, or run `/agents`.");
+  }
+  return 0;
+}
+
+/**
+ * The directory the host has open, which is the only directory whose
+ * project-level definitions it will read.
+ *
+ * `--project` exists because the inferred answer -- nearest ancestor with
+ * `package.json` or `.git` -- is a guess. It is usually right and silently wrong
+ * in the cases that matter: a session opened in a subdirectory, or in a
+ * directory that is not a project at all.
+ */
+function resolveProjectTarget(flags: Args["flags"]): string {
+  const explicit = flags.get("project");
+  if (typeof explicit === "string") return isAbsolute(explicit) ? explicit : join(process.cwd(), explicit);
+  return findProjectRoot();
+}
+
 function cmdRender(root: string, flags: Args["flags"]): number {
   const hostId = typeof flags.get("host") === "string" ? (flags.get("host") as string) : "claude-code";
   const adapter = findAdapter(hostId);
@@ -416,20 +741,78 @@ known: ${DEPARTMENTS.join(", ")}`);
     return 1;
   }
 
-  const outDir = typeof flags.get("out") === "string" ? (flags.get("out") as string) : adapter.defaultOut;
-  const absOut = join(root, outDir);
+  /*
+   * Three different roots are in play, and conflating any two of them is a
+   * silent bug once the CLI is installed globally:
+   *
+   *   root          where the roles are read from (the catalogue)
+   *   installRoot   the project being worked on, where output belongs
+   *   adapter.userOut  the host's user-level location, for --global
+   *
+   * Anchoring output on `root` would write a project's agents into the
+   * catalogue repository. When the cwd is inside the catalogue itself -- the
+   * common case while developing it -- the two coincide and nothing changes.
+   */
+  const installRoot = resolveProjectTarget(flags);
+  const outFlag = typeof flags.get("out") === "string" ? (flags.get("out") as string) : null;
+
+  if (flags.has("global") && outFlag) {
+    console.error("error: --global and --out are alternatives; pass one.");
+    return 2;
+  }
+
+  let outDir: string;
+  let absOut: string;
+
+  if (flags.has("global")) {
+    if (adapter.userOut === null) {
+      console.error(
+        `error: ${adapter.displayName} has no user-level location, so --global is not\n` +
+        "available for it. There is no agreed path for this host, and writing to a\n" +
+        "guessed one would either be ignored or apply to every unrelated project.\n\n" +
+        `Render it into a project instead: se render --host ${adapter.id}`,
+      );
+      return 2;
+    }
+    absOut = adapter.userOut;
+    outDir = absOut;
+  } else {
+    outDir = outFlag ?? adapter.defaultOut;
+    absOut = isAbsolute(outDir) ? outDir : join(installRoot, outDir);
+  }
 
   if (flags.has("dry-run")) {
     for (const f of result.files) console.log(`${outDir}/${f.path}`);
   } else {
     mkdirSync(absOut, { recursive: true });
 
+    // Refuse name collisions before cleanup or writes. A generated agent must
+    // never silently replace a hand-authored host definition, especially
+    // AGENTS.md which may contain the project's primary instructions.
+    for (const file of result.files) {
+      const target = join(absOut, file.path);
+      if (existsSync(target) && !readFileSync(target, "utf8").includes("GENERATED from se/agents/")) {
+        console.error(`error: refusing to overwrite hand-written file ${target}`);
+        console.error("Move it, choose another --out directory, or explicitly remove it yourself.");
+        return 1;
+      }
+    }
+
     // Remove previously generated files that no longer correspond to a
     // selected role. Without this, disabling a role in a local override
     // layer leaves its agent definition behind and the host keeps offering a
     // role the project has deliberately switched off.
     let removed = 0;
-    for (const existing of readdirSync(absOut).filter((n) => n.endsWith(".md"))) {
+    const existingFiles: string[] = [];
+    const collectFiles = (dir: string, prefix = "") => {
+      for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        const rel = prefix === "" ? entry.name : `${prefix}/${entry.name}`;
+        if (entry.isDirectory()) collectFiles(join(dir, entry.name), rel);
+        else if (entry.isFile() && /\.(?:md|toml)$/.test(entry.name)) existingFiles.push(rel);
+      }
+    };
+    collectFiles(absOut);
+    for (const existing of existingFiles) {
       const abs = join(absOut, existing);
       if (result.files.some((f) => f.path === existing)) continue;
       if (!readFileSync(abs, "utf8").includes("GENERATED from se/agents/")) continue; // never touch hand-written files
@@ -437,7 +820,11 @@ known: ${DEPARTMENTS.join(", ")}`);
       removed++;
     }
 
-    for (const f of result.files) writeFileSync(join(absOut, f.path), f.contents, "utf8");
+    for (const f of result.files) {
+      const target = join(absOut, f.path);
+      mkdirSync(dirname(target), { recursive: true });
+      writeFileSync(target, f.contents, "utf8");
+    }
     console.log(`rendered ${result.files.length} role(s) to ${outDir}/${removed > 0 ? `  (removed ${removed} stale)` : ""}`);
   }
 
@@ -451,7 +838,13 @@ known: ${DEPARTMENTS.join(", ")}`);
 
   const writers = selected.filter((r) => r.writes_files);
   if (writers.length > 0) {
-    console.log(`${writers.length} role(s) render with isolation: worktree (Part XV 53).`);
+    console.log(
+      adapter.providesWorkspaceIsolation
+        ? `${writers.length} role(s) render with isolation: worktree (Part XV 53).`
+        : `warning: ${writers.length} role(s) write files, and ${adapter.displayName} provides no\n` +
+          `  workspace isolation. Part XV 53 wants one workspace per writer; on this host\n` +
+          `  that is not enforced, so parallel writers can corrupt each other silently.`,
+    );
   }
 
   if (result.unmapped.size > 0) {
@@ -459,6 +852,111 @@ known: ${DEPARTMENTS.join(", ")}`);
     for (const [id, caps] of result.unmapped) console.log(`  ${id}: ${caps.join(", ")}`);
   }
   return 0;
+}
+
+/** Select a safe roster once for the aggregate global install command. */
+function cmdAgents(root: string, args: Args): number {
+  const action = args.positional[0] ?? "help";
+  const hostFlag = args.flags.get("host");
+  const chosen = typeof hostFlag === "string"
+    ? [findAdapter(hostFlag)]
+    : ADAPTERS.filter((adapter) => adapter.userOut !== null);
+  if (chosen.some((adapter) => adapter === undefined)) {
+    console.error(`error: unknown host "${hostFlag}".\nknown: ${ADAPTERS.filter((a) => a.userOut).map((a) => a.id).join(", ")}`);
+    return 2;
+  }
+  const adapters = chosen.filter((adapter) => adapter?.userOut !== null) as typeof ADAPTERS[number][];
+  if (adapters.length === 0) {
+    console.error("error: no selected host has a supported global agent directory.");
+    return 2;
+  }
+
+  if (action === "status") {
+    for (const adapter of adapters) {
+      const site = hostSites(adapter, "", [])[1]!;
+      console.log(`${adapter.id.padEnd(16)} ${site.generated.length} generated  ${site.dir}`);
+      if (site.foreign.length) console.log(`                  ${site.foreign.length} hand-written file(s), left untouched`);
+    }
+    return 0;
+  }
+
+  if (action === "disable") {
+    let removed = 0;
+    for (const adapter of adapters) {
+      const dir = adapter.userOut!;
+      if (!existsSync(dir)) continue;
+      const files: string[] = [];
+      const visit = (at: string, prefix = "") => {
+        for (const entry of readdirSync(at, { withFileTypes: true })) {
+          const rel = prefix ? `${prefix}/${entry.name}` : entry.name;
+          if (entry.isDirectory()) visit(join(at, entry.name), rel);
+          else if (entry.isFile() && /\.(?:md|toml)$/.test(entry.name)) files.push(rel);
+        }
+      };
+      visit(dir);
+      for (const rel of files) {
+        const path = join(dir, rel);
+        if (readFileSync(path, "utf8").includes("GENERATED from se/agents/")) {
+          rmSync(path);
+          removed++;
+        }
+      }
+    }
+    console.log(`removed ${removed} generated definition(s); hand-written files were left untouched`);
+    return 0;
+  }
+
+  if (action !== "enable") {
+    console.error('usage: se agents <enable|disable|status> [--host <id>] [--roster a,b,c] [--all] [--force]');
+    return 2;
+  }
+  const { registry, diags } = loadCatalogue(root);
+  const roleErrors = diags.sorted().filter((d) => d.code.startsWith("role/"));
+  if (roleErrors.length) {
+    console.error(diags.format({ color: useColor(args.flags) }));
+    console.error("error: refusing global install while role files have errors.");
+    return 1;
+  }
+  const routable = registry.all.filter((r) => r.enabled && r.status === "active");
+  const rosterFlag = args.flags.get("roster");
+  let selected: readonly Role[];
+  if (typeof rosterFlag === "string") {
+    const ids = rosterFlag.split(",").map((id) => id.trim()).filter(Boolean);
+    const missing = ids.filter((id) => !registry.byId.has(id));
+    if (missing.length) { console.error(`error: unknown role id(s): ${missing.join(", ")}`); return 2; }
+    selected = ids.map((id) => registry.byId.get(id)!);
+  } else selected = args.flags.has("all") ? routable : routable.filter((r) => r.tier === "starter");
+  if (!selected.length) { console.error("error: selected roster is empty."); return 1; }
+
+  // Preflight every host before the first write so a foreign-file conflict or
+  // metadata ceiling cannot leave a half-installed global roster.
+  for (const adapter of adapters) {
+    const rendered = adapter.render(selected, root);
+    if (adapter.metadataTokenBudget !== null && rendered.metadataTokens > adapter.metadataTokenBudget && !args.flags.has("force")) {
+      console.error(`error: ${adapter.id} roster is ~${rendered.metadataTokens} metadata tokens, over its ${adapter.metadataTokenBudget} budget; use --roster or --force.`);
+      return 1;
+    }
+    for (const file of rendered.files) {
+      const target = join(adapter.userOut!, file.path);
+      if (existsSync(target) && !readFileSync(target, "utf8").includes("GENERATED from se/agents/")) {
+        console.error(`error: refusing to overwrite hand-written file ${target}`);
+        return 1;
+      }
+    }
+  }
+  for (const adapter of adapters) {
+    const result = cmdRender(root, new Map([...args.flags, ["host", adapter.id], ["global", true]]));
+    if (result !== 0) return result;
+  }
+  console.log("Global roster installed. Restart or refresh each client to load it; choose roles in that client's own agent picker.");
+  return 0;
+}
+
+/** One-command first install for a fresh clone. */
+function cmdSetup(root: string, args: Args): number {
+  const installResult = cmdInstall(args.flags);
+  if (installResult !== 0) return installResult;
+  return cmdAgents(root, { ...args, positional: ["enable"] });
 }
 
 function main(argv: readonly string[]): number {
@@ -470,7 +968,13 @@ function main(argv: readonly string[]): number {
     case "ownership":   return cmdOwnership(requireRoot(), args.flags);
     case "departments": return cmdDepartments(requireRoot(), args.flags);
     case "doctor":      return cmdDoctor(requireRoot(), args.flags);
+    case "memory":      return cmdMemory(findProjectRoot(), args.positional, args.flags);
+    case "install":     return cmdInstall(args.flags);
+    case "link":        return cmdLink(args.flags);
+    case "where":       return cmdWhere(requireRoot(), args.flags);
     case "render":      return cmdRender(requireRoot(), args.flags);
+    case "agents":      return cmdAgents(requireRoot(), args);
+    case "setup":       return cmdSetup(requireRoot(), args);
     case "help":
     case "--help":
     case "-h":

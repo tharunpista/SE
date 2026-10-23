@@ -46,6 +46,13 @@ jobs:
       - name: Tests
         run: bun test
 
+      # Part XX 80: a failing invariant is a build failure, not a logged
+      # warning. Runs on every platform in the matrix, because the write
+      # protocol's guarantees rest on filesystem primitives that differ between
+      # them -- see docs/platform-atomicity.md.
+      - name: Memory invariants
+        run: bun run src/cli.ts memory doctor
+
       - name: Generated files are current
         shell: bash
         run: |

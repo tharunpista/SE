@@ -48,8 +48,6 @@ boundary: >-
   Engineer decides which records enter a context package; the Knowledge
   Steward decides what gets promoted. This role guarantees that whatever is
   written is written correctly, or is reported as not written at all.
-blocked_on:
-  - "se memory"
 verify_commands:
   - "bun test tests/memory"
   - "se memory doctor"

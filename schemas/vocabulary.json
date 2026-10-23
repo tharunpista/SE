@@ -59,6 +59,8 @@
     "i18n-catalogue", "seo-metadata", "service-worker",
 
     "backend-service", "domain-rule", "api-endpoint", "database-schema",
+    "identity-integration", "external-integration", "concurrency-review",
+    "backend-performance-budget", "realtime-protocol",
     "database-migration", "database-query", "background-job",
     "event-schema", "cache-policy", "search-index", "object-storage-flow",
     "realtime-channel", "data-pipeline", "analytical-dataset",
@@ -147,7 +149,8 @@
     "compaction"
   ],
   "cli_commands": [
-    "validate", "roles", "role", "ownership", "departments", "doctor", "render"
+    "validate", "roles", "role", "ownership", "departments", "doctor", "render",
+    "memory"
   ],
   "$comment_cli": "Implemented se subcommands. A role may only reference one of these in verify_commands unless it declares the gap in blocked_on. Keeping this list honest is what stops a role from running a command that does not exist and reporting the exit code as a failure of the code under test.",
   "trust_tiers": ["operator", "repository", "derived", "external"]
