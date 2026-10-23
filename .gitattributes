@@ -1,0 +1,22 @@
+# Normalise to LF in the repository, always.
+#
+# Without this, a role file checked out with CRLF on Windows and LF on Linux
+# produces different bytes for the same role. The frontmatter parser already
+# normalises line endings before hashing, so the content hash is stable
+# either way -- but the shell scripts in CI and any future tooling that reads
+# these files raw would not be, and the failure would appear only on one
+# platform.
+* text=auto eol=lf
+
+# Binary, never converted.
+*.png binary
+*.jpg binary
+*.ico binary
+*.pdf binary
+*.sqlite binary
+
+# Generated. Marked so review diffs collapse them by default; they are still
+# committed on purpose, because a diff of the ownership matrix is how a
+# reviewer sees that a role quietly took over an artifact.
+se/agents/role-inventory.md   linguist-generated=true
+se/agents/ownership-matrix.md linguist-generated=true
