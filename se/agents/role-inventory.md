@@ -2,7 +2,7 @@
 
 # Role inventory
 
-3 roles across 16 departments.
+9 roles across 16 departments.
 
 ## orchestration (1)
 
@@ -10,11 +10,42 @@
 |---|---|---|---|
 | `chief-orchestrator` | Chief Orchestrator | starter | Decompose a goal into bounded, owned, sequenced tasks; select the smallest sufficient roster; and refuse to let work proceed on unresolved contracts, unresolved project identity, or unsupported completion claims. |
 
-## integration (1)
+## product-and-requirements (1)
+
+| id | name | tier | mission |
+|---|---|---|---|
+| `requirements-engineer` | Requirements Engineer | starter | Convert stated needs into requirements that can be tested, and separate what the user actually said from what anyone inferred. |
+
+## architecture (1)
+
+| id | name | tier | mission |
+|---|---|---|---|
+| `solution-architect` | Solution Architect | starter | Turn requirements into a coherent, deployable system with explicit boundaries, and name the trade-off behind every significant choice. |
+
+## frontend (1)
+
+| id | name | tier | mission |
+|---|---|---|---|
+| `frontend-lead` | Frontend Lead | starter | Own frontend architecture, component boundaries, routing, state strategy and data flow, and make every screen correct in its loading, empty, partial and error states, not only its happy path. |
+
+## backend-and-data (1)
+
+| id | name | tier | mission |
+|---|---|---|---|
+| `backend-lead` | Backend Lead | starter | Own backend service boundaries, endpoint implementation and data access, and guarantee that every operation is correct under retry, concurrency and partial failure. |
+
+## integration (2)
 
 | id | name | tier | mission |
 |---|---|---|---|
 | `api-contract-owner` | API Contract Owner | starter | Own the authoritative request and response contract between producer and consumer, and make it exist before either side builds against an assumption. |
+| `contract-test-engineer` | Contract Test Engineer | starter | Prove that each producer and each consumer independently conform to the agreed interface, and catch a breaking change at the boundary that introduced it rather than in production. |
+
+## quality-and-testing (1)
+
+| id | name | tier | mission |
+|---|---|---|---|
+| `qa-lead` | QA Lead | starter | Define the verification strategy and the quality gates, allocate test effort by risk rather than by coverage, and refuse completion claims that no evidence supports. |
 
 ## agent-platform-engineering (1)
 

@@ -6,12 +6,27 @@ Exactly one role is accountable per artifact kind. Others contribute.
 
 | artifact | accountable owner | co-owners | contributors |
 |---|---|---|---|
+| `acceptance-criteria` | `requirements-engineer` | — | `qa-lead` |
 | `api-convention` | `api-contract-owner` | — | — |
+| `api-endpoint` | `backend-lead` | — | `api-contract-owner` |
+| `architecture-decision` | `solution-architect` | — | `chief-orchestrator` |
+| `backend-service` | `backend-lead` | — | — |
+| `contract-test` | `contract-test-engineer` | — | `api-contract-owner` |
+| `defect-report` | `qa-lead` | — | `contract-test-engineer` |
 | `error-taxonomy` | `api-contract-owner` | — | — |
+| `frontend-component` | `frontend-lead` | — | — |
+| `frontend-route` | `frontend-lead` | — | — |
+| `frontend-screen` | `frontend-lead` | — | — |
+| `frontend-state-model` | `frontend-lead` | — | — |
 | `handoff-record` | `chief-orchestrator` | — | — |
-| `interface-contract` | `api-contract-owner` | — | — |
+| `interface-contract` | `api-contract-owner` | — | `backend-lead`, `contract-test-engineer`, `frontend-lead`, `solution-architect` |
 | `memory-record` | `memory-systems-engineer` | — | — |
 | `memory-schema` | `memory-systems-engineer` | — | — |
+| `module-boundary` | `solution-architect` | — | — |
 | `project-snapshot` | `memory-systems-engineer` | — | — |
+| `release-readiness-record` | `qa-lead` | — | — |
+| `requirement` | `requirements-engineer` | — | — |
 | `roster-selection` | `chief-orchestrator` | — | — |
-| `task-record` | `chief-orchestrator` | — | — |
+| `system-architecture` | `solution-architect` | — | — |
+| `task-record` | `chief-orchestrator` | — | `requirements-engineer` |
+| `test-strategy` | `qa-lead` | — | `contract-test-engineer`, `requirements-engineer` |

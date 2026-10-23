@@ -21,6 +21,7 @@ export interface Role {
   readonly owns_artifacts: readonly string[];
   readonly contributes_artifacts: readonly string[];
   readonly owns_interfaces: readonly string[];
+  readonly participates_interfaces: readonly string[];
   readonly shared_with: Readonly<Record<string, readonly string[]>>;
   readonly collaborators: readonly string[];
   readonly escalates_to: string;

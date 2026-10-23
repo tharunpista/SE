@@ -97,6 +97,79 @@ export function buildOwnershipMatrix(registry: Registry, diags: Diagnostics): Ow
   return rows;
 }
 
+export interface InterfaceRow {
+  readonly interface: string;
+  readonly owner: string | null;
+  readonly participants: readonly string[];
+}
+
+/**
+ * Interface ownership.
+ *
+ * An interface is inherently multi-party: it has a producer, a consumer, and
+ * the role accountable for the contract between them. So the model is one
+ * accountable owner plus any number of participants, not co-ownership by
+ * exception. Two accountable owners means neither can classify a breaking
+ * change, which is the one decision a contract owner exists to make.
+ */
+export function buildInterfaceMatrix(registry: Registry, diags: Diagnostics): InterfaceRow[] {
+  const owners = new Map<string, Role[]>();
+  const participants = new Map<string, string[]>();
+
+  for (const role of registry.all) {
+    if (!isRoutable(role)) continue;
+    for (const i of role.owns_interfaces) {
+      const list = owners.get(i);
+      if (list) list.push(role);
+      else owners.set(i, [role]);
+    }
+    for (const i of role.participates_interfaces) {
+      const list = participants.get(i);
+      if (list) list.push(role.id);
+      else participants.set(i, [role.id]);
+    }
+  }
+
+  const rows: InterfaceRow[] = [];
+
+  for (const [iface, claimants] of owners) {
+    if (claimants.length > 1) {
+      const ids = claimants.map((c) => c.id).sort();
+      for (const role of claimants) {
+        diags.error({
+          code: "catalogue/interface-ownership-collision",
+          file: role.file,
+          key: `owns_interfaces.${iface}`,
+          message: `"${iface}" is claimed as accountable owner by ${ids.join(", ")}.`,
+          hint: `An interface has exactly one accountable owner. Producers and consumers declare participates_interfaces: [${iface}] instead.`,
+        });
+      }
+    }
+    rows.push({
+      interface: iface,
+      owner: claimants.length === 1 ? claimants[0]!.id : null,
+      participants: (participants.get(iface) ?? []).sort(),
+    });
+  }
+
+  // A participant on an interface nobody owns has no one to escalate to when
+  // the contract is wrong, which is exactly when escalation is needed.
+  for (const [iface, ids] of participants) {
+    if (!owners.has(iface)) {
+      diags.error({
+        code: "catalogue/interface-without-owner",
+        key: iface,
+        message: `"${iface}" has participants (${ids.sort().join(", ")}) but no accountable owner.`,
+        hint: "Give the interface an owner, or the participants have nobody to escalate a contract defect to.",
+      });
+      rows.push({ interface: iface, owner: null, participants: ids.sort() });
+    }
+  }
+
+  rows.sort((a, b) => a.interface.localeCompare(b.interface));
+  return rows;
+}
+
 /** Dangling collaborator or escalation targets are broken handoffs at runtime. */
 function checkReferences(registry: Registry, diags: Diagnostics): void {
   for (const role of registry.all) {
@@ -240,15 +313,17 @@ function checkSpecOwnership(registry: Registry, diags: Diagnostics): void {
 
 export interface IntegrityReport {
   readonly ownership: readonly OwnershipRow[];
+  readonly interfaces: readonly InterfaceRow[];
   readonly diagnostics: Diagnostics;
 }
 
 export function checkIntegrity(registry: Registry): IntegrityReport {
   const diags = new Diagnostics();
   const ownership = buildOwnershipMatrix(registry, diags);
+  const interfaces = buildInterfaceMatrix(registry, diags);
   checkReferences(registry, diags);
   checkEscalationChains(registry, diags);
   checkDepartmentCounts(registry, diags);
   checkSpecOwnership(registry, diags);
-  return { ownership, diagnostics: diags };
+  return { ownership, interfaces, diagnostics: diags };
 }

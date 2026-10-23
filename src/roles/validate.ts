@@ -10,7 +10,8 @@ const ID_RE = /^[a-z][a-z0-9]*(-[a-z0-9]+)*$/;
 const KNOWN_KEYS = new Set([
   "schema_version", "id", "name", "department", "tier", "mission", "activation",
   "tools", "memory_scopes", "owns_artifacts", "contributes_artifacts",
-  "owns_interfaces", "shared_with", "collaborators", "escalates_to",
+  "owns_interfaces", "participates_interfaces", "shared_with",
+  "collaborators", "escalates_to",
   "context_budget_tokens", "max_calls", "enabled", "status", "supersedes",
   "superseded_by", "boundary", "requires_evidence", "writes_files",
   "owns_spec_sections",
@@ -211,9 +212,21 @@ export function validateRole(
   const owns_artifacts = strArray(ctx, "owns_artifacts", fm["owns_artifacts"]);
   const contributes_artifacts = strArray(ctx, "contributes_artifacts", fm["contributes_artifacts"]);
   const owns_interfaces = strArray(ctx, "owns_interfaces", fm["owns_interfaces"]);
+  const participates_interfaces = strArray(ctx, "participates_interfaces", fm["participates_interfaces"]);
   checkVocabulary(ctx, "owns_artifacts", owns_artifacts, ARTIFACT_KINDS, "artifact kind");
   checkVocabulary(ctx, "contributes_artifacts", contributes_artifacts, ARTIFACT_KINDS, "artifact kind");
   checkVocabulary(ctx, "owns_interfaces", owns_interfaces, INTERFACE_KINDS, "interface kind");
+  checkVocabulary(ctx, "participates_interfaces", participates_interfaces, INTERFACE_KINDS, "interface kind");
+
+  for (const i of participates_interfaces) {
+    if (owns_interfaces.includes(i)) {
+      diags.error({
+        code: "role/owns-and-participates", file, key: "participates_interfaces",
+        message: `"${i}" is listed in both owns_interfaces and participates_interfaces.`,
+        hint: "Accountable ownership already implies participation. An interface has exactly one accountable owner and any number of participants.",
+      });
+    }
+  }
 
   for (const a of contributes_artifacts) {
     if (owns_artifacts.includes(a)) {
@@ -365,6 +378,7 @@ export function validateRole(
     owns_artifacts,
     contributes_artifacts,
     owns_interfaces,
+    participates_interfaces,
     shared_with,
     collaborators,
     escalates_to: escalates_to as string,
