@@ -113,9 +113,17 @@ export function hasCode(diagnostics: readonly Diagnostic[], code: string): boole
   return diagnostics.some((d) => d.code === code);
 }
 
-/** Diagnostics excluding catalogue-size errors, which every small fixture trips. */
+/**
+ * Diagnostics excluding catalogue-size findings, which every small fixture
+ * trips. Kept as one list so that adding a new catalogue-wide check does not
+ * silently break every fixture-based test, as it did once.
+ */
+const CATALOGUE_SIZE_CODES = new Set([
+  "catalogue/total-count",
+  "catalogue/department-count",
+  "catalogue/department-deferred",
+]);
+
 export function relevant(diagnostics: readonly Diagnostic[]): Diagnostic[] {
-  return diagnostics.filter(
-    (d) => d.code !== "catalogue/total-count" && d.code !== "catalogue/department-count",
-  );
+  return diagnostics.filter((d) => !CATALOGUE_SIZE_CODES.has(d.code));
 }

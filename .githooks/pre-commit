@@ -1,0 +1,10 @@
+#!/bin/sh
+# Twice now a commit has landed with a failing test. The fix is a gate, not
+# more discipline.
+set -e
+bun x tsc --noEmit
+bun run src/cli.ts validate >/dev/null || {
+  echo "pre-commit: se validate failed. Run: bun run src/cli.ts validate" >&2
+  exit 1
+}
+bun test
