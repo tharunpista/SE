@@ -1,5 +1,5 @@
 {
-  "$comment": "Closed vocabularies. Part XII: role frontmatter may only reference terms defined here. Adding a term is a reviewed change, because every term is a potential ownership collision.",
+  "$comment": "Closed vocabularies. Role total is 221: the 220 of the specification plus root-cause-investigator, added deliberately so the three-strike rule has somewhere to hand stuck work. Recorded here and in docs/origin-prompt.md rather than left as an undocumented drift. Part XII: role frontmatter may only reference terms defined here. Adding a term is a reviewed change, because every term is a potential ownership collision.",
   "schema_version": 1,
   "departments": [
     "orchestration",
@@ -28,7 +28,7 @@
     "backend-and-data": 22,
     "integration": 9,
     "ai-and-agent-systems": 15,
-    "quality-and-testing": 18,
+    "quality-and-testing": 19,
     "security-and-privacy": 13,
     "platform-and-operations": 17,
     "mobile-and-desktop": 11,
@@ -72,7 +72,8 @@
     "test-strategy", "unit-test", "integration-test", "e2e-test",
     "regression-test", "performance-test", "compatibility-matrix",
     "accessibility-test", "test-data-fixture", "test-infrastructure",
-    "defect-report", "review-record", "release-readiness-record",
+    "defect-report", "root-cause-diagnosis", "review-record",
+    "release-readiness-record",
     "chaos-experiment", "fuzz-corpus",
 
     "threat-model", "secure-coding-review", "authorization-model",
@@ -104,6 +105,7 @@
     "system-validation-report",
 
     "task-record", "handoff-record", "project-snapshot", "escalation-record",
+    "delivery-plan", "workload-plan", "provenance-record", "promotion-record",
     "run-journal", "cost-ledger", "memory-record", "role-definition",
     "ownership-matrix", "roster-selection", "workspace-allocation",
     "guardrail-policy", "agent-trace", "host-adapter",

@@ -6,27 +6,35 @@ Exactly one role is accountable per artifact kind. Others contribute.
 
 | artifact | accountable owner | co-owners | contributors |
 |---|---|---|---|
-| `acceptance-criteria` | `requirements-engineer` | — | `qa-lead` |
+| `acceptance-criteria` | `requirements-engineer` | — | `decision-recorder`, `qa-lead` |
 | `api-convention` | `api-contract-owner` | — | — |
 | `api-endpoint` | `backend-lead` | — | `api-contract-owner` |
-| `architecture-decision` | `solution-architect` | — | `chief-orchestrator` |
+| `architecture-decision` | `solution-architect` | — | `chief-orchestrator`, `decision-recorder`, `root-cause-investigator` |
 | `backend-service` | `backend-lead` | — | — |
 | `contract-test` | `contract-test-engineer` | — | `api-contract-owner` |
-| `defect-report` | `qa-lead` | — | `contract-test-engineer` |
+| `defect-report` | `qa-lead` | — | `contract-test-engineer`, `root-cause-investigator` |
+| `delivery-plan` | `project-manager` | — | `operations-coordinator`, `technical-program-manager`, `workload-capacity-planner` |
 | `error-taxonomy` | `api-contract-owner` | — | — |
+| `escalation-record` | `operations-coordinator` | — | — |
 | `frontend-component` | `frontend-lead` | — | — |
 | `frontend-route` | `frontend-lead` | — | — |
 | `frontend-screen` | `frontend-lead` | — | — |
 | `frontend-state-model` | `frontend-lead` | — | — |
-| `handoff-record` | `chief-orchestrator` | — | — |
-| `interface-contract` | `api-contract-owner` | — | `backend-lead`, `contract-test-engineer`, `frontend-lead`, `solution-architect` |
-| `memory-record` | `memory-systems-engineer` | — | — |
+| `handoff-record` | `chief-orchestrator` | — | `operations-coordinator` |
+| `interface-contract` | `api-contract-owner` | — | `backend-lead`, `contract-test-engineer`, `frontend-lead`, `solution-architect`, `technical-program-manager` |
+| `knowledge-index` | `knowledge-steward` | — | — |
+| `memory-record` | `memory-systems-engineer` | — | `knowledge-steward` |
 | `memory-schema` | `memory-systems-engineer` | — | — |
 | `module-boundary` | `solution-architect` | — | — |
-| `project-snapshot` | `memory-systems-engineer` | — | — |
+| `project-snapshot` | `memory-systems-engineer` | — | `knowledge-steward` |
+| `promotion-record` | `knowledge-steward` | — | — |
+| `provenance-record` | `decision-recorder` | — | `knowledge-steward` |
+| `release-checklist` | `technical-program-manager` | — | `chief-orchestrator`, `project-manager` |
 | `release-readiness-record` | `qa-lead` | — | — |
-| `requirement` | `requirements-engineer` | — | — |
+| `requirement` | `requirements-engineer` | — | `decision-recorder` |
+| `root-cause-diagnosis` | `root-cause-investigator` | — | — |
 | `roster-selection` | `chief-orchestrator` | — | — |
 | `system-architecture` | `solution-architect` | — | — |
-| `task-record` | `chief-orchestrator` | — | `requirements-engineer` |
+| `task-record` | `chief-orchestrator` | — | `operations-coordinator`, `project-manager`, `requirements-engineer`, `technical-program-manager`, `workload-capacity-planner` |
 | `test-strategy` | `qa-lead` | — | `contract-test-engineer`, `requirements-engineer` |
+| `workload-plan` | `workload-capacity-planner` | — | — |

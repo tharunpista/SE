@@ -19,7 +19,9 @@ commands:
   ownership [--artifact <k>] Show the artifact ownership matrix.
   departments               Show department counts against the specification.
   doctor                    Report environment and catalogue health.
-  render --host <id>        Render the active roster for a coding agent.
+  render --host <id>        Render a roster for a coding agent.
+                            --dept <name>   whole department
+                            --roster a,b,c  explicit roles
                             --out <dir>  --dry-run  --all  --force
 
 options:
@@ -301,12 +303,45 @@ known: ${ADAPTERS.map((a) => a.id).join(", ")}`);
     return 1;
   }
 
-  // The default is the active roster, not the catalogue. A 220-role render
-  // exceeds every host's always-loaded metadata budget, which is the whole
-  // reason roster selection exists.
-  const selected = flags.has("all")
-    ? registry.all.filter((r) => r.enabled && r.status === "active")
-    : registry.all.filter((r) => r.enabled && r.status === "active" && r.tier === "starter");
+  // The default is the starter roster, not the catalogue. A full-catalogue
+  // render exceeds the host's always-loaded metadata budget, which is the
+  // whole reason roster selection exists.
+  const routable = registry.all.filter((r) => r.enabled && r.status === "active");
+  const dept = flags.get("dept");
+  const rosterFlag = flags.get("roster");
+
+  let selected: readonly Role[];
+  let selectionLabel: string;
+
+  if (typeof rosterFlag === "string") {
+    const wanted = rosterFlag.split(",").map((s) => s.trim()).filter(Boolean);
+    const missing = wanted.filter((id) => !registry.byId.has(id));
+    if (missing.length > 0) {
+      console.error(`error: unknown role id(s): ${missing.join(", ")}`);
+      return 2;
+    }
+    selected = wanted.map((id) => registry.byId.get(id)!);
+    selectionLabel = `explicit roster (${wanted.length})`;
+  } else if (typeof dept === "string") {
+    if (!DEPARTMENTS.includes(dept)) {
+      console.error(`error: unknown department "${dept}".
+known: ${DEPARTMENTS.join(", ")}`);
+      return 2;
+    }
+    // Selecting a department brings the starter roster with it. A department
+    // on its own has no orchestrator, no contract owner and no verification,
+    // so it would be a set of specialists with nobody sequencing them.
+    const inDept = routable.filter((r) => r.department === dept);
+    const starters = routable.filter((r) => r.tier === "starter" && r.department !== dept);
+    selected = [...inDept, ...starters];
+    selectionLabel = `department ${dept} (${inDept.length}) + starter roster (${starters.length})`;
+  } else if (flags.has("all")) {
+    selected = routable;
+    selectionLabel = `entire catalogue (${routable.length})`;
+  } else {
+    selected = routable.filter((r) => r.tier === "starter");
+    selectionLabel = `starter roster (${selected.length})`;
+  }
 
   if (selected.length === 0) {
     console.error("error: no roles selected. Nothing to render.");
@@ -355,6 +390,9 @@ known: ${ADAPTERS.map((a) => a.id).join(", ")}`);
     console.log(`rendered ${result.files.length} role(s) to ${outDir}/${removed > 0 ? `  (removed ${removed} stale)` : ""}`);
   }
 
+  console.log(
+    `selection ${selectionLabel}`,
+  );
   console.log(
     `host ${adapter.displayName} · ~${result.metadataTokens} metadata tokens` +
     (budget !== null ? ` / ${budget} budget${overBudget ? " (FORCED OVER)" : ""}` : ""),

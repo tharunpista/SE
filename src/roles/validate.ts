@@ -14,7 +14,8 @@ const KNOWN_KEYS = new Set([
   "collaborators", "escalates_to",
   "context_budget_tokens", "max_calls", "enabled", "status", "supersedes",
   "superseded_by", "boundary", "requires_evidence", "writes_files",
-  "owns_spec_sections",
+  "owns_spec_sections", "verify_commands", "escalates_on_failure_to",
+  "stack_aware",
 ]);
 
 const REQUIRED_KEYS = [
@@ -299,6 +300,37 @@ export function validateRole(
     }
   }
 
+  // Hardcoded per role, overridable by the project layer. A role that has to
+  // infer its own verification command gets it wrong on any non-standard
+  // project, and then reports success it never checked.
+  const verify_commands = strArray(ctx, "verify_commands", fm["verify_commands"]);
+  if (fm["requires_evidence"] !== false && verify_commands.length === 0 && fm["writes_files"] === true) {
+    diags.error({
+      code: "role/no-verify-commands", file, key: "verify_commands",
+      message: "A role that writes files and requires evidence must declare at least one verification command.",
+      hint: "Evidence means a recorded command and exit code. Without a declared command the role has no way to produce one.",
+    });
+  }
+
+  // Where to go when stuck, which is a different question from where to go
+  // for a decision. Conflating them sends a technical dead end to the
+  // operator as if it were a product question.
+  const onFailure = fm["escalates_on_failure_to"];
+  if (onFailure !== undefined) {
+    if (typeof onFailure !== "string" || (onFailure !== "operator" && !ID_RE.test(onFailure))) {
+      diags.error({
+        code: "role/invalid-id", file, key: "escalates_on_failure_to",
+        message: `escalates_on_failure_to must be a role id or "operator", received ${JSON.stringify(onFailure)}.`,
+      });
+    } else if (onFailure === id) {
+      diags.error({
+        code: "role/self-escalation", file, key: "escalates_on_failure_to",
+        message: "A role cannot hand its own stuck work back to itself.",
+        hint: "That is the retry loop the three-strike rule exists to break.",
+      });
+    }
+  }
+
   const budget = fm["context_budget_tokens"];
   if (
     budget !== undefined &&
@@ -392,6 +424,9 @@ export function validateRole(
     requires_evidence: (fm["requires_evidence"] as boolean | undefined) ?? true,
     writes_files: (fm["writes_files"] as boolean | undefined) ?? false,
     owns_spec_sections: strArray(ctx, "owns_spec_sections", fm["owns_spec_sections"]),
+    verify_commands,
+    escalates_on_failure_to: typeof onFailure === "string" ? onFailure : null,
+    stack_aware: (fm["stack_aware"] as boolean | undefined) ?? false,
     body,
     file,
   };

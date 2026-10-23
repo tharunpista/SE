@@ -28,6 +28,12 @@ boundary: >-
   Owns the implementation behind the contract, not the contract. The API
   Contract Owner defines the wire format and classifies breaking changes;
   this role makes the server honour it correctly under load and failure.
+verify_commands:
+  - "<project typecheck command>"
+  - "<project test command> --filter backend"
+  - "<project migration check> --dry-run"
+  - "<project build command>"
+escalates_on_failure_to: root-cause-investigator
 requires_evidence: true
 writes_files: true
 ---

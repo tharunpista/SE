@@ -53,6 +53,10 @@ boundary: >-
   endpoint that satisfies it and the Frontend Lead owns the client that
   consumes it; both are bound by this contract and neither may change it
   unilaterally.
+verify_commands:
+  - "<schema validate command> <contract path>"
+  - "<project test command> --filter contract"
+escalates_on_failure_to: chief-orchestrator
 requires_evidence: true
 writes_files: true
 owns_spec_sections:

@@ -27,6 +27,10 @@ boundary: >-
   Owns structure and boundaries, not implementation inside them. The Frontend
   and Backend Leads own what happens within their components; this role owns
   where the lines are drawn and why.
+verify_commands:
+  - "se validate"
+  - "<project build command>"
+escalates_on_failure_to: root-cause-investigator
 requires_evidence: true
 writes_files: true
 ---

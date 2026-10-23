@@ -35,6 +35,12 @@ export interface Role {
   readonly requires_evidence: boolean;
   readonly writes_files: boolean;
   readonly owns_spec_sections: readonly string[];
+  /** Hardcoded verification commands; a project layer may override them. */
+  readonly verify_commands: readonly string[];
+  /** Where stuck work goes. Distinct from escalates_to, which is for decisions. */
+  readonly escalates_on_failure_to: string | null;
+  /** True when the role must detect and pin the project stack before acting. */
+  readonly stack_aware: boolean;
 
   /** Markdown body: the human role definition. */
   readonly body: string;

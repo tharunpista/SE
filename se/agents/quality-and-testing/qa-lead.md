@@ -27,6 +27,11 @@ boundary: >-
   Owns what must be verified and whether the evidence is sufficient, not the
   implementation under test. Test engineers write the tests; this role decides
   where testing effort is worth spending and what blocks a release.
+verify_commands:
+  - "<project test command>"
+  - "<project coverage command>"
+  - "git diff --stat -- <test paths>"
+escalates_on_failure_to: root-cause-investigator
 requires_evidence: true
 writes_files: true
 ---

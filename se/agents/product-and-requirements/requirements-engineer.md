@@ -26,6 +26,10 @@ boundary: >-
   Writes requirements, not priorities. The Product Manager decides what is
   worth building and in what order; this role makes sure that whatever is
   chosen is stated precisely enough to be verified.
+verify_commands:
+  - "se validate"
+  - "<project link check> docs/"
+escalates_on_failure_to: chief-orchestrator
 requires_evidence: true
 writes_files: true
 ---

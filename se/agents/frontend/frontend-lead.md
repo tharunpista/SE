@@ -28,6 +28,12 @@ boundary: >-
   Owns the client, not the contract it consumes. The API Contract Owner
   defines what the server returns; this role decides how the UI behaves when
   it returns nothing, something partial, or an error.
+verify_commands:
+  - "<project typecheck command>"
+  - "<project lint command>"
+  - "<project test command> --filter frontend"
+  - "<project build command>"
+escalates_on_failure_to: root-cause-investigator
 requires_evidence: true
 writes_files: true
 ---

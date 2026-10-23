@@ -2,13 +2,19 @@
 
 # Role inventory
 
-9 roles across 16 departments.
+16 roles across 16 departments.
 
-## orchestration (1)
+## orchestration (7)
 
 | id | name | tier | mission |
 |---|---|---|---|
 | `chief-orchestrator` | Chief Orchestrator | starter | Decompose a goal into bounded, owned, sequenced tasks; select the smallest sufficient roster; and refuse to let work proceed on unresolved contracts, unresolved project identity, or unsupported completion claims. |
+| `decision-recorder` | Requirements and Decision Recorder | catalogue | Record what was actually decided and on whose authority, keep the four provenance classes separate, and preserve superseded history so a past decision can be understood on its own terms. |
+| `knowledge-steward` | Memory Coordinator and Knowledge Steward | starter | Decide what is worth remembering and what may be promoted beyond the project that learned it, so memory stays small, trustworthy and free of one project's conventions presented as universal truth. |
+| `operations-coordinator` | Operations Coordinator | catalogue | Keep the escalation queue moving and every open commitment owned, so no decision sits unanswered and no blocked work is forgotten. |
+| `project-manager` | Project Manager | catalogue | Own scope, sequence and delivery status, and keep schedule pressure from being converted into silently lowered acceptance criteria. |
+| `technical-program-manager` | Technical Program Manager | catalogue | Own cross-component dependencies and integration checkpoints, so that components built in parallel actually meet, and nothing reaches release sequencing untested across its boundaries. |
+| `workload-capacity-planner` | Workload and Capacity Planner | catalogue | Decide how much work should run at once, so that parallelism buys real throughput instead of contention, rework and an unreviewable pile of simultaneous changes. |
 
 ## product-and-requirements (1)
 
@@ -41,11 +47,12 @@
 | `api-contract-owner` | API Contract Owner | starter | Own the authoritative request and response contract between producer and consumer, and make it exist before either side builds against an assumption. |
 | `contract-test-engineer` | Contract Test Engineer | starter | Prove that each producer and each consumer independently conform to the agreed interface, and catch a breaking change at the boundary that introduced it rather than in production. |
 
-## quality-and-testing (1)
+## quality-and-testing (2)
 
 | id | name | tier | mission |
 |---|---|---|---|
 | `qa-lead` | QA Lead | starter | Define the verification strategy and the quality gates, allocate test effort by risk rather than by coverage, and refuse completion claims that no evidence supports. |
+| `root-cause-investigator` | Root Cause Investigator | starter | Take over work that is stuck, find the actual cause with evidence rather than guessing at fixes, and hand a diagnosis back to the role that owns the code so it can finish. |
 
 ## agent-platform-engineering (1)
 

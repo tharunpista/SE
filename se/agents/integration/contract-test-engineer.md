@@ -27,6 +27,10 @@ boundary: >-
   Verifies conformance to the contract; does not define it and does not
   classify breaking changes. The API Contract Owner decides what the contract
   says and what breaks it; this role proves whether each side obeys it.
+verify_commands:
+  - "<project test command> --filter contract"
+  - "<contract diff tool> <previous> <current>"
+escalates_on_failure_to: root-cause-investigator
 requires_evidence: true
 writes_files: true
 ---
