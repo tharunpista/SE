@@ -1,0 +1,22 @@
+se --- an open-source AI engineering organization and project-memory layer
+Copyright 2026 The se authors
+
+This product includes software developed by the se project
+(https://github.com/tharunvijay/se).
+
+Licensed under the Apache License, Version 2.0 (the "License"); see the
+LICENSE file in the root of this repository.
+
+-----------------------------------------------------------------------
+Acknowledgements
+-----------------------------------------------------------------------
+
+The design of this project was informed by ideas from the following
+open-source projects. No source code or documentation text from them is
+included in this repository.
+
+  gstack (https://github.com/garrytan/gstack), MIT License.
+    Informed: role definitions as plain Markdown with named personas;
+    composable review pipelines; evidence-backed completion gates;
+    authoring instructions once and rendering them per agent host;
+    keeping mutable runtime state outside the source tree.

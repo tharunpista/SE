@@ -1,0 +1,33 @@
+{
+  "name": "se-org",
+  "version": "0.0.0",
+  "private": false,
+  "description": "An open-source AI engineering organization: 220 role definitions and a crash-safe project-memory layer for coding agents.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "bin": {
+    "se": "./src/cli.ts"
+  },
+  "engines": {
+    "bun": ">=1.3.3"
+  },
+  "scripts": {
+    "se": "bun run src/cli.ts",
+    "validate": "bun run src/cli.ts validate",
+    "test": "bun test",
+    "typecheck": "tsc --noEmit",
+    "check": "bun run typecheck && bun run validate && bun test",
+    "gen": "bun run src/cli.ts roles --markdown > se/agents/role-inventory.md && bun run src/cli.ts ownership --markdown > se/agents/ownership-matrix.md"
+  },
+  "keywords": [
+    "ai-agents",
+    "agent-memory",
+    "claude-code",
+    "multi-agent",
+    "software-engineering"
+  ],
+  "devDependencies": {
+    "@types/bun": "^1.3.6",
+    "typescript": "^5.9.3"
+  }
+}
