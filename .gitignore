@@ -28,3 +28,8 @@ Thumbs.db
 .idea/
 .vscode/
 *.swp
+
+# Rendered host integrations are generated from se/agents/ by `se render`.
+# Not committed: they are a build output, and committing them invites edits
+# in the wrong place.
+.claude/agents/

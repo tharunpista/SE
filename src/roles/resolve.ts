@@ -42,6 +42,16 @@ function loadLayer(root: string, layer: LayerName, dir: string, diags: Diagnosti
   const out: LayerEntry[] = [];
   for (const abs of walkMarkdown(dir)) {
     const rel = repoRelative(root, abs);
+
+    // A builtin role lives at se/agents/<department>/<id>.md. Anything
+    // directly in se/agents/ is not a role -- that is where the generated
+    // inventory and ownership matrix live, and scanning them as roles
+    // produced spurious "missing frontmatter" errors. Making the rule
+    // structural rather than a filename blocklist also means a new
+    // generated file cannot reintroduce the bug.
+    const relToLayer = posix(abs.slice(dir.length).replace(/^[\\/]+/, ""));
+    const segments = relToLayer.split("/");
+    if (layer === "builtin" && segments.length < 2) continue;
     const parsed = parseRoleFile(rel, readFileSync(abs, "utf8"), diags);
     if (!parsed) continue;
 
@@ -65,6 +75,22 @@ function loadLayer(root: string, layer: LayerName, dir: string, diags: Diagnosti
         message: `File is named "${basename(abs)}" but declares id "${id}".`,
         hint: `Rename the file to "${expected}", or correct the id.`,
       });
+    }
+
+    // The directory name must match the declared department. Free integrity
+    // check: it catches a role filed in the wrong department, which would
+    // otherwise show up only as two confusing department-count errors at
+    // opposite ends of the report.
+    if (layer === "builtin") {
+      const dirDepartment = segments[0];
+      const declared = parsed.frontmatter["department"];
+      if (typeof declared === "string" && dirDepartment !== declared) {
+        diags.error({
+          code: "role/department-directory-mismatch", file: rel, key: "department",
+          message: `File is in "${dirDepartment}/" but declares department "${declared}".`,
+          hint: `Move the file to se/agents/${declared}/, or correct the department.`,
+        });
+      }
     }
 
     out.push({ layer, file: rel, frontmatter: parsed.frontmatter, body: parsed.body });

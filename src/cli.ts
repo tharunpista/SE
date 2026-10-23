@@ -1,9 +1,12 @@
 #!/usr/bin/env bun
+import { mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 import { findRepoRoot } from "./util/paths.ts";
 import { resolveRoles } from "./roles/resolve.ts";
 import { checkIntegrity } from "./roles/integrity.ts";
 import { DEPARTMENTS, DEPARTMENT_EXPECTED_COUNTS, EXPECTED_ROLE_TOTAL } from "./roles/vocabulary.ts";
 import type { Role } from "./roles/types.ts";
+import { ADAPTERS, findAdapter } from "./render/claude-code.ts";
 
 const USAGE = `se --- AI engineering organization and project-memory layer
 
@@ -16,6 +19,8 @@ commands:
   ownership [--artifact <k>] Show the artifact ownership matrix.
   departments               Show department counts against the specification.
   doctor                    Report environment and catalogue health.
+  render --host <id>        Render the active roster for a coding agent.
+                            --out <dir>  --dry-run  --all  --force
 
 options:
   --json                    Machine-readable output.
@@ -275,6 +280,98 @@ function cmdDoctor(root: string, flags: Args["flags"]): number {
   return diags.ok ? 0 : 1;
 }
 
+
+function cmdRender(root: string, flags: Args["flags"]): number {
+  const hostId = typeof flags.get("host") === "string" ? (flags.get("host") as string) : "claude-code";
+  const adapter = findAdapter(hostId);
+  if (!adapter) {
+    console.error(`error: unknown host "${hostId}".
+known: ${ADAPTERS.map((a) => a.id).join(", ")}`);
+    return 2;
+  }
+
+  const { registry, diags } = loadCatalogue(root);
+
+  // Rendering a catalogue with per-file errors would emit broken agent
+  // definitions that Claude Code silently skips. Refuse instead.
+  const perFile = diags.sorted().filter((d) => d.code.startsWith("role/"));
+  if (perFile.length > 0) {
+    console.error(diags.format({ color: useColor(flags) }));
+    console.error("\nerror: refusing to render while role files have errors.");
+    return 1;
+  }
+
+  // The default is the active roster, not the catalogue. A 220-role render
+  // exceeds every host's always-loaded metadata budget, which is the whole
+  // reason roster selection exists.
+  const selected = flags.has("all")
+    ? registry.all.filter((r) => r.enabled && r.status === "active")
+    : registry.all.filter((r) => r.enabled && r.status === "active" && r.tier === "starter");
+
+  if (selected.length === 0) {
+    console.error("error: no roles selected. Nothing to render.");
+    return 1;
+  }
+
+  const result = adapter.render(selected);
+  const budget = adapter.metadataTokenBudget;
+  const overBudget = budget !== null && result.metadataTokens > budget;
+
+  if (overBudget && !flags.has("force")) {
+    console.error(
+      `error: ${selected.length} roles would add about ${result.metadataTokens} tokens of\n` +
+      `always-loaded metadata to every ${adapter.displayName} session, over the\n` +
+      `${budget} token budget.\n\n` +
+      "Every rendered role costs context in every session, whether it is used\n" +
+      "or not. Render the roster you actually need, not the catalogue.\n\n" +
+      `  se render --host ${adapter.id}            # starter roster only\n` +
+      `  se render --host ${adapter.id} --force    # proceed anyway\n`,
+    );
+    return 1;
+  }
+
+  const outDir = typeof flags.get("out") === "string" ? (flags.get("out") as string) : adapter.defaultOut;
+  const absOut = join(root, outDir);
+
+  if (flags.has("dry-run")) {
+    for (const f of result.files) console.log(`${outDir}/${f.path}`);
+  } else {
+    mkdirSync(absOut, { recursive: true });
+
+    // Remove previously generated files that no longer correspond to a
+    // selected role. Without this, disabling a role in a local override
+    // layer leaves its agent definition behind and the host keeps offering a
+    // role the project has deliberately switched off.
+    let removed = 0;
+    for (const existing of readdirSync(absOut).filter((n) => n.endsWith(".md"))) {
+      const abs = join(absOut, existing);
+      if (result.files.some((f) => f.path === existing)) continue;
+      if (!readFileSync(abs, "utf8").includes("GENERATED from se/agents/")) continue; // never touch hand-written files
+      rmSync(abs);
+      removed++;
+    }
+
+    for (const f of result.files) writeFileSync(join(absOut, f.path), f.contents, "utf8");
+    console.log(`rendered ${result.files.length} role(s) to ${outDir}/${removed > 0 ? `  (removed ${removed} stale)` : ""}`);
+  }
+
+  console.log(
+    `host ${adapter.displayName} · ~${result.metadataTokens} metadata tokens` +
+    (budget !== null ? ` / ${budget} budget${overBudget ? " (FORCED OVER)" : ""}` : ""),
+  );
+
+  const writers = selected.filter((r) => r.writes_files);
+  if (writers.length > 0) {
+    console.log(`${writers.length} role(s) render with isolation: worktree (Part XV 53).`);
+  }
+
+  if (result.unmapped.size > 0) {
+    console.log("\ncapabilities this host cannot provide:");
+    for (const [id, caps] of result.unmapped) console.log(`  ${id}: ${caps.join(", ")}`);
+  }
+  return 0;
+}
+
 function main(argv: readonly string[]): number {
   const args = parseArgs(argv);
   switch (args.command) {
@@ -284,6 +381,7 @@ function main(argv: readonly string[]): number {
     case "ownership":   return cmdOwnership(requireRoot(), args.flags);
     case "departments": return cmdDepartments(requireRoot(), args.flags);
     case "doctor":      return cmdDoctor(requireRoot(), args.flags);
+    case "render":      return cmdRender(requireRoot(), args.flags);
     case "help":
     case "--help":
     case "-h":
