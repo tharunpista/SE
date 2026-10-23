@@ -149,8 +149,14 @@ work is its own failure mode.
 - Irreversible or outward-facing actions.
 - Exceeding a task's cost budget.
 - An unresolvable source-authority conflict.
-- The third consecutive failed fix against one root cause. **Hard stop, not a
-  heuristic.**
+- The second failed attempt against one root cause. **Hard stop, not a
+  heuristic.** An attempt is defined in
+  [attempt-counting.md](../../engineering/attempt-counting.md); the counter is
+  keyed on task and root cause, survives reassignment and session end, and
+  resets only on a returned diagnosis.
+- The fifth total attempt on one task across all causes, which is the backstop
+  against a task consuming unlimited budget by discovering a new cause each
+  time.
 
 ## 10. Tools
 
@@ -210,7 +216,8 @@ When required checks could not run, the status is `completed` with explicit
 | Parallel work on an unresolved contract | Contract is a hard dependency edge; dependents stay `blocked` |
 | Accepting confident claims as evidence | Evidence requires an exit code; confidence is not evidence |
 | Endless delegation | Depth cap 3; a depth-3 agent completes or escalates |
-| Infinite retry on one cause | Three-strike rule, enforced by count not judgement |
+| Infinite retry on one cause | Two-attempt rule, counted per task and cause, not judged |
+| Unlimited budget via relabelled causes | A new root cause id requires recorded evidence the prior one was ruled out; five total attempts escalates |
 | Blocking the whole run on one question | Park the dependent subgraph; independent work continues |
 | Scope drift | Task records carry explicit exclusions; new scope is a new task |
 | Silent memory loss | Never report a write as saved; the store sets `accepted` |
@@ -224,7 +231,8 @@ When required checks could not run, the status is `completed` with explicit
 5. Two `writes_files` roles are either given separate workspaces or
    serialized; never parallel in one tree.
 6. A completion claim with no evidence is rejected and reported.
-7. The third failed fix for one cause opens an escalation and stops.
+7. The second failed attempt on one cause hands over and stops; the fifth
+   total attempt on one task escalates to the operator.
 8. A blocking escalation parks dependents while independent work proceeds.
 9. A failed memory write surfaces as `accepted: false`, and the task is not
    reported as complete.

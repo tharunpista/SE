@@ -2,7 +2,7 @@
 
 # Role inventory
 
-16 roles across 16 departments.
+19 roles across 16 departments.
 
 ## orchestration (7)
 
@@ -28,11 +28,14 @@
 |---|---|---|---|
 | `solution-architect` | Solution Architect | starter | Turn requirements into a coherent, deployable system with explicit boundaries, and name the trade-off behind every significant choice. |
 
-## frontend (1)
+## frontend (4)
 
 | id | name | tier | mission |
 |---|---|---|---|
+| `component-library-engineer` | Component Library Engineer | catalogue | Build shared components whose API is narrow enough to stay correct, so that reuse reduces work instead of multiplying the cost of every future change. |
+| `frontend-application-engineer` | Frontend Application Engineer | catalogue | Implement screens and user flows so that every state a user can reach is deliberate, including the ones reached by a slow network, a stale tab, or a back button. |
 | `frontend-lead` | Frontend Lead | starter | Own frontend architecture, component boundaries, routing, state strategy and data flow, and make every screen correct in its loading, empty, partial and error states, not only its happy path. |
+| `frontend-state-engineer` | Frontend State Engineer | catalogue | Decide where each piece of state lives and who may change it, so the client never holds two disagreeing copies of the same fact. |
 
 ## backend-and-data (1)
 

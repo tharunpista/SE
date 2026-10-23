@@ -6,6 +6,7 @@ export const ARTIFACT_KINDS = new Set(vocab.artifact_kinds as readonly string[])
 export const INTERFACE_KINDS = new Set(vocab.interface_kinds as readonly string[]);
 export const MEMORY_SCOPES = new Set(vocab.memory_scopes as readonly string[]);
 export const LIFECYCLE_PHASES = vocab.lifecycle_phases as readonly string[];
+export const CLI_COMMANDS = new Set(vocab.cli_commands as readonly string[]);
 export const TRUST_TIERS = vocab.trust_tiers as readonly string[];
 
 export const EXPECTED_ROLE_TOTAL = Object.values(DEPARTMENT_EXPECTED_COUNTS).reduce((a, b) => a + b, 0);

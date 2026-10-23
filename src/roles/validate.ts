@@ -1,6 +1,6 @@
 import type { Diagnostics } from "../util/diagnostics.ts";
 import {
-  ARTIFACT_KINDS, DEPARTMENTS, INTERFACE_KINDS, MEMORY_SCOPES, suggest,
+  ARTIFACT_KINDS, CLI_COMMANDS, DEPARTMENTS, INTERFACE_KINDS, MEMORY_SCOPES, suggest,
 } from "./vocabulary.ts";
 import type { MemoryScope, Role, Tier } from "./types.ts";
 
@@ -15,7 +15,7 @@ const KNOWN_KEYS = new Set([
   "context_budget_tokens", "max_calls", "enabled", "status", "supersedes",
   "superseded_by", "boundary", "requires_evidence", "writes_files",
   "owns_spec_sections", "verify_commands", "escalates_on_failure_to",
-  "stack_aware",
+  "stack_aware", "blocked_on",
 ]);
 
 const REQUIRED_KEYS = [
@@ -312,6 +312,24 @@ export function validateRole(
     });
   }
 
+  // A verification command naming an se subcommand that does not exist would
+  // fail with a usage error, and the role would read that exit code as a
+  // failure of the code under test. Either the command exists, or the role
+  // declares the gap in blocked_on and nobody mistakes it for working.
+  const blocked_on = strArray(ctx, "blocked_on", fm["blocked_on"]);
+  for (const cmd of verify_commands) {
+    const m = /^"?se\s+([a-z][a-z-]*)/.exec(cmd.trim());
+    if (!m) continue;
+    const sub = m[1]!;
+    if (CLI_COMMANDS.has(sub)) continue;
+    if (blocked_on.some((b) => b === `se ${sub}` || b.startsWith(`se ${sub} `))) continue;
+    diags.error({
+      code: "role/unimplemented-verify-command", file, key: "verify_commands",
+      message: `"se ${sub}" is not an implemented command.${suggest(sub, CLI_COMMANDS)}`,
+      hint: `Point at a command that exists, or declare the gap: blocked_on: ["se ${sub}"]. A role that runs a nonexistent command reads the usage error as a test failure.`,
+    });
+  }
+
   // Where to go when stuck, which is a different question from where to go
   // for a decision. Conflating them sends a technical dead end to the
   // operator as if it were a product question.
@@ -426,6 +444,7 @@ export function validateRole(
     owns_spec_sections: strArray(ctx, "owns_spec_sections", fm["owns_spec_sections"]),
     verify_commands,
     escalates_on_failure_to: typeof onFailure === "string" ? onFailure : null,
+    blocked_on,
     stack_aware: (fm["stack_aware"] as boolean | undefined) ?? false,
     body,
     file,

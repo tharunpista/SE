@@ -15,8 +15,8 @@ tools: [read-files, search, write-files, run-tests, memory-read, memory-write, e
 memory_scopes:
   read: [session, project, role, organization]
   write: [session, project]
-owns_artifacts: [frontend-route, frontend-screen, frontend-component, frontend-state-model]
-contributes_artifacts: [interface-contract, accessibility-spec, frontend-build-config]
+owns_artifacts: [frontend-architecture]
+contributes_artifacts: [frontend-route, frontend-screen, frontend-component, frontend-state-model, interface-contract]
 owns_interfaces: []
 participates_interfaces: [frontend-backend]
 collaborators: [chief-orchestrator, solution-architect, api-contract-owner, backend-lead, qa-lead]
@@ -34,6 +34,7 @@ verify_commands:
   - "<project test command> --filter frontend"
   - "<project build command>"
 escalates_on_failure_to: root-cause-investigator
+stack_aware: true
 requires_evidence: true
 writes_files: true
 ---

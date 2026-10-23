@@ -25,6 +25,8 @@ escalates_on_failure_to: memory-systems-engineer
 context_budget_tokens: 45000
 max_calls: 15
 enabled: true
+blocked_on:
+  - "se memory"
 verify_commands:
   - "se memory query --scope organization --status active"
   - "se memory doctor --check stale"

@@ -1,3 +1,5 @@
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import type { Role } from "../roles/types.ts";
 import type { CapabilityMap, HostAdapter, RenderResult, RenderedFile } from "./host.ts";
 import { estimateTokens, mapCapabilities, routingDescription } from "./host.ts";
@@ -55,7 +57,22 @@ function yamlString(s: string): string {
   return `"${s.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
 }
 
-function renderRole(role: Role): { file: RenderedFile; unmapped: string[]; descriptionTokens: number } {
+/**
+ * Stack discipline, loaded once per render rather than copied into each role
+ * file. It is injected into the body, which loads only when the role runs, so
+ * it costs nothing in always-loaded metadata.
+ */
+let stackDisciplineCache: string | null | undefined;
+function stackDiscipline(root: string): string | null {
+  if (stackDisciplineCache !== undefined) return stackDisciplineCache;
+  const path = join(root, "se", "engineering", "stack-discipline.md");
+  stackDisciplineCache = existsSync(path)
+    ? readFileSync(path, "utf8").replace(/^#\s+/m, "## ").trim()
+    : null;
+  return stackDisciplineCache;
+}
+
+function renderRole(role: Role, root: string): { file: RenderedFile; unmapped: string[]; descriptionTokens: number } {
   const { tools, unmapped } = mapCapabilities(role, CAPABILITIES);
   const genuinelyUnmapped = unmapped.filter((c) => !INTERNAL_CAPABILITIES.has(c));
   const description = routingDescription(role);
@@ -97,6 +114,43 @@ function renderRole(role: Role): { file: RenderedFile; unmapped: string[]; descr
   ];
 
   const footer: string[] = ["", "---", ""];
+
+  if (role.blocked_on.length > 0) {
+    footer.push(
+      `**Not yet available.** This role depends on ${role.blocked_on.join(", ")},`,
+      "which is not implemented. Do not run those commands and do not treat their",
+      "absence as a failure of the code you are working on. Where a check cannot",
+      "run, report the work as completed with that check named as unverified.",
+      "Never report it as verified.",
+      "",
+    );
+  }
+
+  if (role.verify_commands.length > 0) {
+    footer.push(
+      "**Verification.** Record the command and its exit code for each check:",
+      "",
+      ...role.verify_commands.map((c) => `- \`${c}\``),
+      "",
+      "A placeholder in angle brackets means the project supplies the real",
+      "command. Find it in the project manifest or scripts; if it is not there,",
+      "ask rather than guessing, and never report a check you did not run.",
+      "",
+    );
+  }
+
+  if (role.escalates_on_failure_to) {
+    footer.push(
+      `**When stuck.** After **two** failed attempts at the same root cause, stop.`,
+      `Do not attempt a third. Hand over to \`${role.escalates_on_failure_to}\` with:`,
+      "the exact failing command and its full output; what you attempted and what",
+      "you observed after each attempt; the last known working state; and your",
+      "suspected cause stated so it can be falsified. Two failed fixes mean the",
+      "model of the problem is wrong, and a third attempt from the same model is a",
+      "coin flip. You will get a diagnosis back and finish the work yourself.",
+      "",
+    );
+  }
   if (role.boundary) {
     footer.push(`**Boundary.** ${role.boundary}`, "");
   }
@@ -109,6 +163,11 @@ function renderRole(role: Role): { file: RenderedFile; unmapped: string[]; descr
       "",
     );
   }
+  if (role.stack_aware) {
+    const discipline = stackDiscipline(root);
+    if (discipline) footer.push(discipline, "");
+  }
+
   if (genuinelyUnmapped.length > 0) {
     footer.push(
       `**Unavailable capabilities.** This role declares ${genuinelyUnmapped.join(", ")},`,
@@ -145,7 +204,7 @@ export const claudeCodeAdapter: HostAdapter = {
    */
   metadataTokenBudget: 9000,
 
-  render(roles: readonly Role[]): RenderResult {
+  render(roles: readonly Role[], root = process.cwd()): RenderResult {
     const files: RenderedFile[] = [];
     const unmapped = new Map<string, readonly string[]>();
     let metadataTokens = 0;
@@ -153,7 +212,7 @@ export const claudeCodeAdapter: HostAdapter = {
     // Sorted for deterministic output: an unstable render churns the diff
     // and makes a real change invisible among reorderings.
     for (const role of [...roles].sort((a, b) => a.id.localeCompare(b.id))) {
-      const rendered = renderRole(role);
+      const rendered = renderRole(role, root);
       files.push(rendered.file);
       metadataTokens += rendered.descriptionTokens;
       if (rendered.unmapped.length > 0) unmapped.set(role.id, rendered.unmapped);

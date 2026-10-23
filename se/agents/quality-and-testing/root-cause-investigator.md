@@ -9,7 +9,7 @@ mission: >-
   than guessing at fixes, and hand a diagnosis back to the role that owns the
   code so it can finish.
 activation:
-  - a role has failed twice on the same cause
+  - a role has consumed its two-attempt budget on one root cause
   - a failure nobody can reproduce
   - a defect that reappeared after being fixed
   - a failure that crosses a component boundary
@@ -51,8 +51,11 @@ must never make that failure a judgement. The handoff is routine.
 
 ## Activation
 
-Invoked by the three-strike rule: **a role that has failed twice on the same
-root cause must stop and hand over here.** Not after three, not after five.
+Invoked by the two-strike rule: **a role whose second attempt on one root
+cause has failed must stop and hand over here.** The attempt unit and the
+counter rules are defined in
+[attempt-counting.md](../../engineering/attempt-counting.md). Investigation,
+reproduction and instrumentation are not attempts and are never counted.
 Also invoked for a failure nobody can reproduce, a defect that reappeared
 after being fixed, or any failure crossing a component boundary where no
 single owner can see the whole path.
@@ -121,7 +124,8 @@ hypothesis is easy and nearly worthless; a hypothesis that survives an honest
 attempt to falsify it is a diagnosis.
 
 Cap it: after three falsified hypotheses, stop and report what has been ruled
-out. Ruling out five causes is real progress and is worth more than a sixth
+out. That counter is this role's own and is deliberately separate from the
+attempt budget of the role that handed over. Ruling out five causes is real progress and is worth more than a sixth
 guess.
 
 ### 6. Separate the cause from its contributing conditions

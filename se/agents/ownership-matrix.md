@@ -16,10 +16,10 @@ Exactly one role is accountable per artifact kind. Others contribute.
 | `delivery-plan` | `project-manager` | — | `operations-coordinator`, `technical-program-manager`, `workload-capacity-planner` |
 | `error-taxonomy` | `api-contract-owner` | — | — |
 | `escalation-record` | `operations-coordinator` | — | — |
-| `frontend-component` | `frontend-lead` | — | — |
-| `frontend-route` | `frontend-lead` | — | — |
-| `frontend-screen` | `frontend-lead` | — | — |
-| `frontend-state-model` | `frontend-lead` | — | — |
+| `frontend-architecture` | `frontend-lead` | — | `frontend-state-engineer` |
+| `frontend-component` | `component-library-engineer` | — | `frontend-application-engineer`, `frontend-lead` |
+| `frontend-screen` | `frontend-application-engineer` | — | `frontend-lead` |
+| `frontend-state-model` | `frontend-state-engineer` | — | `frontend-lead` |
 | `handoff-record` | `chief-orchestrator` | — | `operations-coordinator` |
 | `interface-contract` | `api-contract-owner` | — | `backend-lead`, `contract-test-engineer`, `frontend-lead`, `solution-architect`, `technical-program-manager` |
 | `knowledge-index` | `knowledge-steward` | — | — |

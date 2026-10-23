@@ -39,6 +39,8 @@ export interface Role {
   readonly verify_commands: readonly string[];
   /** Where stuck work goes. Distinct from escalates_to, which is for decisions. */
   readonly escalates_on_failure_to: string | null;
+  /** Declared dependencies on capabilities that do not exist yet. */
+  readonly blocked_on: readonly string[];
   /** True when the role must detect and pin the project stack before acting. */
   readonly stack_aware: boolean;
 

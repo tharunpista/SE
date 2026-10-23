@@ -24,6 +24,8 @@ escalates_on_failure_to: chief-orchestrator
 context_budget_tokens: 35000
 max_calls: 12
 enabled: true
+blocked_on:
+  - "se tasks"
 verify_commands:
   - "se tasks list --status blocked"
   - "se tasks list --overdue"

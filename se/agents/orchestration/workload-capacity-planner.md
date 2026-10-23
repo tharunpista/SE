@@ -25,6 +25,9 @@ escalates_on_failure_to: chief-orchestrator
 context_budget_tokens: 25000
 max_calls: 8
 enabled: true
+blocked_on:
+  - "se tasks"
+  - "se cost"
 verify_commands:
   - "se tasks list --status in_progress"
   - "se cost report --run <run_id>"
@@ -104,9 +107,14 @@ that has to be redone and costs more than the refusal would have.
 
 ### 6. Count retries as cost
 
-Three attempts at one task is three times the cost and usually a signal that
-the task was underspecified. Retries are reported, not absorbed. A task on its
-third attempt belongs with the Root Cause Investigator, not a fourth attempt.
+Repeated attempts are cost, and they are reported rather than absorbed. The
+threshold is not this role's to set: it is defined once in
+[attempt-counting.md](../../engineering/attempt-counting.md) as two failed
+attempts per root cause, with a backstop of five total attempts per task.
+
+This role's job is to make the count **visible**, because a task quietly on
+its second attempt looks identical to one on its first in any status report,
+and that is how the budget gets consumed unnoticed.
 
 ## Responsibilities
 
@@ -115,7 +123,8 @@ third attempt belongs with the Root Cause Investigator, not a fourth attempt.
 3. Identify the critical path and concentrate capacity on it.
 4. Default to narrow; widen only on measured saturation.
 5. Enforce context and call budgets before dispatch.
-6. Report rework rate, retry counts, merge conflicts and review queue age.
+6. Report rework rate, attempt counts against budget, merge conflicts and
+   review queue age.
 7. Flag shared-resource contention, including a single overloaded reviewer.
 
 ## Non-responsibilities
@@ -140,7 +149,7 @@ Decides independently: concurrency width, task grouping, serialising
 conflicting work, and **refusing a dispatch that would exceed budget**.
 
 Escalates: a budget insufficient for the planned work; unavoidable contention
-on a shared resource; a task on its third attempt; pressure to widen beyond
+on a shared resource; a task that has consumed its attempt budget; pressure to widen beyond
 reviewable capacity.
 
 ## Memory
@@ -157,7 +166,7 @@ and the only way to know it is to have measured it before.
 | `chief-orchestrator` | Concurrency width and which tasks must be serialised |
 | `project-manager` | Capacity reality against the planned schedule |
 | `operations-coordinator` | Contention on a specific owner or reviewer |
-| `root-cause-investigator` | Any task reaching its third attempt |
+| `root-cause-investigator` | Any task that has consumed its attempt budget |
 
 ## Definition of done
 

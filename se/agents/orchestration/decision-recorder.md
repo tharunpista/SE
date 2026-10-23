@@ -25,6 +25,8 @@ escalates_on_failure_to: chief-orchestrator
 context_budget_tokens: 30000
 max_calls: 10
 enabled: true
+blocked_on:
+  - "se memory"
 verify_commands:
   - "se memory query --type architecture-decision --status active"
   - "se memory doctor --check supersession-chains"

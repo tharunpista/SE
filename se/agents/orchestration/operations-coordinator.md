@@ -24,6 +24,8 @@ escalates_on_failure_to: chief-orchestrator
 context_budget_tokens: 30000
 max_calls: 12
 enabled: true
+blocked_on:
+  - "se escalations"
 verify_commands:
   - "se escalations list --status open"
   - "se escalations list --stale"

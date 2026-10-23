@@ -25,7 +25,7 @@ export interface HostAdapter {
    * 220-role catalogue is that only the active roster is ever loaded.
    */
   readonly metadataTokenBudget: number | null;
-  render(roles: readonly Role[]): RenderResult;
+  render(roles: readonly Role[], root?: string): RenderResult;
 }
 
 /**

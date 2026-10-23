@@ -1,5 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import { codes, hasCode, relevant, roleFile, tempRepo } from "./harness.ts";
+import { readFileSync } from "node:fs";
+import { join, sep } from "node:path";
+import { findRepoRoot } from "../src/util/paths.ts";
 
 describe("frontmatter parsing", () => {
   test("accepts CRLF line endings", () => {
@@ -195,6 +198,66 @@ describe("fail-closed validation", () => {
     } finally {
       repo.dispose();
     }
+  });
+});
+
+describe("audit regressions", () => {
+  test("a verify_commands entry naming a nonexistent se subcommand is rejected", () => {
+    const repo = tempRepo();
+    try {
+      repo.builtin("orchestration/a.md", roleFile("a", {
+        verify_commands: ["se tasks list --status blocked"],
+      }));
+      // The role would run a usage error and read its exit code as a failure
+      // of the code under test. Found in 13 real role files by audit.
+      expect(hasCode(repo.check().diagnostics, "role/unimplemented-verify-command")).toBe(true);
+    } finally {
+      repo.dispose();
+    }
+  });
+
+  test("a declared blocked_on dependency permits the reference", () => {
+    const repo = tempRepo();
+    try {
+      repo.builtin("orchestration/a.md", roleFile("a", {
+        verify_commands: ["se tasks list --status blocked"],
+        blocked_on: ["se tasks"],
+      }));
+      expect(hasCode(repo.check().diagnostics, "role/unimplemented-verify-command")).toBe(false);
+      expect(repo.resolve().byId.get("a")?.blocked_on).toEqual(["se tasks"]);
+    } finally {
+      repo.dispose();
+    }
+  });
+
+  test("an implemented se subcommand needs no declaration", () => {
+    const repo = tempRepo();
+    try {
+      repo.builtin("orchestration/a.md", roleFile("a", { verify_commands: ["se validate"] }));
+      expect(hasCode(repo.check().diagnostics, "role/unimplemented-verify-command")).toBe(false);
+    } finally {
+      repo.dispose();
+    }
+  });
+
+  test("the shipped catalogue states one attempt threshold, not three", () => {
+    // The audit found the rule stated as "third consecutive failed fix",
+    // "two failed attempts" and "third attempt", with three different units.
+    // A rule that cannot be counted the same way twice cannot be tested.
+    const root = findRepoRoot(import.meta.dir)!;
+    const offenders: string[] = [];
+
+    for (const rel of new Bun.Glob("se/**/*.md").scanSync({ cwd: root })) {
+      const posixRel = rel.split(sep).join("/");
+      // The canonical definition is allowed to quote the wordings it replaces.
+      if (posixRel === "se/engineering/attempt-counting.md") continue;
+      const body = readFileSync(join(root, rel), "utf8");
+      if (/third consecutive failed fix|three-strike rule|on its third attempt/.test(body)) {
+        offenders.push(posixRel);
+      }
+    }
+
+    expect(offenders).toEqual([]);
   });
 });
 
