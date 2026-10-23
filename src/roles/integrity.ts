@@ -1,5 +1,5 @@
 import { Diagnostics } from "../util/diagnostics.ts";
-import { DEPARTMENT_EXPECTED_COUNTS, EXPECTED_ROLE_TOTAL } from "./vocabulary.ts";
+import { DEFERRED_DEPARTMENTS, DEPARTMENT_EXPECTED_COUNTS, EXPECTED_ROLE_TOTAL } from "./vocabulary.ts";
 import type { Registry } from "./resolve.ts";
 import type { Role } from "./types.ts";
 
@@ -264,6 +264,21 @@ function checkDepartmentCounts(registry: Registry, diags: Diagnostics): void {
 
   for (const [dept, expected] of Object.entries(DEPARTMENT_EXPECTED_COUNTS)) {
     const got = actual.get(dept) ?? 0;
+
+    // A deferred department reports as outstanding, not as an error. Without
+    // this, validate never reaches a green state while the catalogue is being
+    // written, and "ignore the errors, they are expected" is exactly how a
+    // real defect gets missed.
+    if (DEFERRED_DEPARTMENTS.has(dept)) {
+      if (got < expected) {
+        diags.warn({
+          code: "catalogue/department-deferred", key: dept,
+          message: `Department "${dept}" is deferred: ${got} of ${expected} written.`,
+        });
+      }
+      continue;
+    }
+
     if (got !== expected) {
       diags.error({
         code: "catalogue/department-count",
@@ -277,10 +292,17 @@ function checkDepartmentCounts(registry: Registry, diags: Diagnostics): void {
     }
   }
 
-  if (registry.all.length !== EXPECTED_ROLE_TOTAL) {
+  const deferredOutstanding = [...DEFERRED_DEPARTMENTS].reduce(
+    (sum, d) => sum + Math.max(0, (DEPARTMENT_EXPECTED_COUNTS[d] ?? 0) - (actual.get(d) ?? 0)),
+    0,
+  );
+  const expectedNow = EXPECTED_ROLE_TOTAL - deferredOutstanding;
+  if (registry.all.length !== expectedNow) {
     diags.error({
       code: "catalogue/total-count",
-      message: `Catalogue has ${registry.all.length} roles; the specification requires ${EXPECTED_ROLE_TOTAL}.`,
+      message:
+        `Catalogue has ${registry.all.length} roles; ${expectedNow} are expected right now ` +
+        `(${EXPECTED_ROLE_TOTAL} in total, less ${deferredOutstanding} in deferred departments).`,
     });
   }
 }

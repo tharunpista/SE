@@ -7,21 +7,30 @@ Exactly one role is accountable per artifact kind. Others contribute.
 | artifact | accountable owner | co-owners | contributors |
 |---|---|---|---|
 | `acceptance-criteria` | `requirements-engineer` | — | `decision-recorder`, `qa-lead` |
+| `accessibility-test` | `frontend-accessibility-engineer` | — | `component-library-engineer`, `forms-validation-engineer`, `frontend-test-engineer` |
 | `api-convention` | `api-contract-owner` | — | — |
 | `api-endpoint` | `backend-lead` | — | `api-contract-owner` |
 | `architecture-decision` | `solution-architect` | — | `chief-orchestrator`, `decision-recorder`, `root-cause-investigator` |
 | `backend-service` | `backend-lead` | — | — |
-| `contract-test` | `contract-test-engineer` | — | `api-contract-owner` |
+| `client-cache-policy` | `frontend-data-fetching-engineer` | — | `frontend-performance-engineer`, `frontend-state-engineer`, `offline-pwa-engineer` |
+| `component-test` | `frontend-test-engineer` | — | `component-library-engineer`, `forms-validation-engineer`, `frontend-application-engineer`, `frontend-state-engineer` |
+| `contract-test` | `contract-test-engineer` | — | `api-contract-owner`, `frontend-data-fetching-engineer` |
 | `defect-report` | `qa-lead` | — | `contract-test-engineer`, `root-cause-investigator` |
 | `delivery-plan` | `project-manager` | — | `operations-coordinator`, `technical-program-manager`, `workload-capacity-planner` |
+| `design-fidelity-report` | `design-implementation-engineer` | — | `internationalization-engineer` |
 | `error-taxonomy` | `api-contract-owner` | — | — |
 | `escalation-record` | `operations-coordinator` | — | — |
-| `frontend-architecture` | `frontend-lead` | — | `frontend-state-engineer` |
-| `frontend-component` | `component-library-engineer` | — | `frontend-application-engineer`, `frontend-lead` |
-| `frontend-screen` | `frontend-application-engineer` | — | `frontend-lead` |
-| `frontend-state-model` | `frontend-state-engineer` | — | `frontend-lead` |
+| `form-spec` | `forms-validation-engineer` | — | `frontend-application-engineer` |
+| `frontend-architecture` | `frontend-lead` | — | `frontend-performance-engineer`, `frontend-state-engineer`, `offline-pwa-engineer`, `seo-web-metadata-engineer` |
+| `frontend-build-config` | `frontend-build-tooling-engineer` | — | `frontend-performance-engineer` |
+| `frontend-component` | `component-library-engineer` | — | `design-implementation-engineer`, `forms-validation-engineer`, `frontend-accessibility-engineer`, `frontend-application-engineer`, `frontend-lead`, `internationalization-engineer` |
+| `frontend-performance-budget` | `frontend-performance-engineer` | — | `frontend-build-tooling-engineer` |
+| `frontend-route` | `routing-navigation-engineer` | — | `frontend-application-engineer`, `frontend-lead`, `seo-web-metadata-engineer` |
+| `frontend-screen` | `frontend-application-engineer` | — | `design-implementation-engineer`, `frontend-lead`, `routing-navigation-engineer` |
+| `frontend-state-model` | `frontend-state-engineer` | — | `frontend-data-fetching-engineer`, `frontend-lead`, `routing-navigation-engineer` |
 | `handoff-record` | `chief-orchestrator` | — | `operations-coordinator` |
-| `interface-contract` | `api-contract-owner` | — | `backend-lead`, `contract-test-engineer`, `frontend-lead`, `solution-architect`, `technical-program-manager` |
+| `i18n-catalogue` | `internationalization-engineer` | — | — |
+| `interface-contract` | `api-contract-owner` | — | `backend-lead`, `contract-test-engineer`, `frontend-data-fetching-engineer`, `frontend-lead`, `solution-architect`, `technical-program-manager` |
 | `knowledge-index` | `knowledge-steward` | — | — |
 | `memory-record` | `memory-systems-engineer` | — | `knowledge-steward` |
 | `memory-schema` | `memory-systems-engineer` | — | — |
@@ -34,7 +43,9 @@ Exactly one role is accountable per artifact kind. Others contribute.
 | `requirement` | `requirements-engineer` | — | `decision-recorder` |
 | `root-cause-diagnosis` | `root-cause-investigator` | — | — |
 | `roster-selection` | `chief-orchestrator` | — | — |
+| `seo-metadata` | `seo-web-metadata-engineer` | — | — |
+| `service-worker` | `offline-pwa-engineer` | — | — |
 | `system-architecture` | `solution-architect` | — | — |
 | `task-record` | `chief-orchestrator` | — | `operations-coordinator`, `project-manager`, `requirements-engineer`, `technical-program-manager`, `workload-capacity-planner` |
-| `test-strategy` | `qa-lead` | — | `contract-test-engineer`, `requirements-engineer` |
+| `test-strategy` | `qa-lead` | — | `contract-test-engineer`, `frontend-test-engineer`, `requirements-engineer` |
 | `workload-plan` | `workload-capacity-planner` | — | — |

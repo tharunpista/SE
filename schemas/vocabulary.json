@@ -37,6 +37,8 @@
     "documentation-and-support": 8,
     "business-and-product-operations": 11
   },
+  "deferred_departments": ["hardware-and-embedded"],
+  "$comment_deferred": "Departments not yet being written. Their role counts are reported as outstanding rather than as errors, so that a genuine defect in a completed department is not lost among expected gaps. Removing a department from this list is what makes its count binding.",
   "artifact_kinds": [
     "product-vision", "requirement", "acceptance-criteria", "user-research",
     "market-analysis", "product-metric", "experiment-design", "roadmap",

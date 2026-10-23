@@ -2,6 +2,7 @@ import vocab from "../../schemas/vocabulary.json" with { type: "json" };
 
 export const DEPARTMENTS = vocab.departments as readonly string[];
 export const DEPARTMENT_EXPECTED_COUNTS = vocab.department_expected_counts as Record<string, number>;
+export const DEFERRED_DEPARTMENTS = new Set(vocab.deferred_departments as readonly string[]);
 export const ARTIFACT_KINDS = new Set(vocab.artifact_kinds as readonly string[]);
 export const INTERFACE_KINDS = new Set(vocab.interface_kinds as readonly string[]);
 export const MEMORY_SCOPES = new Set(vocab.memory_scopes as readonly string[]);

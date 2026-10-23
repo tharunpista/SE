@@ -2,7 +2,7 @@
 
 # Role inventory
 
-19 roles across 16 departments.
+30 roles across 16 departments.
 
 ## orchestration (7)
 
@@ -28,14 +28,25 @@
 |---|---|---|---|
 | `solution-architect` | Solution Architect | starter | Turn requirements into a coherent, deployable system with explicit boundaries, and name the trade-off behind every significant choice. |
 
-## frontend (4)
+## frontend (15)
 
 | id | name | tier | mission |
 |---|---|---|---|
 | `component-library-engineer` | Component Library Engineer | catalogue | Build shared components whose API is narrow enough to stay correct, so that reuse reduces work instead of multiplying the cost of every future change. |
+| `design-implementation-engineer` | Design Implementation Engineer | catalogue | Turn an approved design into an implementation that holds up at every viewport and content length, and report honestly where the design and the build diverge rather than quietly splitting the difference. |
+| `forms-validation-engineer` | Forms and Validation Engineer | catalogue | Own form state, validation and submission so that a user never loses typed work, never submits twice, and is never told something is wrong without being told how to fix it. |
+| `frontend-accessibility-engineer` | Frontend Accessibility Engineer | catalogue | Make the interface operable without a mouse and intelligible without sight, and prove it with tests rather than with an audit that goes stale the next sprint. |
 | `frontend-application-engineer` | Frontend Application Engineer | catalogue | Implement screens and user flows so that every state a user can reach is deliberate, including the ones reached by a slow network, a stale tab, or a back button. |
+| `frontend-build-tooling-engineer` | Frontend Build and Tooling Engineer | catalogue | Own the build, type checking, linting and local developer loop so that the build is reproducible, the feedback is fast, and a problem is caught by a tool rather than by a reviewer. |
+| `frontend-data-fetching-engineer` | Frontend Data-Fetching Engineer | catalogue | Own how the client talks to the server, so that a slow network, a failed request, or a request the user already abandoned never produces a wrong screen. |
 | `frontend-lead` | Frontend Lead | starter | Own frontend architecture, component boundaries, routing, state strategy and data flow, and make every screen correct in its loading, empty, partial and error states, not only its happy path. |
+| `frontend-performance-engineer` | Frontend Performance Engineer | catalogue | Measure what the user actually experiences and hold a budget against it, so that performance is a tracked number rather than an opinion revisited after a complaint. |
 | `frontend-state-engineer` | Frontend State Engineer | catalogue | Decide where each piece of state lives and who may change it, so the client never holds two disagreeing copies of the same fact. |
+| `frontend-test-engineer` | Frontend Test Engineer | catalogue | Write frontend tests that fail when the user-visible behaviour breaks and not when the implementation is refactored, so the suite is worth keeping green. |
+| `internationalization-engineer` | Internationalization Engineer | catalogue | Make the product translatable and locale-correct in its structure, so that adding a language is a content task rather than a rewrite. |
+| `offline-pwa-engineer` | Offline and Progressive Web App Engineer | catalogue | Make the application behave correctly without a network, and make absolutely certain a cached version can never become permanently stuck. |
+| `routing-navigation-engineer` | Routing and Navigation Engineer | catalogue | Own the route structure and navigation behaviour so that every meaningful view has an address, and arriving at one directly works exactly as arriving at it by clicking. |
+| `seo-web-metadata-engineer` | SEO and Web Metadata Engineer | catalogue | Make public pages correctly discoverable and correctly previewed, and make sure nothing private is indexable. |
 
 ## backend-and-data (1)
 
