@@ -6,7 +6,7 @@ import type { Role } from "../roles/types.ts";
 import { departmentLabel } from "../roles/vocabulary.ts";
 import type { HostAdapter, RenderResult, RenderedFile } from "./host.ts";
 import { estimateTokens, renderRoleInstructions, routingDescription } from "./host.ts";
-import { renderRouterSkill } from "./router.ts";
+import { renderRouterSkill, renderTopicSkills } from "./router.ts";
 
 /**
  * `when_to_use` is a routing field the host folds into the skill's tool
@@ -77,6 +77,14 @@ function skillAdapter(id: string, displayName: string, projectPath: string, user
        */
       const router = renderRouterSkill(roles);
       if (router) files.push(router);
+
+      /*
+       * Topic skills: one per group of roles that share a job, carrying the
+       * words an operator types. A department is where a role reports; a topic
+       * is what someone asks about, and only the latter is reachable from a
+       * keyword.
+       */
+      files.push(...renderTopicSkills(roles));
 
       return {
         files,

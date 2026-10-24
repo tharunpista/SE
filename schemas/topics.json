@@ -1,0 +1,525 @@
+{
+  "$comment": "Topics group roles by the job an operator arrives with, which cuts across departments. A department is where a role reports; a topic is what someone types. 'auth' needs five roles from three departments, and no department selection reaches that set. Membership is explicit and validated rather than derived from artifact kinds or name matching: a derived group is clever until it is wrong, and a wrong group silently omits the role that owns the decision. Keywords are what the operator actually says, including the words they say instead of the right ones.",
+  "schema_version": 1,
+  "topics": [
+    {
+      "id": "auth",
+      "label": "Authentication and access",
+      "purpose": "Who the caller is, what they may do, and how that is proven and revoked.",
+      "keywords": [
+        "auth",
+        "authentication",
+        "authorization",
+        "login",
+        "signup",
+        "sign in",
+        "session",
+        "sso",
+        "oauth",
+        "jwt",
+        "password",
+        "permissions",
+        "roles",
+        "rbac",
+        "access control",
+        "token"
+      ],
+      "roles": [
+        "security-architect",
+        "identity-access-integration-engineer",
+        "authorization-model-engineer",
+        "cryptography-key-management-engineer",
+        "api-contract-owner",
+        "security-test-engineer",
+        "privacy-engineer"
+      ]
+    },
+    {
+      "id": "payments",
+      "label": "Payments and billing",
+      "purpose": "Taking money correctly, exactly once, with the compliance and pricing decisions attached.",
+      "keywords": [
+        "payment",
+        "payments",
+        "billing",
+        "checkout",
+        "subscription",
+        "invoice",
+        "stripe",
+        "refund",
+        "pricing",
+        "paywall",
+        "charge",
+        "currency"
+      ],
+      "roles": [
+        "backend-lead",
+        "concurrency-transaction-engineer",
+        "external-integration-engineer",
+        "api-contract-owner",
+        "forms-validation-engineer",
+        "pricing-packaging-analyst",
+        "finance-unit-economics-analyst",
+        "compliance-control-engineer"
+      ]
+    },
+    {
+      "id": "performance",
+      "label": "Performance and latency",
+      "purpose": "Making something fast enough against a stated budget, and fixing the cause rather than the symptom.",
+      "keywords": [
+        "performance",
+        "slow",
+        "latency",
+        "speed",
+        "optimize",
+        "optimise",
+        "p95",
+        "p99",
+        "bottleneck",
+        "throughput",
+        "lag",
+        "faster",
+        "timeout"
+      ],
+      "roles": [
+        "performance-architect",
+        "backend-performance-engineer",
+        "frontend-performance-engineer",
+        "database-engineer",
+        "caching-engineer",
+        "performance-load-test-engineer",
+        "mobile-performance-engineer"
+      ]
+    },
+    {
+      "id": "database",
+      "label": "Data model and database",
+      "purpose": "Where data lives, what shape it takes, and how it changes without losing anything.",
+      "keywords": [
+        "database",
+        "db",
+        "schema",
+        "migration",
+        "sql",
+        "query",
+        "index",
+        "table",
+        "postgres",
+        "mysql",
+        "mongo",
+        "orm",
+        "data model",
+        "transaction"
+      ],
+      "roles": [
+        "data-architect",
+        "data-modeling-engineer",
+        "database-engineer",
+        "database-migration-engineer",
+        "database-reliability-engineer",
+        "concurrency-transaction-engineer",
+        "test-data-engineer"
+      ]
+    },
+    {
+      "id": "api",
+      "label": "API design and contracts",
+      "purpose": "The shape of an interface, who owns it, and how it changes without breaking its consumers.",
+      "keywords": [
+        "api",
+        "endpoint",
+        "rest",
+        "graphql",
+        "contract",
+        "openapi",
+        "swagger",
+        "versioning",
+        "breaking change",
+        "request",
+        "response",
+        "webhook"
+      ],
+      "roles": [
+        "api-architect",
+        "api-contract-owner",
+        "backend-service-engineer",
+        "contract-test-engineer",
+        "api-documentation-engineer",
+        "error-recovery-integration-specialist"
+      ]
+    },
+    {
+      "id": "launch",
+      "label": "Release and launch",
+      "purpose": "Getting a change into production reversibly, with the evidence that it is ready.",
+      "keywords": [
+        "launch",
+        "release",
+        "ship",
+        "deploy",
+        "deployment",
+        "go live",
+        "rollout",
+        "rollback",
+        "production",
+        "cutover"
+      ],
+      "roles": [
+        "release-readiness-reviewer",
+        "release-rollback-engineer",
+        "cicd-engineer",
+        "devops-engineer",
+        "feature-flag-engineer",
+        "integration-release-coordinator",
+        "release-notes-engineer",
+        "qa-lead"
+      ]
+    },
+    {
+      "id": "incident",
+      "label": "Incident and outage",
+      "purpose": "Something is broken in production now: mitigate, diagnose, record, in that order.",
+      "keywords": [
+        "incident",
+        "outage",
+        "down",
+        "broken in production",
+        "500",
+        "errors spiking",
+        "postmortem",
+        "on call",
+        "oncall",
+        "rollback now",
+        "degraded",
+        "firefight"
+      ],
+      "roles": [
+        "incident-response-coordinator",
+        "site-reliability-engineer",
+        "root-cause-investigator",
+        "observability-engineer",
+        "release-rollback-engineer",
+        "security-incident-responder"
+      ]
+    },
+    {
+      "id": "security",
+      "label": "Security review and hardening",
+      "purpose": "Finding and closing the ways a system can be abused, with reproducible evidence.",
+      "keywords": [
+        "security",
+        "vulnerability",
+        "cve",
+        "pentest",
+        "penetration test",
+        "exploit",
+        "hardening",
+        "secrets",
+        "audit",
+        "injection",
+        "xss",
+        "csrf",
+        "supply chain"
+      ],
+      "roles": [
+        "security-architect",
+        "application-security-engineer",
+        "vulnerability-management-engineer",
+        "secrets-management-engineer",
+        "supply-chain-security-engineer",
+        "security-test-engineer",
+        "offensive-security-engineer",
+        "independent-technical-reviewer",
+        "cicd-engineer"
+      ]
+    },
+    {
+      "id": "privacy",
+      "label": "Privacy and data protection",
+      "purpose": "What personal data is held, on what basis, and how it is found and deleted.",
+      "keywords": [
+        "privacy",
+        "gdpr",
+        "ccpa",
+        "pii",
+        "personal data",
+        "consent",
+        "data deletion",
+        "right to be forgotten",
+        "retention",
+        "dsar",
+        "anonymise",
+        "anonymize"
+      ],
+      "roles": [
+        "privacy-engineer",
+        "data-governance-steward",
+        "data-retention-deletion-engineer",
+        "compliance-control-engineer",
+        "security-architect"
+      ]
+    },
+    {
+      "id": "accessibility",
+      "label": "Accessibility",
+      "purpose": "Operable without a mouse, intelligible without sight, and kept that way by tests.",
+      "keywords": [
+        "accessibility",
+        "a11y",
+        "screen reader",
+        "wcag",
+        "keyboard navigation",
+        "contrast",
+        "aria",
+        "disabled users",
+        "assistive"
+      ],
+      "roles": [
+        "accessibility-specialist",
+        "frontend-accessibility-engineer",
+        "accessibility-test-engineer",
+        "ux-content-designer"
+      ]
+    },
+    {
+      "id": "testing",
+      "label": "Testing and quality gates",
+      "purpose": "Deciding what is tested at which level, and keeping the suite worth trusting.",
+      "keywords": [
+        "test",
+        "tests",
+        "testing",
+        "coverage",
+        "flaky",
+        "qa",
+        "unit test",
+        "integration test",
+        "e2e",
+        "regression",
+        "ci failing"
+      ],
+      "roles": [
+        "test-architect",
+        "qa-lead",
+        "unit-test-engineer",
+        "integration-test-engineer",
+        "e2e-test-engineer",
+        "regression-test-engineer",
+        "test-infrastructure-engineer",
+        "frontend-test-engineer",
+        "contract-test-engineer",
+        "cicd-engineer"
+      ]
+    },
+    {
+      "id": "observability",
+      "label": "Observability and monitoring",
+      "purpose": "Being able to diagnose a new failure from what is already recorded.",
+      "keywords": [
+        "observability",
+        "logging",
+        "logs",
+        "metrics",
+        "tracing",
+        "monitoring",
+        "alerting",
+        "alerts",
+        "dashboard",
+        "telemetry",
+        "slo",
+        "sli"
+      ],
+      "roles": [
+        "observability-engineer",
+        "site-reliability-engineer",
+        "incident-response-coordinator",
+        "capacity-cost-engineer",
+        "agent-observability-engineer"
+      ]
+    },
+    {
+      "id": "ai",
+      "label": "AI and LLM features",
+      "purpose": "Putting a model in a product flow behind a boundary that survives it being wrong.",
+      "keywords": [
+        "ai",
+        "llm",
+        "model",
+        "prompt",
+        "prompting",
+        "rag",
+        "retrieval",
+        "embedding",
+        "vector",
+        "agent",
+        "chatbot",
+        "fine-tune",
+        "hallucination",
+        "eval",
+        "evals"
+      ],
+      "roles": [
+        "ai-systems-architect",
+        "llm-application-engineer",
+        "model-integration-engineer",
+        "ai-evaluation-engineer",
+        "context-engineer",
+        "retrieval-knowledge-engineer",
+        "responsible-ai-risk-engineer",
+        "prompt-role-definition-engineer",
+        "agent-observability-engineer",
+        "token-cost-governance-engineer"
+      ]
+    },
+    {
+      "id": "mobile",
+      "label": "Mobile applications",
+      "purpose": "Shipping to iOS and Android, including the store, the offline case and the upgrade path.",
+      "keywords": [
+        "mobile",
+        "ios",
+        "android",
+        "app store",
+        "play store",
+        "swift",
+        "kotlin",
+        "react native",
+        "flutter",
+        "push notification",
+        "deep link",
+        "offline sync"
+      ],
+      "roles": [
+        "mobile-lead",
+        "ios-application-engineer",
+        "android-application-engineer",
+        "cross-platform-mobile-engineer",
+        "mobile-offline-sync-engineer",
+        "push-notification-engineer",
+        "mobile-release-compliance-engineer",
+        "deep-linking-attribution-engineer",
+        "api-contract-owner",
+        "notification-delivery-engineer"
+      ]
+    },
+    {
+      "id": "frontend",
+      "label": "User interface",
+      "purpose": "Screens whose every reachable state is deliberate, not only the happy path.",
+      "keywords": [
+        "frontend",
+        "ui",
+        "screen",
+        "page",
+        "component",
+        "css",
+        "react",
+        "vue",
+        "svelte",
+        "form",
+        "routing",
+        "responsive",
+        "state management"
+      ],
+      "roles": [
+        "frontend-lead",
+        "frontend-application-engineer",
+        "component-library-engineer",
+        "frontend-state-engineer",
+        "forms-validation-engineer",
+        "routing-navigation-engineer",
+        "frontend-data-fetching-engineer",
+        "frontend-test-engineer",
+        "api-contract-owner",
+        "visual-ui-designer",
+        "interaction-designer"
+      ]
+    },
+    {
+      "id": "new-project",
+      "label": "Starting something new",
+      "purpose": "Turning an outcome someone wants into a scoped, owned, buildable plan.",
+      "keywords": [
+        "new project",
+        "from scratch",
+        "greenfield",
+        "build me",
+        "create an app",
+        "start a project",
+        "mvp",
+        "prototype",
+        "what should i build",
+        "kick off"
+      ],
+      "roles": [
+        "requirements-engineer",
+        "product-strategist",
+        "solution-architect",
+        "chief-orchestrator",
+        "principal-architect",
+        "technical-feasibility-engineer"
+      ]
+    },
+    {
+      "id": "docs",
+      "label": "Documentation",
+      "purpose": "Written from verified behaviour, and checked against it rather than against intent.",
+      "keywords": [
+        "docs",
+        "documentation",
+        "readme",
+        "guide",
+        "tutorial",
+        "changelog",
+        "release notes",
+        "onboarding",
+        "runbook",
+        "troubleshooting"
+      ],
+      "roles": [
+        "technical-documentation-engineer",
+        "api-documentation-engineer",
+        "developer-onboarding-engineer",
+        "documentation-qa-reviewer",
+        "release-notes-engineer",
+        "troubleshooting-engineer",
+        "api-contract-owner",
+        "knowledge-engineer"
+      ]
+    },
+    {
+      "id": "infra",
+      "label": "Infrastructure and cloud",
+      "purpose": "Provisioning what runs the system, with least privilege and a cost someone has seen.",
+      "keywords": [
+        "infrastructure",
+        "infra",
+        "cloud",
+        "aws",
+        "gcp",
+        "azure",
+        "terraform",
+        "kubernetes",
+        "k8s",
+        "docker",
+        "networking",
+        "dns",
+        "certificate",
+        "scaling",
+        "cost"
+      ],
+      "roles": [
+        "platform-architect",
+        "cloud-infrastructure-engineer",
+        "infrastructure-as-code-engineer",
+        "networking-engineer",
+        "environment-configuration-engineer",
+        "capacity-cost-engineer",
+        "disaster-recovery-engineer",
+        "secrets-management-engineer",
+        "database-reliability-engineer"
+      ]
+    }
+  ]
+}

@@ -148,6 +148,55 @@ describe("remember writes a record without the caller assembling one", () => {
     }
   });
 
+  /*
+   * `--source` takes an operator- or agent-supplied path and reads the file to
+   * hash it. The first implementation joined it to the repo root and read
+   * whatever came back, so `--source ../../../.ssh/id_rsa` would have been read
+   * and its hash stored in a record. Containment is enforced now; these tests
+   * exist so a later refactor cannot quietly remove it again.
+   */
+  test("a --source escaping the project root is refused, not read", () => {
+    const h = harness();
+    try {
+      for (const attempt of ["../../../etc/passwd", "..\\..\\..\\windows\\win.ini", "../outside.txt"]) {
+        const run = h.run(["remember", "about a file outside the project"], {
+          scope: "session",
+          source: attempt,
+        });
+        expect(run.code).toBe(2);
+        expect(h.run(["list"]).out).toContain("no records");
+      }
+    } finally {
+      h.dispose();
+    }
+  });
+
+  test("an absolute --source is refused", () => {
+    const h = harness();
+    try {
+      const run = h.run(["remember", "about an absolute path"], {
+        scope: "session",
+        source: process.platform === "win32" ? "C:\\Windows\\win.ini" : "/etc/passwd",
+      });
+      expect(run.code).toBe(2);
+      expect(h.run(["list"]).out).toContain("no records");
+    } finally {
+      h.dispose();
+    }
+  });
+
+  test("a binary --source is refused rather than hashed as text", () => {
+    const h = harness();
+    try {
+      writeFileSync(join(h.repoRoot, "blob.bin"), Buffer.from([0x00, 0x01, 0x02, 0x00]));
+      const run = h.run(["remember", "about a binary file"], { scope: "session", source: "blob.bin" });
+      expect(run.code).toBe(2);
+      expect(h.run(["list"]).out).toContain("no records");
+    } finally {
+      h.dispose();
+    }
+  });
+
   test("a missing --source is refused before anything is written", () => {
     const h = harness();
     try {

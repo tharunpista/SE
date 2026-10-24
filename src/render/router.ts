@@ -27,6 +27,7 @@
 
 import type { Role } from "../roles/types.ts";
 import { departmentLabel } from "../roles/vocabulary.ts";
+import { TOPICS } from "../roles/topics.ts";
 import type { RenderedFile } from "./host.ts";
 
 export const ROUTER_SKILL_ID = "se-route";
@@ -280,4 +281,90 @@ export function renderRouterSkill(roles: readonly Role[]): RenderedFile | null {
   );
 
   return { path: `${ROUTER_SKILL_ID}/SKILL.md`, contents: body.join("\n") };
+}
+
+/**
+ * One skill per topic, so a keyword reaches a group of roles.
+ *
+ * A department is where a role reports; a topic is what an operator types.
+ * "auth" is owned by five roles across three departments, and no department
+ * selection or role name reaches that set from the word the operator used. The
+ * topic skill is the bridge: its `when_to_use` carries the vocabulary people
+ * actually type, and its body names the roles that own the work.
+ *
+ * A topic is emitted only when the roster carries at least two of its roles.
+ * Below that there is no group to route between, and the skill would mostly
+ * list roles the host has not installed.
+ *
+ * Absent members are named rather than hidden. An operator who asks about
+ * payments and holds three of the eight relevant roles needs to know which
+ * five are missing and how to get them -- silently listing three would present
+ * a partial roster as the whole answer.
+ */
+export function renderTopicSkills(roles: readonly Role[]): RenderedFile[] {
+  const present = new Map(roles.map((r) => [r.id, r] as const));
+  const files: RenderedFile[] = [];
+
+  for (const topic of TOPICS) {
+    const installed = topic.roles.filter((id) => present.has(id));
+    if (installed.length < 2) continue;
+    const absent = topic.roles.filter((id) => !present.has(id));
+
+    const lines = [
+      "---",
+      `name: topic-${topic.id}`,
+      `description: ${JSON.stringify(`${topic.label} — ${topic.purpose} Routes to the ${installed.length} role(s) in this roster that own it.`)}`,
+      `when_to_use: ${JSON.stringify(
+        `Use when the request concerns ${topic.label.toLowerCase()}, including when it mentions: ` +
+          `${topic.keywords.join(", ")}. These words are owned by specific roles rather than by whoever is active; ` +
+          `this skill names them.`,
+      )}`,
+      "---",
+      "",
+      "<!-- GENERATED from schemas/topics.json by se render. Do not edit here; edits are overwritten. -->",
+      `# ${topic.label}`,
+      "",
+      topic.purpose,
+      "",
+      "## Roles that own this work",
+      "",
+      "| role | owns | mission |",
+      "|---|---|---|",
+    ];
+
+    for (const id of installed) {
+      const role = present.get(id)!;
+      const owns = role.owns_artifacts.length > 0 ? role.owns_artifacts.map((a) => `\`${a}\``).join(", ") : "—";
+      // Single-line, pipes stripped: a newline or a pipe in a cell breaks the table.
+      const mission = role.mission.replace(/\s+/g, " ").replace(/\|/g, "/").trim();
+      lines.push(`| \`${role.id}\` | ${owns} | ${mission} |`);
+    }
+
+    lines.push(
+      "",
+      "Route to the role that owns the artifact in question. Where this host",
+      "cannot invoke a role directly, apply that role's own definition and say",
+      "which role's rules you are following.",
+      "",
+    );
+
+    if (absent.length > 0) {
+      lines.push(
+        "## Not installed in this roster",
+        "",
+        `This topic also involves ${absent.map((id) => `\`${id}\``).join(", ")}, which this host does`,
+        "not have. Do not approximate them and do not absorb their decisions.",
+        "Report the gap, or install them:",
+        "",
+        "```sh",
+        `se render --topic ${topic.id}`,
+        "```",
+        "",
+      );
+    }
+
+    files.push({ path: `topic-${topic.id}/SKILL.md`, contents: lines.join("\n") });
+  }
+
+  return files;
 }

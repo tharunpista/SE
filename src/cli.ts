@@ -22,6 +22,7 @@ import { renderRoleInstructions } from "./render/host.ts";
 import { effectiveRoster, hostSites } from "./render/sites.ts";
 import { cmdMemory } from "./memory/cli.ts";
 import { closeRoster, isClosureMode } from "./roles/roster.ts";
+import { checkTopics, findTopic, resolveTopic, suggestTopic, TOPICS, uncoveredRoles } from "./roles/topics.ts";
 import {
   chooseBinDir,
   isOnPath,
@@ -40,6 +41,7 @@ commands:
   role <id>                 Show one role, with per-key layer provenance.
   ownership [--artifact <k>] Show the artifact ownership matrix.
   departments               Show department counts against the specification.
+  topics                    Show topics: role groups reachable by keyword.
   doctor                    Report environment and catalogue health.
   memory <subcommand>       Project memory: init, status, doctor, context,
                             sources, recall, remember. Run "se memory help".
@@ -55,6 +57,8 @@ commands:
                             rooted here, and which roles it will actually load.
   render --host <id>        Render a roster for a coding agent.
                             --dept <name>   whole department
+                            --topic <name>  roles that own one job, across
+                                            departments (se topics to list)
                             --roster a,b,c  explicit roles
                             --global        install for every project
                             --project <dir> the directory the host has open
@@ -177,6 +181,18 @@ function checkGeneratedCurrent(root: string, registry: Registry, ownership: read
 
 function cmdValidate(root: string, flags: Args["flags"]): number {
   const { registry, ownership, diags } = loadCatalogue(root);
+
+  /*
+   * Topic integrity is checked here rather than in `checkIntegrity`, which is
+   * shared by every command and by the test harness. Topics reference the
+   * shipped catalogue by id, so running them against a partial catalogue -- a
+   * fixture holding two invented roles, say -- reports all 136 memberships as
+   * unknown and buries the finding the caller was actually looking for. That
+   * failure mode has happened before with the catalogue-count checks, which is
+   * why the harness carries an ignore list for them; this check is placed so it
+   * never needs one.
+   */
+  checkTopics(registry.byId, diags);
   checkGeneratedCurrent(root, registry, ownership, diags);
 
   if (flags.has("json")) {
@@ -675,6 +691,59 @@ function resolveProjectTarget(flags: Args["flags"]): string {
   return findProjectRoot();
 }
 
+/**
+ * `se topics` --- the keyword routing axis, listed.
+ *
+ * Departments answer "where does this role report". Topics answer "I have an
+ * auth problem, who owns it", which is the question an operator actually has
+ * and the one a department listing cannot answer.
+ */
+function cmdTopics(root: string, flags: Args["flags"]): number {
+  const { registry } = loadCatalogue(root);
+  const uncovered = uncoveredRoles(registry.byId);
+
+  if (flags.has("json")) {
+    console.log(JSON.stringify({
+      topics: TOPICS.map((t) => ({ ...t, installed_roles: resolveTopic(t, registry.byId).roles.map((r) => r.id) })),
+      uncovered_roles: uncovered,
+    }, null, 2));
+    return 0;
+  }
+
+  const wanted = typeof flags.get("topic") === "string" ? (flags.get("topic") as string) : null;
+  if (wanted) {
+    const topic = findTopic(wanted);
+    if (!topic) {
+      console.error(`error: unknown topic "${wanted}".${suggestTopic(wanted)}`);
+      return 2;
+    }
+    const { roles } = resolveTopic(topic, registry.byId);
+    console.log(`${topic.label}  (se render --topic ${topic.id})`);
+    console.log(`  ${topic.purpose}`);
+    console.log("");
+    console.log(`  keywords: ${topic.keywords.join(", ")}`);
+    console.log("");
+    for (const role of roles) console.log(`  ${role.id.padEnd(42)} ${role.department}`);
+    return 0;
+  }
+
+  console.log(`${TOPICS.length} topics. A topic groups the roles that own one job, across departments.`);
+  console.log("");
+  for (const topic of TOPICS) {
+    const { roles } = resolveTopic(topic, registry.byId);
+    console.log(`${topic.id.padEnd(14)} ${String(roles.length).padStart(2)} roles  ${topic.label}`);
+    console.log(`${" ".repeat(14)}           ${topic.keywords.slice(0, 6).join(", ")}...`);
+  }
+  console.log("");
+  console.log(`Install one:  se render --host claude-code --topic <id>`);
+  console.log(`Detail:       se topics --topic <id>`);
+  if (uncovered.length > 0) {
+    console.log("");
+    console.log(`${uncovered.length} active role(s) belong to no topic and are reachable by name only.`);
+  }
+  return 0;
+}
+
 function cmdRender(root: string, flags: Args["flags"]): number {
   const hostId = typeof flags.get("host") === "string" ? (flags.get("host") as string) : "claude-code";
   const adapter = findAdapter(hostId);
@@ -701,6 +770,7 @@ known: ${ADAPTERS.map((a) => a.id).join(", ")}`);
   const routable = registry.all.filter((r) => r.enabled && r.status === "active");
   const dept = flags.get("dept");
   const rosterFlag = flags.get("roster");
+  const topicFlag = flags.get("topic");
 
   let selected: readonly Role[];
   let selectionLabel: string;
@@ -714,6 +784,25 @@ known: ${ADAPTERS.map((a) => a.id).join(", ")}`);
     }
     selected = wanted.map((id) => registry.byId.get(id)!);
     selectionLabel = `explicit roster (${wanted.length})`;
+  } else if (typeof topicFlag === "string") {
+    const topic = findTopic(topicFlag);
+    if (!topic) {
+      console.error(`error: unknown topic "${topicFlag}".${suggestTopic(topicFlag)}`);
+      return 2;
+    }
+    const { roles: members, missing } = resolveTopic(topic, registry.byId);
+    if (missing.length > 0) {
+      // Validation rejects this, so reaching it means the catalogue was edited
+      // past the gate. Report rather than silently installing a partial topic.
+      console.error(`error: topic "${topic.id}" names unknown role(s): ${missing.join(", ")}`);
+      return 1;
+    }
+    const enabled = members.filter((r) => r.enabled && r.status === "active");
+    // The starter roster comes too: a topic is a set of specialists with no
+    // orchestrator, no requirements owner and no verification among them.
+    const starters = routable.filter((r) => r.tier === "starter" && !enabled.some((m) => m.id === r.id));
+    selected = [...enabled, ...starters];
+    selectionLabel = `topic ${topic.id} (${enabled.length}) + starter roster (${starters.length})`;
   } else if (typeof dept === "string") {
     if (!DEPARTMENTS.includes(dept)) {
       console.error(`error: unknown department "${dept}".
@@ -1093,6 +1182,7 @@ function main(argv: readonly string[]): number {
     case "role":        return cmdRole(requireRoot(), args);
     case "ownership":   return cmdOwnership(requireRoot(), args.flags);
     case "departments": return cmdDepartments(requireRoot(), args.flags);
+    case "topics":      return cmdTopics(requireRoot(), args.flags);
     case "doctor":      return cmdDoctor(requireRoot(), args.flags);
     case "memory":      return cmdMemory(findProjectRoot(), args.positional, args.flags);
     case "install":     return cmdInstall(args.flags);
