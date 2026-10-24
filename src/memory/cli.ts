@@ -11,6 +11,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { isAbsolute, join } from "node:path";
 import {
   AmbiguousProjectError,
+  ensureRepoLocalMemoryGitignore,
   initProject,
   REPO_LOCAL_MEMORY_DIR,
   resolveMemoryLocation,
@@ -311,8 +312,10 @@ function cmdInit(repoRoot: string, flags: Flags): number {
       if (!existsSync(join(local, ".gitkeep"))) {
         writeFileSync(join(local, ".gitkeep"), "", "utf8");
       }
+      const ignore = ensureRepoLocalMemoryGitignore(repoRoot);
       console.log(`using repo-local memory: ${local}`);
-      console.log("Commit it. Tier 0 is plain diffable JSON on purpose (Part XX 70).");
+      console.log(`${ignore.changed ? "wrote" : "kept"} ${ignore.path} (runtime records are excluded from Git)`);
+      console.log("Runtime records stay ignored by Git. Curate and review any knowledge before sharing it.");
       console.log("");
     }
 

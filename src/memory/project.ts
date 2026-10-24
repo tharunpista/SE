@@ -70,6 +70,14 @@ export function slugify(value: string): string {
   return slug;
 }
 
+function requireProjectId(value: string, source: string): string {
+  const id = slugify(value);
+  if (!id) {
+    throw new Error(`${source} does not produce a usable project id. Use letters or digits, for example --id my-project.`);
+  }
+  return id;
+}
+
 /**
  * Turn a git remote into a stable id. Two clones of the same repository resolve
  * to the same id regardless of where they sit on disk, which is the property
@@ -87,7 +95,7 @@ export function identityFromRemote(remote: string): { id: string; label: string 
   const owner = parts.length >= 2 ? parts[parts.length - 2]! : "";
   const repo = parts[parts.length - 1] ?? "";
   const label = owner ? `${owner}/${repo}` : repo;
-  return { id: slugify(label) || slugify(remote), label };
+  return { id: requireProjectId(label || remote, "Git remote"), label };
 }
 
 function readGitRemote(repoRoot: string): string | null {
@@ -131,7 +139,7 @@ export function readProjectConfig(repoRoot: string): ProjectConfig | null {
       `${PROJECT_CONFIG_PATH} has unsupported schema_version ${String(config?.schema_version)}; expected 1.`,
     );
   }
-  if (!config.id || slugify(config.id) !== config.id) {
+  if (typeof config.id !== "string" || !config.id || slugify(config.id) !== config.id) {
     throw new Error(
       `${PROJECT_CONFIG_PATH} has id ${JSON.stringify(config.id)}, which is not a valid namespace. ` +
         `Use lower-case letters, digits and dashes.`,
@@ -155,12 +163,12 @@ export function resolveProject(repoRoot: string, options: ResolveOptions = {}): 
   const env = options.env ?? process.env;
 
   if (options.flag) {
-    return { id: slugify(options.flag), label: options.flag, source: "flag" };
+    return { id: requireProjectId(options.flag, "--project"), label: options.flag, source: "flag" };
   }
 
   const fromEnv = env["SE_PROJECT"];
   if (fromEnv) {
-    return { id: slugify(fromEnv), label: fromEnv, source: "env" };
+    return { id: requireProjectId(fromEnv, "SE_PROJECT"), label: fromEnv, source: "env" };
   }
 
   const config = readProjectConfig(repoRoot);
@@ -189,7 +197,7 @@ export function resolveProject(repoRoot: string, options: ResolveOptions = {}): 
   const packaged = readPackageName(repoRoot);
   if (packaged) {
     return {
-      id: slugify(packaged),
+      id: requireProjectId(packaged, "package.json name"),
       label: packaged,
       source: "package-name",
       origin: "package.json#name",
@@ -211,6 +219,40 @@ export interface MemoryLocation {
 
 /** Repo-local Tier 0, committed beside the source it describes (Part XX 70). */
 export const REPO_LOCAL_MEMORY_DIR = "memory";
+
+const MEMORY_IGNORE_START = "# BEGIN se local-memory runtime exclusion";
+const MEMORY_IGNORE_END = "# END se local-memory runtime exclusion";
+const MEMORY_IGNORE_BLOCK = [
+  MEMORY_IGNORE_START,
+  "*",
+  "!.gitignore",
+  "!.gitkeep",
+  MEMORY_IGNORE_END,
+].join("\n");
+
+/**
+ * Ensure an opted-in checkout-local store is not accidentally added to Git.
+ * The rule lives beside the data so `se memory init --local` is safe in any
+ * consuming repository, not only in this CLI's own checkout. Preserve existing
+ * user rules and append one marked, idempotent block.
+ */
+export function ensureRepoLocalMemoryGitignore(repoRoot: string): { path: string; changed: boolean } {
+  const memoryDir = join(repoRoot, REPO_LOCAL_MEMORY_DIR);
+  mkdirSync(memoryDir, { recursive: true });
+  const path = join(memoryDir, ".gitignore");
+  const existing = existsSync(path) ? readFileSync(path, "utf8") : "";
+  const hasStart = existing.includes(MEMORY_IGNORE_START);
+  const hasEnd = existing.includes(MEMORY_IGNORE_END);
+
+  if (hasStart && hasEnd) return { path, changed: false };
+  if (hasStart || hasEnd) {
+    throw new Error(`Cannot safely update ${path}: found an incomplete se-managed ignore block.`);
+  }
+
+  const prefix = existing.length === 0 || existing.endsWith("\n") ? existing : `${existing}\n`;
+  writeFileSync(path, `${prefix}${MEMORY_IGNORE_BLOCK}\n`, "utf8");
+  return { path, changed: true };
+}
 
 /**
  * Where this project's Tier 0 lives.
@@ -291,9 +333,8 @@ export function initProject(repoRoot: string, explicitId?: string): InitResult {
   let origin: string | undefined;
 
   if (explicitId) {
-    id = slugify(explicitId);
+    id = requireProjectId(explicitId, "--id");
     label = explicitId;
-    if (!id) throw new Error(`--id ${JSON.stringify(explicitId)} slugifies to nothing usable.`);
   } else {
     const remote = readGitRemote(repoRoot);
     if (remote) {
@@ -309,7 +350,7 @@ export function initProject(repoRoot: string, explicitId?: string): InitResult {
             `Pass one explicitly: se memory init --id <stable-id>`,
         );
       }
-      id = slugify(packaged);
+      id = requireProjectId(packaged, "package.json name");
       label = packaged;
       origin = "package.json#name";
     }

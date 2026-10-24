@@ -1,8 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { tmpdir } from "node:os";
-import { findProjectRoot, isCatalogueRoot } from "../src/util/paths.ts";
+import { homedir, tmpdir } from "node:os";
+import { findProjectRoot, isCatalogueRoot, readGlobalConfig, seHome, stateRoot, writeGlobalConfig } from "../src/util/paths.ts";
 import { agentsMdAdapter } from "../src/render/agents-md.ts";
 import { ADAPTERS, claudeCodeAdapter, findAdapter } from "../src/render/claude-code.ts";
 import { roleFile, tempRepo } from "./harness.ts";
@@ -17,6 +17,30 @@ function tempTree(files: Record<string, string>, dirs: string[] = []) {
   }
   return { root, dispose: () => rmSync(root, { recursive: true, force: true }) };
 }
+
+describe("environment path overrides", () => {
+  test("SE_HOME is anchored to an absolute path rather than reinterpreted by each command", () => {
+    expect(seHome({ SE_HOME: "relative-se-home" })).toBe(join(homedir(), "relative-se-home"));
+  });
+
+  test("SE_STATE_ROOT resolves to an absolute path", () => {
+    const root = join(tmpdir(), "se-project");
+    expect(stateRoot(root, { SE_STATE_ROOT: "relative-state" })).toBe(join(root, "relative-state"));
+  });
+
+  test("registered catalogue paths must be absolute and remain stable", () => {
+    const t = tempTree({});
+    const env = { SE_HOME: join(t.root, "home") };
+    try {
+      const path = writeGlobalConfig(t.root, env);
+      expect(readGlobalConfig(env)?.catalogue_root).toBe(t.root);
+      writeFileSync(path, JSON.stringify({ schema_version: 1, catalogue_root: "relative-catalogue" }));
+      expect(readGlobalConfig(env)).toBeNull();
+    } finally {
+      t.dispose();
+    }
+  });
+});
 
 describe("catalogue root and project root are different questions", () => {
   test("a catalogue root needs the specification tree, not just a package.json", () => {

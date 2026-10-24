@@ -1,9 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import {
   AmbiguousProjectError,
+  ensureRepoLocalMemoryGitignore,
   identityFromRemote,
   initProject,
   PROJECT_CONFIG_PATH,
@@ -85,6 +86,16 @@ describe("resolution precedence", () => {
       const identity = resolveProject(p.root, { env: { SE_PROJECT: "from-env" } });
       expect(identity.id).toBe("from-env");
       expect(identity.source).toBe("env");
+    } finally {
+      p.dispose();
+    }
+  });
+
+  test("invalid explicit and environment ids are refused instead of using the store root", () => {
+    const p = tempProject({ "package.json": JSON.stringify({ name: "safe-project" }) });
+    try {
+      expect(() => resolveProject(p.root, { flag: "../" , env: NO_ENV })).toThrow(/usable project id/);
+      expect(() => resolveProject(p.root, { env: { SE_PROJECT: "../../" } })).toThrow(/usable project id/);
     } finally {
       p.dispose();
     }
@@ -276,8 +287,24 @@ describe("memory placement", () => {
     try {
       const location = resolveMemoryLocation(p.root, { env: NO_MEMORY_ENV });
       expect(location.source).toBe("repo-local");
-      expect(location.committable).toBe(true);
       expect(location.root).toBe(join(p.root, "memory"));
+    } finally {
+      p.dispose();
+    }
+  });
+
+  test("local initialization adds an idempotent ignore rule without replacing user rules", () => {
+    const p = tempProject({ "memory/.gitignore": "# existing local policy\n*.tmp\n" });
+    try {
+      const first = ensureRepoLocalMemoryGitignore(p.root);
+      const contents = readFileSync(first.path, "utf8");
+      expect(first.changed).toBe(true);
+      expect(contents).toContain("# existing local policy");
+      expect(contents).toContain("*\n!.gitignore\n!.gitkeep");
+
+      const second = ensureRepoLocalMemoryGitignore(p.root);
+      expect(second.changed).toBe(false);
+      expect(readFileSync(second.path, "utf8")).toBe(contents);
     } finally {
       p.dispose();
     }
@@ -310,12 +337,12 @@ describe("memory placement", () => {
     }
   });
 
-  test("a store outside the project is reported as not committable", () => {
+  test("an explicit custom store location is reported as custom", () => {
     const p = tempProject({});
     try {
       const outside = mkdtempSync(join(tmpdir(), "se-outside-"));
       const location = resolveMemoryLocation(p.root, { flag: outside, env: NO_MEMORY_ENV });
-      expect(location.committable).toBe(false);
+      expect(location.source).toBe("flag");
       rmSync(outside, { recursive: true, force: true });
     } finally {
       p.dispose();
