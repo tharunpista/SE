@@ -21,7 +21,7 @@ import { ADAPTERS, findAdapter } from "./render/claude-code.ts";
 import { renderRoleInstructions } from "./render/host.ts";
 import { effectiveRoster, hostSites } from "./render/sites.ts";
 import { cmdMemory } from "./memory/cli.ts";
-import { closeRoster, isClosureMode } from "./roles/roster.ts";
+import { isClosureMode, selectRoster } from "./roles/roster.ts";
 import { checkTopics, findTopic, resolveTopic, suggestTopic, TOPICS, uncoveredRoles } from "./roles/topics.ts";
 import {
   chooseBinDir,
@@ -64,8 +64,10 @@ commands:
                             --project <dir> the directory the host has open
                             --out <dir>  --dry-run  --all  --force  --merge
                             --merge updates selected files without removing other generated roles.
-  agents enable             Install the starter roster globally in supported clients.
-                            --host <id>  --roster a,b,c  --all  --force
+  agents enable             Install a roster globally in every supported client.
+                            Omit --host to install for all of them at once.
+                            --host <id>  --topic <id>  --dept <name>
+                            --roster a,b,c  --all  --force
   agents disable            Remove generated global agents; --host <id> for one.
   agents status             Show generated global agents in each client folder.
 
@@ -772,91 +774,29 @@ known: ${ADAPTERS.map((a) => a.id).join(", ")}`);
   const rosterFlag = flags.get("roster");
   const topicFlag = flags.get("topic");
 
-  let selected: readonly Role[];
-  let selectionLabel: string;
-
-  if (typeof rosterFlag === "string") {
-    const wanted = rosterFlag.split(",").map((s) => s.trim()).filter(Boolean);
-    const missing = wanted.filter((id) => !registry.byId.has(id));
-    if (missing.length > 0) {
-      console.error(`error: unknown role id(s): ${missing.join(", ")}`);
-      return 2;
-    }
-    selected = wanted.map((id) => registry.byId.get(id)!);
-    selectionLabel = `explicit roster (${wanted.length})`;
-  } else if (typeof topicFlag === "string") {
-    const topic = findTopic(topicFlag);
-    if (!topic) {
-      console.error(`error: unknown topic "${topicFlag}".${suggestTopic(topicFlag)}`);
-      return 2;
-    }
-    const { roles: members, missing } = resolveTopic(topic, registry.byId);
-    if (missing.length > 0) {
-      // Validation rejects this, so reaching it means the catalogue was edited
-      // past the gate. Report rather than silently installing a partial topic.
-      console.error(`error: topic "${topic.id}" names unknown role(s): ${missing.join(", ")}`);
-      return 1;
-    }
-    const enabled = members.filter((r) => r.enabled && r.status === "active");
-    // The starter roster comes too: a topic is a set of specialists with no
-    // orchestrator, no requirements owner and no verification among them.
-    const starters = routable.filter((r) => r.tier === "starter" && !enabled.some((m) => m.id === r.id));
-    selected = [...enabled, ...starters];
-    selectionLabel = `topic ${topic.id} (${enabled.length}) + starter roster (${starters.length})`;
-  } else if (typeof dept === "string") {
-    if (!DEPARTMENTS.includes(dept)) {
-      console.error(`error: unknown department "${dept}".
-known: ${DEPARTMENTS.join(", ")}`);
-      return 2;
-    }
-    // Selecting a department brings the starter roster with it. A department
-    // on its own has no orchestrator, no contract owner and no verification,
-    // so it would be a set of specialists with nobody sequencing them.
-    const inDept = routable.filter((r) => r.department === dept);
-    const starters = routable.filter((r) => r.tier === "starter" && r.department !== dept);
-    selected = [...inDept, ...starters];
-    selectionLabel = `department ${dept} (${inDept.length}) + starter roster (${starters.length})`;
-  } else if (flags.has("all")) {
-    selected = routable;
-    selectionLabel = `entire catalogue (${routable.length})`;
-  } else {
-    selected = routable.filter((r) => r.tier === "starter");
-    selectionLabel = `starter roster (${selected.length})`;
-  }
-
-  if (selected.length === 0) {
-    console.error("error: no roles selected. Nothing to render.");
-    return 1;
-  }
-
-  /*
-   * Escalation closure.
-   *
-   * A roster whose escalation targets are not installed is a roster where stuck
-   * work has nowhere to go: the role names a receiver, the host has no such
-   * agent, and the handoff block is returned to an operator who did not ask for
-   * it. `escalates_to` and `escalates_on_failure_to` are hard dependencies for
-   * that reason, and they are pulled in automatically.
-   *
-   * `collaborators` deliberately is not. It is routing metadata, not
-   * delegation -- the generated AGENTS.md says so in as many words -- and
-   * closing over it costs 21 extra roles for security-and-privacy and 27 for
-   * backend-and-data, roughly doubling the roster and pushing it through the
-   * host's always-loaded metadata budget. `--closure collaborators` asks for
-   * that set explicitly; nothing imposes it.
-   */
   const closureFlag = typeof flags.get("closure") === "string" ? (flags.get("closure") as string) : "escalation";
   if (!isClosureMode(closureFlag)) {
     console.error(`error: unknown --closure "${closureFlag}". One of: escalation, collaborators, none`);
     return 2;
   }
 
-  const added = closeRoster(selected, routable, closureFlag);
-  if (added.length > 0) {
-    selected = [...selected, ...added];
-    selectionLabel += ` + ${added.length} escalation target(s)`;
+  const selection = selectRoster(registry, {
+    ...(typeof rosterFlag === "string" ? { roster: rosterFlag } : {}),
+    ...(typeof topicFlag === "string" ? { topic: topicFlag } : {}),
+    ...(typeof dept === "string" ? { dept } : {}),
+    all: flags.has("all"),
+    closure: closureFlag,
+  });
+  if (!selection.ok) {
+    console.error(`error: ${selection.message}`);
+    return selection.exitCode;
+  }
+  const selected = selection.roles;
+  const selectionLabel = selection.label;
+  if (selection.added.length > 0) {
     console.log(
-      `added for closure: ${added.map((r) => r.id).sort().join(", ")}\n` +
+      `added for closure: ${selection.added.map((r) => r.id).sort().join(", ")}
+` +
         `  selected roles escalate to these; without them stuck work has no receiver.`,
     );
   }
@@ -1099,7 +1039,7 @@ function cmdAgents(root: string, args: Args): number {
   }
 
   if (action !== "enable") {
-    console.error('usage: se agents <enable|disable|status> [--host <id>] [--roster a,b,c] [--all] [--force]');
+    console.error('usage: se agents <enable|disable|status> [--host <id>] [--topic <id>] [--dept <name>] [--roster a,b,c] [--all] [--force]');
     return 2;
   }
   const { registry, diags } = loadCatalogue(root);
@@ -1109,16 +1049,33 @@ function cmdAgents(root: string, args: Args): number {
     console.error("error: refusing global install while role files have errors.");
     return 1;
   }
-  const routable = registry.all.filter((r) => r.enabled && r.status === "active");
+  /*
+   * The same selector `se render` uses. These two commands both answer "which
+   * roles", and when they answered it differently the roster an operator
+   * installed globally was not the one they had previewed: enable understood
+   * only --roster and --all, and applied no escalation closure.
+   */
+  const closureFlag = typeof args.flags.get("closure") === "string" ? (args.flags.get("closure") as string) : "escalation";
+  if (!isClosureMode(closureFlag)) {
+    console.error(`error: unknown --closure "${closureFlag}". One of: escalation, collaborators, none`);
+    return 2;
+  }
   const rosterFlag = args.flags.get("roster");
-  let selected: readonly Role[];
-  if (typeof rosterFlag === "string") {
-    const ids = rosterFlag.split(",").map((id) => id.trim()).filter(Boolean);
-    const missing = ids.filter((id) => !registry.byId.has(id));
-    if (missing.length) { console.error(`error: unknown role id(s): ${missing.join(", ")}`); return 2; }
-    selected = ids.map((id) => registry.byId.get(id)!);
-  } else selected = args.flags.has("all") ? routable : routable.filter((r) => r.tier === "starter");
-  if (!selected.length) { console.error("error: selected roster is empty."); return 1; }
+  const topicFlag = args.flags.get("topic");
+  const deptFlag = args.flags.get("dept");
+  const selection = selectRoster(registry, {
+    ...(typeof rosterFlag === "string" ? { roster: rosterFlag } : {}),
+    ...(typeof topicFlag === "string" ? { topic: topicFlag } : {}),
+    ...(typeof deptFlag === "string" ? { dept: deptFlag } : {}),
+    all: args.flags.has("all"),
+    closure: closureFlag,
+  });
+  if (!selection.ok) {
+    console.error(`error: ${selection.message}`);
+    return selection.exitCode;
+  }
+  const selected = selection.roles;
+  console.log(`roster: ${selection.label}`);
 
   // Preflight every host before the first write so a foreign-file conflict or
   // metadata ceiling cannot leave a half-installed global roster.

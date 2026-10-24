@@ -5,7 +5,10 @@
  * worth testing directly.
  */
 
+import type { Registry } from "./resolve.ts";
 import type { Role } from "./types.ts";
+import { findTopic, resolveTopic, suggestTopic } from "./topics.ts";
+import { DEPARTMENTS } from "./vocabulary.ts";
 
 export type ClosureMode = "escalation" | "collaborators" | "none";
 
@@ -69,4 +72,93 @@ export function closeRoster(
     }
   }
   return added;
+}
+
+
+export interface RosterRequest {
+  /** --roster a,b,c */
+  readonly roster?: string | undefined;
+  /** --topic <id> */
+  readonly topic?: string | undefined;
+  /** --dept <name> */
+  readonly dept?: string | undefined;
+  /** --all */
+  readonly all?: boolean;
+  readonly closure?: ClosureMode;
+}
+
+export type RosterSelection =
+  | { readonly ok: true; readonly roles: readonly Role[]; readonly label: string; readonly added: readonly Role[] }
+  | { readonly ok: false; readonly message: string; readonly exitCode: 1 | 2 };
+
+/**
+ * Resolve a roster request into roles.
+ *
+ * Shared by `se render` and `se agents enable`, which previously each had their
+ * own selection code: render understood --dept and --topic, enable understood
+ * only --roster and --all, and neither applied escalation closure in the other's
+ * path. Two commands that both answer "which roles" must answer it the same
+ * way, or the roster an operator installs globally differs from the one they
+ * previewed.
+ */
+export function selectRoster(
+  registry: Registry,
+  request: RosterRequest,
+): RosterSelection {
+  const routable = registry.all.filter((r) => r.enabled && r.status === "active");
+  let roles: readonly Role[];
+  let label: string;
+
+  if (request.roster !== undefined) {
+    const wanted = request.roster.split(",").map((s) => s.trim()).filter(Boolean);
+    const missing = wanted.filter((id) => !registry.byId.has(id));
+    if (missing.length > 0) {
+      return { ok: false, message: `unknown role id(s): ${missing.join(", ")}`, exitCode: 2 };
+    }
+    roles = wanted.map((id) => registry.byId.get(id)!);
+    label = `explicit roster (${wanted.length})`;
+  } else if (request.topic !== undefined) {
+    const topic = findTopic(request.topic);
+    if (!topic) {
+      return { ok: false, message: `unknown topic "${request.topic}".${suggestTopic(request.topic)}`, exitCode: 2 };
+    }
+    const { roles: members, missing } = resolveTopic(topic, registry.byId);
+    if (missing.length > 0) {
+      // Validation rejects this, so reaching it means the catalogue was edited
+      // past the gate. Report rather than installing a partial topic.
+      return { ok: false, message: `topic "${topic.id}" names unknown role(s): ${missing.join(", ")}`, exitCode: 1 };
+    }
+    const enabled = members.filter((r) => r.enabled && r.status === "active");
+    // A topic is a set of specialists with no orchestrator, no requirements
+    // owner and no verification among them, so the starter roster comes too.
+    const starters = routable.filter((r) => r.tier === "starter" && !enabled.some((m) => m.id === r.id));
+    roles = [...enabled, ...starters];
+    label = `topic ${topic.id} (${enabled.length}) + starter roster (${starters.length})`;
+  } else if (request.dept !== undefined) {
+    if (!DEPARTMENTS.includes(request.dept)) {
+      return { ok: false, message: `unknown department "${request.dept}".
+known: ${DEPARTMENTS.join(", ")}`, exitCode: 2 };
+    }
+    const inDept = routable.filter((r) => r.department === request.dept);
+    const starters = routable.filter((r) => r.tier === "starter" && r.department !== request.dept);
+    roles = [...inDept, ...starters];
+    label = `department ${request.dept} (${inDept.length}) + starter roster (${starters.length})`;
+  } else if (request.all === true) {
+    roles = routable;
+    label = `entire catalogue (${routable.length})`;
+  } else {
+    roles = routable.filter((r) => r.tier === "starter");
+    label = `starter roster (${roles.length})`;
+  }
+
+  if (roles.length === 0) {
+    return { ok: false, message: "no roles selected. Nothing to render.", exitCode: 1 };
+  }
+
+  const added = closeRoster(roles, routable, request.closure ?? "escalation");
+  if (added.length > 0) {
+    roles = [...roles, ...added];
+    label += ` + ${added.length} escalation target(s)`;
+  }
+  return { ok: true, roles, label, added };
 }
