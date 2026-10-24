@@ -87,12 +87,6 @@ export const QUARANTINE: readonly string[] = [
   "pricing-packaging-analyst",
   "product-marketing-specialist",
   "sales-engineer",
-  // documentation-and-support (5 remaining)
-  "developer-onboarding-engineer",
-  "knowledge-engineer",
-  "release-notes-engineer",
-  "support-knowledge-engineer",
-  "troubleshooting-engineer",
   // mobile-and-desktop (11)
   "android-application-engineer",
   "cross-platform-mobile-engineer",
