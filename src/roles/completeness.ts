@@ -14,10 +14,12 @@
  * problem, it is a role that will not change what an agent does, which is the
  * only thing a role definition is for.
  *
- * QUARANTINE exists so this rule could be introduced before the backlog was
- * cleared. It is a debt register, not an exemption: a quarantined role is
- * reported on every run, the list may only shrink, and a test fails if a role
- * outside it regresses. When it is empty, delete it and this paragraph.
+ * QUARANTINE existed so this rule could be introduced before the backlog was
+ * cleared. The backlog is now empty and every role is held to the rule as an
+ * error. The list stays, empty, because the machinery around it -- a shrinking
+ * register, an error when an entry is finished but not delisted -- is what any
+ * future batch of unfinished roles should go through rather than being
+ * exempted silently.
  */
 
 import type { Diagnostics } from "../util/diagnostics.ts";
@@ -68,26 +70,13 @@ const GENERIC_BOUNDARY = "Owns the scoped responsibility described in the missio
 const PLACEHOLDER_VERIFY = /<project-native verification command>/;
 
 /**
- * Roles known to be unfinished when this rule was introduced.
+ * Roles not yet held to the rule. Empty: all 191 software roles meet the bar.
  *
- * Ordered by department so a batch can be cleared and removed together. Every
- * entry is a role whose body is template fill; none is a role that is finished
- * and merely short.
+ * An entry here is a debt record, never an exemption. It is reported on every
+ * run, the list may only shrink, and finishing a role without delisting it is
+ * itself an error.
  */
-export const QUARANTINE: readonly string[] = [
-  // business-and-product-operations (11)
-  "business-operations-coordinator",
-  "business-strategy-analyst",
-  "content-specialist",
-  "customer-feedback-analyst",
-  "customer-success-specialist",
-  "finance-unit-economics-analyst",
-  "open-source-community-manager",
-  "partnership-integration-specialist",
-  "pricing-packaging-analyst",
-  "product-marketing-specialist",
-  "sales-engineer",
-];
+export const QUARANTINE: readonly string[] = [];
 
 const QUARANTINED = new Set(QUARANTINE);
 
