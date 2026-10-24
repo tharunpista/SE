@@ -87,14 +87,6 @@ export const QUARANTINE: readonly string[] = [
   "pricing-packaging-analyst",
   "product-marketing-specialist",
   "sales-engineer",
-  // mobile-and-desktop (7 remaining)
-  "deep-linking-attribution-engineer",
-  "desktop-application-engineer",
-  "desktop-packaging-update-engineer",
-  "mobile-offline-sync-engineer",
-  "mobile-performance-engineer",
-  "mobile-release-compliance-engineer",
-  "push-notification-engineer",
 ];
 
 const QUARANTINED = new Set(QUARANTINE);
