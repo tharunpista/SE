@@ -1,6 +1,6 @@
 import type { Diagnostics } from "../util/diagnostics.ts";
 import {
-  ARTIFACT_KINDS, CLI_COMMANDS, DEPARTMENTS, INTERFACE_KINDS, MEMORY_SCOPES, suggest,
+  ARTIFACT_KINDS, CAPABILITY_KINDS, CLI_COMMANDS, DEPARTMENTS, INTERFACE_KINDS, MEMORY_SCOPES, suggest,
 } from "./vocabulary.ts";
 import type { MemoryScope, Role, Tier } from "./types.ts";
 
@@ -296,6 +296,26 @@ export function validateRole(
         code: "role/self-escalation", file, key: "escalates_to",
         message: "A role may not escalate to itself.",
         hint: "Self-escalation is an infinite loop at runtime; terminate the chain at another role or at 'operator'.",
+      });
+    }
+  }
+
+  /*
+   * `tools` is an allowlist of capabilities, and until now it was the only
+   * vocabulary in this schema left open. That made it the one field where a
+   * typo removes authority silently: `read-fils` validates, the renderer finds
+   * no mapping, drops it, and the role runs believing it can read files. Every
+   * other closed vocabulary here exists to prevent exactly that class of
+   * failure, so this one is closed too.
+   */
+  for (const capability of strArray(ctx, "tools", fm["tools"])) {
+    if (!CAPABILITY_KINDS.has(capability)) {
+      diags.error({
+        code: "role/unknown-capability", file, key: "tools",
+        message: `Unknown capability "${capability}".`,
+        hint:
+          `Use a term from schemas/vocabulary.json#capabilities.${suggest(capability, CAPABILITY_KINDS)} ` +
+          `An unknown capability is dropped by every renderer, so the role would lose it without being told.`,
       });
     }
   }

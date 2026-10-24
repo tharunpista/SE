@@ -7,8 +7,9 @@ project-scoped local memory store.
 
 **Current scope:** this is a CLI and local library. A localhost dashboard, a
 background service, hosted team memory, and automatic task-aware memory
-retrieval are not implemented yet. The memory CLI currently supports project
-status, integrity checks, listing, reading, and writing records.
+retrieval are not implemented yet. The memory CLI supports project identity,
+versioned local records, explicit source allowlists, and query-based bounded
+context assembly for local repository files.
 
 ## Get started
 
@@ -37,6 +38,7 @@ For a global installation and client setup, see
 | `tests/` | Unit, integration, and memory-store tests |
 | `docs/` | Installation, architecture, data-boundary, and memory documentation |
 | `.se/project.json` | Stable project ID metadata shared across clones; contains no runtime records |
+| `.se/sources.json` | Reviewed allowlist of project files eligible for local context retrieval |
 | `memory/` | Optional checkout-local runtime store; ignored by Git |
 
 Generated files under client folders such as `.claude/agents/` and
@@ -56,7 +58,14 @@ se memory status
 se memory doctor
 se memory list
 se memory get <record-id>
+se memory sources
+se memory context --query "the task and relevant project area"
 ```
+
+The context command reads only the files listed in `.se/sources.json`, returns
+small source excerpts with paths, line numbers, and hashes, and adds matching
+memory notes with freshness and trust metadata. It does not scan or copy the
+whole repository. See [context retrieval policy](docs/memory/README.md#context-retrieval).
 
 Raw memory records are private runtime data. Do not commit or upload them. To
 share knowledge, curate it into reviewed documentation or role definitions.

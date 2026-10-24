@@ -79,6 +79,39 @@ describe("fail-closed validation", () => {
     }
   });
 
+  /*
+   * `tools` was the one open vocabulary, and the only field where a typo
+   * removes authority silently rather than failing: the renderer drops an
+   * unmapped capability and the role runs believing it still has it.
+   */
+  test("rejects an unknown capability in tools, and suggests the right one", () => {
+    const repo = tempRepo();
+    try {
+      repo.builtin("orchestration/a.md", roleFile("a", { tools: ["read-fils"] }));
+      const d = repo.check().diagnostics.find((x) => x.code === "role/unknown-capability");
+      expect(d).toBeDefined();
+      expect(d?.message).toContain("read-fils");
+      expect(d?.hint).toContain('Did you mean "read-files"?');
+    } finally {
+      repo.dispose();
+    }
+  });
+
+  test("accepts every capability the renderers can actually map", () => {
+    const repo = tempRepo();
+    try {
+      repo.builtin(
+        "orchestration/a.md",
+        roleFile("a", {
+          tools: ["read-files", "search", "run-tests", "memory-read", "escalate", "web-search"],
+        }),
+      );
+      expect(hasCode(repo.check().diagnostics, "role/unknown-capability")).toBe(false);
+    } finally {
+      repo.dispose();
+    }
+  });
+
   test("rejects an unsupported schema_version instead of guessing", () => {
     const repo = tempRepo();
     try {

@@ -169,21 +169,23 @@ describe("tool mapping enforces the role's declared constraints", () => {
     }
   });
 
+  /*
+   * `tools` is now closed against vocabulary.json#/capabilities, so an
+   * unmappable capability is rejected by `validate` and a fixture carrying one
+   * never resolves -- see "rejects an unknown capability in tools" in
+   * roles.test.ts. The renderer's own guard stays, and is tested directly,
+   * because defence in depth is only defence if the inner layer still works
+   * when the outer one is bypassed.
+   */
   test("an unmappable capability is reported, never silently dropped", () => {
-    const repo = tempRepo();
-    try {
-      repo.builtin("orchestration/a.md", roleFile("a", {
-        tools: ["read-files", "drive-a-browser"],
-      }));
-      const result = render(repo);
-      // Silently dropping a capability produces a role that looks fine and
-      // cannot do its job. It must surface, both to the operator and in the
-      // rendered prompt.
-      expect(result.unmapped.get("a")).toEqual(["drive-a-browser"]);
-      expect(result.files[0]!.contents).toContain("Unavailable capabilities");
-    } finally {
-      repo.dispose();
-    }
+    const rendered = claudeCodeAdapter.render([
+      synthesiseRole({ id: "a", tools: ["read-files", "drive-a-browser"] }),
+    ]);
+    // Silently dropping a capability produces a role that looks fine and
+    // cannot do its job. It must surface, both to the operator and in the
+    // rendered prompt.
+    expect(rendered.unmapped.get("a")).toEqual(["drive-a-browser"]);
+    expect(rendered.files[0]!.contents).toContain("Unavailable capabilities");
   });
 
   test("capabilities this project serves itself are not reported as unmapped", () => {

@@ -21,6 +21,7 @@ import { ADAPTERS, findAdapter } from "./render/claude-code.ts";
 import { renderRoleInstructions } from "./render/host.ts";
 import { effectiveRoster, hostSites } from "./render/sites.ts";
 import { cmdMemory } from "./memory/cli.ts";
+import { closeRoster, isClosureMode } from "./roles/roster.ts";
 import {
   chooseBinDir,
   isOnPath,
@@ -40,8 +41,8 @@ commands:
   ownership [--artifact <k>] Show the artifact ownership matrix.
   departments               Show department counts against the specification.
   doctor                    Report environment and catalogue health.
-  memory <subcommand>       Project memory: init, status, doctor, list, get,
-                            put. Run "se memory help" for its options.
+  memory <subcommand>       Project memory: init, status, doctor, context,
+                            sources, recall, remember. Run "se memory help".
   install                   Put "se" on PATH for every shell and register this
                             catalogue. Run this once after cloning.
                             --bin-dir <dir>  --add-path  --dry-run
@@ -81,12 +82,25 @@ function parseArgs(argv: readonly string[]): Args {
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i]!;
     if (a.startsWith("--")) {
+      /*
+       * A repeated flag accumulates rather than overwriting, so `--source a
+       * --source b` keeps both. Values are joined with a newline because no
+       * flag value this CLI accepts contains one, which keeps the map's value
+       * type a plain string and every existing consumer working unchanged.
+       * Readers take the last line for a scalar flag, or every line for a
+       * repeatable one.
+       */
+      const accumulate = (key: string, value: string): void => {
+        const existing = flags.get(key);
+        flags.set(key, typeof existing === "string" ? `${existing}\n${value}` : value);
+      };
+
       const eq = a.indexOf("=");
-      if (eq !== -1) flags.set(a.slice(2, eq), a.slice(eq + 1));
+      if (eq !== -1) accumulate(a.slice(2, eq), a.slice(eq + 1));
       else {
         const next = argv[i + 1];
         if (next !== undefined && !next.startsWith("-")) {
-          flags.set(a.slice(2), next);
+          accumulate(a.slice(2), next);
           i++;
         } else flags.set(a.slice(2), true);
       }
@@ -724,6 +738,38 @@ known: ${DEPARTMENTS.join(", ")}`);
   if (selected.length === 0) {
     console.error("error: no roles selected. Nothing to render.");
     return 1;
+  }
+
+  /*
+   * Escalation closure.
+   *
+   * A roster whose escalation targets are not installed is a roster where stuck
+   * work has nowhere to go: the role names a receiver, the host has no such
+   * agent, and the handoff block is returned to an operator who did not ask for
+   * it. `escalates_to` and `escalates_on_failure_to` are hard dependencies for
+   * that reason, and they are pulled in automatically.
+   *
+   * `collaborators` deliberately is not. It is routing metadata, not
+   * delegation -- the generated AGENTS.md says so in as many words -- and
+   * closing over it costs 21 extra roles for security-and-privacy and 27 for
+   * backend-and-data, roughly doubling the roster and pushing it through the
+   * host's always-loaded metadata budget. `--closure collaborators` asks for
+   * that set explicitly; nothing imposes it.
+   */
+  const closureFlag = typeof flags.get("closure") === "string" ? (flags.get("closure") as string) : "escalation";
+  if (!isClosureMode(closureFlag)) {
+    console.error(`error: unknown --closure "${closureFlag}". One of: escalation, collaborators, none`);
+    return 2;
+  }
+
+  const added = closeRoster(selected, routable, closureFlag);
+  if (added.length > 0) {
+    selected = [...selected, ...added];
+    selectionLabel += ` + ${added.length} escalation target(s)`;
+    console.log(
+      `added for closure: ${added.map((r) => r.id).sort().join(", ")}\n` +
+        `  selected roles escalate to these; without them stuck work has no receiver.`,
+    );
   }
 
   const result = adapter.render(selected, root);

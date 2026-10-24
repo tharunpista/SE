@@ -1,0 +1,75 @@
+{
+  "schema_version": 1,
+  "sources": [
+    {
+      "id": "project-overview",
+      "kind": "file",
+      "path": "README.md",
+      "purpose": "Project goal, current scope, setup, and repository map.",
+      "authority": "authoritative"
+    },
+    {
+      "id": "runtime-contract",
+      "kind": "file",
+      "path": "package.json",
+      "purpose": "Supported runtime, commands, package identity, and dependency policy.",
+      "authority": "authoritative"
+    },
+    {
+      "id": "memory-policy",
+      "kind": "file",
+      "path": "docs/memory/README.md",
+      "purpose": "Memory storage locations, privacy boundaries, and sharing policy.",
+      "authority": "authoritative"
+    },
+    {
+      "id": "project-identity",
+      "kind": "file",
+      "path": ".se/project.json",
+      "purpose": "Stable non-secret identity used to namespace project memory.",
+      "authority": "authoritative"
+    },
+    {
+      "id": "memory-cli",
+      "kind": "file",
+      "path": "src/memory/cli.ts",
+      "purpose": "Available memory commands and their input/output behavior.",
+      "authority": "authoritative"
+    },
+    {
+      "id": "memory-project-resolution",
+      "kind": "file",
+      "path": "src/memory/project.ts",
+      "purpose": "Project identity resolution and memory placement rules.",
+      "authority": "authoritative"
+    },
+    {
+      "id": "memory-store",
+      "kind": "file",
+      "path": "src/memory/store.ts",
+      "purpose": "Canonical record storage, write safety, and persistence protocol.",
+      "authority": "authoritative"
+    },
+    {
+      "id": "memory-record-contract",
+      "kind": "file",
+      "path": "src/memory/types.ts",
+      "purpose": "Record schema, trust, lifecycle, and write authorization types.",
+      "authority": "authoritative"
+    },
+    {
+      "id": "memory-context-retrieval",
+      "kind": "file",
+      "path": "src/memory/context.ts",
+      "purpose": "Explicit source allowlist validation, safe local retrieval, ranking, and context package provenance.",
+      "authority": "authoritative"
+    },
+    {
+      "id": "memory-namespace-collision-policy",
+      "kind": "file",
+      "path": "src/memory/namespace.ts",
+      "purpose": "Detect whether separate checkouts are claiming the same project memory namespace.",
+      "authority": "authoritative"
+    }
+  ]
+}

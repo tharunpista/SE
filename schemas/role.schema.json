@@ -6,13 +6,27 @@
   "type": "object",
   "additionalProperties": false,
   "required": [
-    "schema_version", "id", "name", "department", "tier",
-    "mission", "activation", "tools", "memory_scopes",
-    "owns_artifacts", "owns_interfaces", "collaborators",
-    "escalates_to", "context_budget_tokens", "max_calls", "enabled"
+    "schema_version",
+    "id",
+    "name",
+    "department",
+    "tier",
+    "mission",
+    "activation",
+    "tools",
+    "memory_scopes",
+    "owns_artifacts",
+    "owns_interfaces",
+    "collaborators",
+    "escalates_to",
+    "context_budget_tokens",
+    "max_calls",
+    "enabled"
   ],
   "properties": {
-    "schema_version": { "const": 1 },
+    "schema_version": {
+      "const": 1
+    },
     "id": {
       "type": "string",
       "pattern": "^[a-z][a-z0-9]*(-[a-z0-9]+)*$",
@@ -20,10 +34,19 @@
       "maxLength": 64,
       "description": "Stable kebab-case identifier. Never reused, never renamed; retire with status instead."
     },
-    "name": { "type": "string", "minLength": 3, "maxLength": 80 },
-    "department": { "$ref": "vocabulary.json#/departments" },
+    "name": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 80
+    },
+    "department": {
+      "$ref": "vocabulary.json#/departments"
+    },
     "tier": {
-      "enum": ["starter", "catalogue"],
+      "enum": [
+        "starter",
+        "catalogue"
+      ],
       "description": "starter carries all 16 sections; catalogue carries the mandatory subset. Part IV 7.1."
     },
     "mission": {
@@ -35,53 +58,86 @@
     "activation": {
       "type": "array",
       "minItems": 1,
-      "items": { "type": "string", "minLength": 8 },
+      "items": {
+        "type": "string",
+        "minLength": 8
+      },
       "description": "Project facts that activate this role. Never 'always' for a catalogue role; activation requires a fact, not a hunch."
     },
     "tools": {
       "type": "array",
-      "items": { "type": "string" },
-      "description": "Allowlist, enforced at invocation. Part XVI 62."
+      "items": {
+        "$ref": "vocabulary.json#/capabilities"
+      },
+      "uniqueItems": true,
+      "description": "Allowlist of capabilities, closed against vocabulary.json#/capabilities. An unknown term is dropped by every renderer, so it must fail validation rather than silently remove authority."
     },
     "memory_scopes": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["read", "write"],
+      "required": [
+        "read",
+        "write"
+      ],
       "properties": {
-        "read":  { "type": "array", "items": { "$ref": "vocabulary.json#/memory_scopes" }, "uniqueItems": true },
-        "write": { "type": "array", "items": { "$ref": "vocabulary.json#/memory_scopes" }, "uniqueItems": true }
+        "read": {
+          "type": "array",
+          "items": {
+            "$ref": "vocabulary.json#/memory_scopes"
+          },
+          "uniqueItems": true
+        },
+        "write": {
+          "type": "array",
+          "items": {
+            "$ref": "vocabulary.json#/memory_scopes"
+          },
+          "uniqueItems": true
+        }
       },
       "description": "Deny-by-default. A scope absent from 'read' is unreadable. 'write' to organization or role scope additionally requires human promotion (Part XX 75)."
     },
     "owns_artifacts": {
       "type": "array",
-      "items": { "$ref": "vocabulary.json#/artifact_kinds" },
+      "items": {
+        "$ref": "vocabulary.json#/artifact_kinds"
+      },
       "uniqueItems": true,
       "description": "Accountable ownership. Exactly one enabled role may own an artifact kind unless shared_with declares otherwise. Part XII 47."
     },
     "contributes_artifacts": {
       "type": "array",
-      "items": { "$ref": "vocabulary.json#/artifact_kinds" },
+      "items": {
+        "$ref": "vocabulary.json#/artifact_kinds"
+      },
       "uniqueItems": true,
       "description": "Contribution without accountability. Unlimited roles may contribute."
     },
     "owns_interfaces": {
       "type": "array",
-      "items": { "$ref": "vocabulary.json#/interface_kinds" },
+      "items": {
+        "$ref": "vocabulary.json#/interface_kinds"
+      },
       "uniqueItems": true
     },
     "shared_with": {
       "type": "object",
       "additionalProperties": {
         "type": "array",
-        "items": { "type": "string", "pattern": "^[a-z][a-z0-9]*(-[a-z0-9]+)*$" },
+        "items": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9]*(-[a-z0-9]+)*$"
+        },
         "minItems": 1
       },
       "description": "artifact_kind -> role ids with declared co-ownership. Must be reciprocal; one-sided declarations are rejected."
     },
     "collaborators": {
       "type": "array",
-      "items": { "type": "string", "pattern": "^[a-z][a-z0-9]*(-[a-z0-9]+)*$" },
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9]*(-[a-z0-9]+)*$"
+      },
       "uniqueItems": true,
       "description": "Role ids. Every id must resolve; a dangling collaborator is a broken handoff."
     },
@@ -91,18 +147,37 @@
       "description": "A role id, or 'operator' for decisions reserved to the human."
     },
     "context_budget_tokens": {
-      "type": "integer", "minimum": 2000, "maximum": 400000,
+      "type": "integer",
+      "minimum": 2000,
+      "maximum": 400000,
       "description": "Enforced before invocation, not measured after. Part XI 46."
     },
-    "max_calls": { "type": "integer", "minimum": 1, "maximum": 100 },
-    "enabled": { "type": "boolean" },
+    "max_calls": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 100
+    },
+    "enabled": {
+      "type": "boolean"
+    },
     "status": {
-      "enum": ["active", "deprecated"],
+      "enum": [
+        "active",
+        "deprecated"
+      ],
       "default": "active",
       "description": "Deprecated roles keep their id forever. Part XVII 65."
     },
-    "supersedes": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
-    "superseded_by": { "type": "string" },
+    "supersedes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "superseded_by": {
+      "type": "string"
+    },
     "boundary": {
       "type": "string",
       "minLength": 16,
@@ -120,8 +195,43 @@
     },
     "owns_spec_sections": {
       "type": "array",
-      "items": { "type": "string" },
+      "items": {
+        "type": "string"
+      },
       "description": "Sections of the specification this role is accountable for. Used to prove every requirement in Parts IX-XX has an owner."
+    },
+    "participates_interfaces": {
+      "type": "array",
+      "items": {
+        "$ref": "vocabulary.json#/interface_kinds"
+      },
+      "uniqueItems": true,
+      "description": "Interfaces this role takes part in without owning. Ownership is accountability; participation is not."
+    },
+    "verify_commands": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 3
+      },
+      "description": "The commands that prove this role's work. Hardcoded per role rather than inferred, because a role that guesses its own verification command gets it wrong on any non-standard project and then reports the exit code as a failure of the code under test."
+    },
+    "escalates_on_failure_to": {
+      "type": "string",
+      "pattern": "^([a-z][a-z0-9]*(-[a-z0-9]+)*|operator)$",
+      "description": "Where stuck work goes, which is a different question from where decisions go. Separate from escalates_to on purpose."
+    },
+    "stack_aware": {
+      "type": "boolean",
+      "default": false,
+      "description": "When true, renderers append the project's stack-discipline guidance to this role's prompt."
+    },
+    "blocked_on": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Declared gaps: capabilities or commands this role needs that do not exist yet. Declaring the gap is what keeps verify_commands honest."
     }
   }
 }

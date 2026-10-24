@@ -32,6 +32,13 @@ export function departmentLabel(id: string): string {
 
 export const ARTIFACT_KINDS = new Set(vocab.artifact_kinds as readonly string[]);
 export const INTERFACE_KINDS = new Set(vocab.interface_kinds as readonly string[]);
+/**
+ * Capabilities a role may declare in `tools`. Closed for the same reason every
+ * other vocabulary here is: an unknown term in `tools` is the one typo that
+ * silently removes authority instead of failing, because the renderer drops an
+ * unmapped capability and the role never learns it lost one.
+ */
+export const CAPABILITY_KINDS = new Set(vocab.capabilities as readonly string[]);
 export const MEMORY_SCOPES = new Set(vocab.memory_scopes as readonly string[]);
 export const LIFECYCLE_PHASES = vocab.lifecycle_phases as readonly string[];
 export const CLI_COMMANDS = new Set(vocab.cli_commands as readonly string[]);
