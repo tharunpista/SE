@@ -197,7 +197,7 @@
 |---|---|---|---|
 | `capacity-cost-engineer` | Capacity and Cost Engineer | catalogue | Know what the system costs per unit of work and where it runs out of headroom, so capacity and spend are decisions rather than surprises. |
 | `cicd-engineer` | CI/CD Engineer | catalogue | Own the pipeline from commit to production so that it is fast, honest about what it verified, and impossible to bypass accidentally. |
-| `cloud-infrastructure-engineer` | Cloud Infrastructure Engineer | catalogue | Provision cloud resources with least privilege, no public exposure by accident, and a cost that someone has seen before the invoice. |
+| `cloud-infrastructure-engineer` | Cloud Infrastructure Engineer | catalogue | Provision cloud resources that survive a failure domain going away, cannot be reached or deleted by accident, and cost what someone agreed before the invoice. |
 | `database-reliability-engineer` | Database Reliability Engineer | catalogue | Own replication, failover, connection limits, maintenance, backup verification, and safe online schema changes under load. |
 | `developer-experience-engineer` | Developer Experience Engineer | catalogue | Make the local loop fast and the setup reproducible, so time goes into the work rather than into getting the project to run. |
 | `devops-engineer` | DevOps Engineer | catalogue | Operate the deployment path day to day, so deploying is boring, reversible and available to the people who wrote the change. |
