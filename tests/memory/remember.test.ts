@@ -477,6 +477,34 @@ describe("the SessionStart hook", () => {
     expect(JSON.parse((await hook("something-new-in-a-later-version")).out)).toEqual({});
   });
 
+  /*
+   * The hook is installed globally, so it fires in every directory -- a home
+   * directory, a scratch folder, a clone with no manifest or remote. Printing
+   * the identity refusal there at every session start is how an operator
+   * learns to disable the hook, so an unresolvable project is "no memory
+   * here", not an error.
+   */
+  test("a directory with no project identity answers with a silent no-op", async () => {
+    const scratch = mkdtempSync(join(tmpdir(), "se-noproject-"));
+    try {
+      const proc = Bun.spawn(
+        ["bun", "run", join(import.meta.dir, "..", "..", "src", "cli.ts"), "memory", "brief", "--hook"],
+        { stdin: "pipe", stdout: "pipe", stderr: "pipe", cwd: scratch },
+      );
+      proc.stdin.write(JSON.stringify({ source: "startup" }));
+      await proc.stdin.end();
+      const out = await new Response(proc.stdout).text();
+      const err = await new Response(proc.stderr).text();
+
+      expect(await proc.exited).toBe(0);
+      expect(JSON.parse(out)).toEqual({});
+      // Nothing on stderr either: a hook that chatters is a hook that gets removed.
+      expect(err).not.toContain("Cannot determine the project identity");
+    } finally {
+      rmSync(scratch, { recursive: true, force: true });
+    }
+  });
+
   test("brief never throws and never exits non-zero, whatever the store holds", () => {
     const h = harness();
     try {

@@ -937,6 +937,22 @@ export function cmdMemory(repoRoot: string, positional: readonly string[], flags
     // Context assembly is pure: even advisory namespace access metadata is not written.
     ctx = resolveContext(repoRoot, flags, { persistClaim: sub !== "context" });
   } catch (cause) {
+    /*
+     * In hook mode a resolution failure is not an error, it is "no memory
+     * here". The hook is installed globally and therefore fires in every
+     * directory, most of which are not projects: a home directory, a scratch
+     * folder, a clone with no manifest or remote. Printing the seven-line
+     * identity refusal at every session start in every such directory is how
+     * an operator learns to disable the hook.
+     *
+     * So: answer with the empty no-op, say nothing, exit 0. `se memory status`
+     * run by hand still explains the refusal in full, which is where someone
+     * who wants to enable memory here will look.
+     */
+    if (flags.has("hook")) {
+      console.log("{}");
+      return 0;
+    }
     if (cause instanceof AmbiguousProjectError) {
       console.error(`error: ${cause.message}`);
       return 2;
