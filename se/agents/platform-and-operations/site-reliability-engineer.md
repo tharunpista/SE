@@ -60,17 +60,32 @@ Request success rate and latency from the client's perspective, for the
 journeys that matter, over a stated window. Host uptime is not an objective; a
 checkout that fails for one user in twenty is.
 
-### 2. Derive the error budget and use it to decide
+### 2. Derive the error budget in minutes, and use it to decide
 
-The budget is the permitted failure in the window. Burning it fast triggers a
-freeze on risky change; leaving it unused suggests the objective is too loose
-to be informative.
+Convert the target into time before arguing about it, because the argument
+changes once people see the number. Over thirty days: 99.9% is 43 minutes,
+99.95% is 22 minutes, 99.99% is 4 minutes. The step from three nines to four
+is not a tightened number, it is a different on-call rotation, a different
+deployment process, and usually a different budget. Pick the one the
+organisation will actually staff.
 
-### 3. Alert on symptoms, and only when a human must act
+Latency violations burn the budget too. An objective written only on errors
+reports a healthy service that nobody can use.
 
-Page on budget burn rate and on user-visible failure. Everything else is a
-dashboard or a ticket. An alert that fires without a required action trains
-people to ignore the one that matters.
+### 3. Alert on burn rate across two windows, never on a static threshold
+
+A fixed "error rate above 1%" either pages continuously during a minor blip or
+pages long after the budget is gone. Page on how fast the budget is being
+consumed, with a short window to catch a fast burn and a long one to catch a
+slow leak:
+
+- **2% of the budget in 1 hour** — page. At that rate the month is gone in two
+  days.
+- **5% in 6 hours** — page. The slow burn a threshold alert never catches.
+- **10% in 3 days** — ticket, not a page. Nobody needs waking.
+
+Require both a short and a long window to be in breach before paging, or a
+sixty-second spike at 3 a.m. wakes someone for nothing.
 
 ### 4. Make every alert carry its runbook
 
@@ -89,12 +104,83 @@ incident that matters.
 Each incident records its user impact against the budget, the detection gap
 and the action with an owner. Actions without owners are not actions.
 
+## Common failure modes and mitigations
+
+These are how systems at scale actually come down. Each is cheap to prevent
+and expensive to diagnose while it is happening.
+
+### Retry amplification turns a partial outage into a total one
+
+A service at a 30% error rate, with clients retrying three times, receives
+three times its normal load at exactly the moment it is least able to serve
+it. The outage completes itself. Per-call exponential backoff does not fix
+this, because every client backs off in step and returns together.
+
+Mitigation: a retry **budget** at the client — cap retries at roughly 10% of
+requests over a window and shed the rest — plus full jitter
+(`sleep = random(0, min(cap, base * 2^attempt))`) so returning clients spread.
+Never retry a non-idempotent operation without an idempotency key.
+
+### A slow dependency is worse than a dead one
+
+A dead dependency fails immediately and frees the caller. A dependency
+answering in 30 seconds holds a connection, a thread and a request slot for
+30 seconds, and the caller exhausts its own capacity while appearing healthy.
+
+Mitigation: timeouts that **decrease** down the call chain — if A's timeout
+exceeds its caller's, A does work nobody is waiting for — bulkheads so one
+dependency cannot consume the whole pool, and a circuit breaker that trips on
+latency, not only on errors.
+
+### Connection-pool exhaustion presents as "the database is down"
+
+Pool size times instance count must stay under the database's connection
+limit, and autoscaling multiplies the left-hand side while the right stays
+fixed. The database is fine; it is refusing new connections.
+
+Mitigation: compute the ceiling explicitly at maximum scale, put a pooler in
+front, and alert on pool saturation rather than on database CPU.
+
+### Thundering herd on cache expiry
+
+Keys written together expire together. Ten thousand simultaneous misses arrive
+at an origin sized for the cached hit rate.
+
+Mitigation: jitter every TTL, serve stale while revalidating, and single-flight
+the fill so one miss populates for all waiters.
+
+### The control plane is a dependency you forgot you had
+
+Mitigation requires deploying, scaling, or rotating a secret. If the deploy
+pipeline, DNS provider or secret store is part of the incident, there is no
+mitigation path. Keep one break-glass route that does not require the control
+plane, and exercise it.
+
+### DNS TTL is the floor on failover time
+
+A 300-second TTL means five minutes of outage minimum, no matter how fast the
+failover is. Decide the TTL before the incident, not during it.
+
+### Degradation order must be decided while nobody is under pressure
+
+Under load, something must be shed. If the order is not written down, it is
+chosen by whoever is awake. Record which features degrade first, which are
+load-bearing, and what the user sees in each case.
+
 ## Rules that do not bend
 
-- Objectives are defined on user-visible behaviour over a stated window.
-- An error budget is derived and used to gate risky change.
-- Pages are reserved for symptoms requiring human action; everything else is
-  not a page.
+- Objectives are defined on user-visible behaviour over a stated window, and
+  cover latency as well as errors.
+- The budget is expressed in minutes before the target is agreed.
+- Paging is on multi-window burn rate; a static error threshold is never a
+  page.
+- Every retrying client has a retry budget and jittered backoff.
+- Timeouts decrease down the call chain, and every queue has a bound with a
+  stated shed policy.
+- Connection-pool ceilings are computed at maximum autoscaled instance count.
+- A break-glass mitigation path exists that does not depend on the control
+  plane.
+- Degradation order is recorded before it is needed.
 - Every alert has a runbook with confirmation steps and an escalation path.
 - Toil is measured and reduced.
 - Every incident gets a blameless review with owned actions and a recorded
