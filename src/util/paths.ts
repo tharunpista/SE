@@ -1,4 +1,4 @@
-import { dirname, join, relative, resolve, sep } from "node:path";
+import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 
@@ -26,8 +26,11 @@ export function findRepoRoot(from = process.cwd()): string | null {
 }
 
 /** `~/.se`, or `SE_HOME` when set. Holds user-global overrides and config. */
-export function seHome(): string {
-  return process.env["SE_HOME"] ?? join(homedir(), ".se");
+export function seHome(env: Record<string, string | undefined> = process.env): string {
+  const configured = env["SE_HOME"];
+  // SE_HOME is a user-level location, so a relative override is relative to the
+  // user's home, never to whichever project happens to be the current cwd.
+  return configured ? resolve(homedir(), configured) : join(homedir(), ".se");
 }
 
 export const GLOBAL_CONFIG_PATH = "config.json";
@@ -91,13 +94,17 @@ export function isCatalogueRoot(dir: string): boolean {
   return existsSync(join(dir, "se", "agents")) && existsSync(join(dir, "package.json"));
 }
 
-export function readGlobalConfig(): GlobalConfig | null {
-  const path = join(seHome(), GLOBAL_CONFIG_PATH);
+export function readGlobalConfig(env: Record<string, string | undefined> = process.env): GlobalConfig | null {
+  const path = join(seHome(env), GLOBAL_CONFIG_PATH);
   if (!existsSync(path)) return null;
   try {
-    const parsed = JSON.parse(readFileSync(path, "utf8")) as GlobalConfig;
-    if (parsed?.schema_version !== 1) return null;
-    return parsed;
+    const parsed = JSON.parse(readFileSync(path, "utf8")) as Partial<GlobalConfig>;
+    if (
+      parsed?.schema_version !== 1 ||
+      typeof parsed.catalogue_root !== "string" ||
+      !isAbsolute(parsed.catalogue_root)
+    ) return null;
+    return parsed as GlobalConfig;
   } catch {
     // A corrupt global config must not break a command that can resolve the
     // catalogue another way; `se link` reports and rewrites it.
@@ -106,8 +113,8 @@ export function readGlobalConfig(): GlobalConfig | null {
 }
 
 /** Register a catalogue root for use from any directory. */
-export function writeGlobalConfig(catalogueRoot: string): string {
-  const home = seHome();
+export function writeGlobalConfig(catalogueRoot: string, env: Record<string, string | undefined> = process.env): string {
+  const home = seHome(env);
   mkdirSync(home, { recursive: true });
   const path = join(home, GLOBAL_CONFIG_PATH);
   const config: GlobalConfig = { schema_version: 1, catalogue_root: resolve(catalogueRoot) };
@@ -132,12 +139,13 @@ export interface LayerPaths {
 export function layerPaths(root: string): LayerPaths {
   return {
     builtin: join(root, "se", "agents"),
-    userOverrides: join(process.env["SE_HOME"] ?? join(homedir(), ".se"), "overrides", "roles"),
+    userOverrides: join(seHome(), "overrides", "roles"),
     projectRoles: join(root, ".se", "roles"),
   };
 }
 
 /** Tier 2 run state. Outside the source tree, never committed. Part XX 70. */
-export function stateRoot(root: string): string {
-  return process.env["SE_STATE_ROOT"] ?? join(root, ".se", "state");
+export function stateRoot(root: string, env: Record<string, string | undefined> = process.env): string {
+  const configured = env["SE_STATE_ROOT"];
+  return configured ? resolve(root, configured) : join(root, ".se", "state");
 }

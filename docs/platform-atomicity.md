@@ -1,7 +1,9 @@
 # Platform atomicity evidence
 
-Executed on Windows 11 Pro 10.0.26200, Bun 1.4.3, NTFS, 2026-10-23.
-Reproduce with `bun test tests/memory/atomicity.test.ts`.
+The contention numbers below are a recorded manual experiment on Windows 11 Pro
+10.0.26200, Bun 1.4.3, NTFS, 2026-10-23. The current automated crash and
+recovery suite is `bun test tests/memory/crash/crash.test.ts`; it does not
+reproduce the multi-process contention benchmark or its exact counts.
 
 Part XX §72 requires an atomic publish step and a directory `fsync`, and §14 of
 `memory-systems-engineer` requires executed evidence per platform rather than
@@ -49,8 +51,8 @@ under load, on slower disks, or with one more concurrent reader.
 The commit point is **the appearance of a new generation file**, never the
 replacement of an existing one:
 
-    memory/<project_id>/manifest/000001.json   immutable once written
-    memory/<project_id>/manifest/000002.json   <- publishing this IS the commit
+    <memory-root>/<project_id>/manifest/000001.json   immutable once written
+    <memory-root>/<project_id>/manifest/000002.json   <- publishing this IS the commit
 
 - `rename` to a name that does not yet exist cannot hit a sharing violation, so
   publishing is contention-free by construction rather than by retry.

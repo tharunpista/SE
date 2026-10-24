@@ -108,9 +108,12 @@ that has to be redone and costs more than the refusal would have.
 ### 6. Count retries as cost
 
 Repeated attempts are cost, and they are reported rather than absorbed. The
-threshold is not this role's to set: it is defined once in
-[attempt-counting.md](../../engineering/attempt-counting.md) as two failed
-attempts per root cause, with a backstop of five total attempts per task.
+threshold is two failed attempts per root cause, with a backstop of five total
+attempts per task. An attempt is one change intended to fix one cause, checked
+with the declared verification command. Investigation, reproduction and
+instrumentation do not count. Preserve the task-and-cause counter across
+handoffs and sessions; do not reset it without a diagnosis or changed
+acceptance criteria.
 
 This role's job is to make the count **visible**, because a task quietly on
 its second attempt looks identical to one on its first in any status report,

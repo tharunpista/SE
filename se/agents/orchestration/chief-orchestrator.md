@@ -150,10 +150,12 @@ work is its own failure mode.
 - Exceeding a task's cost budget.
 - An unresolvable source-authority conflict.
 - The second failed attempt against one root cause. **Hard stop, not a
-  heuristic.** An attempt is defined in
-  [attempt-counting.md](../../engineering/attempt-counting.md); the counter is
-  keyed on task and root cause, survives reassignment and session end, and
-  resets only on a returned diagnosis.
+  heuristic.** One attempt is one change by one owner intended to resolve one
+  root cause, with its result determined by the declared verification command.
+  Investigation, reproduction, instrumentation and questions do not count.
+  The counter is keyed on task and root cause and survives reassignment and
+  session end. Reset it only after a root-cause investigator returns a diagnosis
+  or the task's acceptance criteria change; a new cause label requires evidence.
 - The fifth total attempt on one task across all causes, which is the backstop
   against a task consuming unlimited budget by discovering a new cause each
   time.

@@ -52,10 +52,12 @@ must never make that failure a judgement. The handoff is routine.
 ## Activation
 
 Invoked by the two-strike rule: **a role whose second attempt on one root
-cause has failed must stop and hand over here.** The attempt unit and the
-counter rules are defined in
-[attempt-counting.md](../../engineering/attempt-counting.md). Investigation,
-reproduction and instrumentation are not attempts and are never counted.
+cause has failed must stop and hand over here.** An attempt is one change by
+one owner intended to resolve one root cause, with the result determined by the
+declared verification command. Investigation, reproduction, instrumentation
+and questions are not attempts. The counter follows the task and root cause
+across owners and sessions; a new cause label requires evidence that the old
+cause was ruled out.
 Also invoked for a failure nobody can reproduce, a defect that reappeared
 after being fixed, or any failure crossing a component boundary where no
 single owner can see the whole path.

@@ -24,7 +24,7 @@ Verify:
 bun run src/cli.ts render --host claude-code --dry-run
 ```
 
-## Why not all 152
+## Roster size and context cost
 
 Every rendered role costs context in **every** session, used or not: Claude Code
 loads each subagent's `description` at startup so it can route to them. Measured
@@ -32,15 +32,14 @@ on this catalogue:
 
 | Roster | Roles | Always-loaded metadata |
 |---|---|---|
-| starter (default) | 11 | ~669 tokens |
-| one department | 7–22 | ~500–1,500 tokens |
-| entire catalogue | 152 | **~10,487 tokens** |
+| starter (default) | 11 | ~490 tokens |
+| one department | varies | depends on the selected roles |
+| entire catalogue | 191 | **~8,465 tokens** |
 
-The adapter's budget is 9,000 tokens, so `--all` refuses unless forced. That
-refusal is deliberate. Ten thousand tokens of agent descriptions is context the
-actual task no longer has, and a routing menu of 152 near-neighbours makes
-selection *worse*, not better — the orchestrator picks between twelve plausible
-specialists instead of three.
+The adapter's configured budget is 9,000 estimated tokens, so the current full
+roster fits. The estimate is a renderer-side budget check, not a guarantee about
+Claude Code's actual tokenizer or available context. A smaller task-specific
+roster can still make role selection clearer and reduce always-loaded metadata.
 
 Render the roster you need:
 
@@ -54,8 +53,8 @@ bun run src/cli.ts render --host claude-code --dept backend-and-data
 # an explicit set
 bun run src/cli.ts render --host claude-code --roster frontend-lead,api-contract-owner
 
-# everything, with the cost accepted explicitly
-bun run src/cli.ts render --host claude-code --all --force
+# all active roles (currently within the configured metadata budget)
+bun run src/cli.ts render --host claude-code --all
 ```
 
 ## What is not committed, and why
