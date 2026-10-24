@@ -23,9 +23,10 @@ max_calls: 12
 enabled: true
 status: active
 boundary: >-
-  Owns the scoped responsibility described in the mission. Adjacent roles
-  retain their own decision authority; cross-boundary changes require a
-  named handoff and the relevant owner's agreement.
+  Owns the machinery that runs a task graph: scheduling, failure propagation,
+  the run journal, replay and stop-the-line. The Chief Orchestrator decides
+  what the tasks are and who owns them; this role makes the execution of that
+  decision resumable and auditable, and does not reassign work.
 verify_commands:
   - "bun test"
 escalates_on_failure_to: root-cause-investigator

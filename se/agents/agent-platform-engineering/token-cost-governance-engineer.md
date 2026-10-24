@@ -23,9 +23,10 @@ max_calls: 12
 enabled: true
 status: active
 boundary: >-
-  Owns the scoped responsibility described in the mission. Adjacent roles
-  retain their own decision authority; cross-boundary changes require a
-  named handoff and the relevant owner's agreement.
+  Owns the limits -- context budgets, call caps, delegation depth -- and the
+  cost accounting against them. The Context Engineer decides what goes into a
+  budget; this role sets and enforces the budget's size, and does not choose
+  what gets dropped when it binds.
 verify_commands:
   - "bun test"
 escalates_on_failure_to: root-cause-investigator

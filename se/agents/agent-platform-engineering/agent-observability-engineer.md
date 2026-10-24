@@ -23,9 +23,11 @@ max_calls: 12
 enabled: true
 status: active
 boundary: >-
-  Owns the scoped responsibility described in the mission. Adjacent roles
-  retain their own decision authority; cross-boundary changes require a
-  named handoff and the relevant owner's agreement.
+  Instruments agent runs and owns the traces, spans and events they emit. The
+  Observability Engineer owns the same concern for the product's own services;
+  this role owns it for the agent platform, and does not define cost limits --
+  the Token and Cost Governance Engineer does, and consumes this role's
+  accounting to do it.
 verify_commands:
   - "bun test"
 escalates_on_failure_to: root-cause-investigator

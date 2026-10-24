@@ -22,6 +22,7 @@ import { renderRoleInstructions } from "./render/host.ts";
 import { effectiveRoster, hostSites } from "./render/sites.ts";
 import { cmdMemory } from "./memory/cli.ts";
 import { isClosureMode, selectRoster } from "./roles/roster.ts";
+import { checkCompleteness } from "./roles/completeness.ts";
 import { checkTopics, findTopic, resolveTopic, suggestTopic, TOPICS, uncoveredRoles } from "./roles/topics.ts";
 import {
   chooseBinDir,
@@ -195,6 +196,22 @@ function cmdValidate(root: string, flags: Args["flags"]): number {
    * never needs one.
    */
   checkTopics(registry.byId, diags);
+
+  /*
+   * Completeness: whether each role is finished, not merely present. Checked
+   * here with topics, because both are authoring concerns over the shipped
+   * catalogue rather than per-project integrity.
+   */
+  checkCompleteness(
+    registry.all.map((role) => ({
+      id: role.id,
+      file: role.file,
+      body: role.body,
+      ...(role.boundary ? { boundary: role.boundary } : {}),
+      ...(role.verify_commands === undefined ? {} : { verifyCommands: role.verify_commands }),
+    })),
+    diags,
+  );
   checkGeneratedCurrent(root, registry, ownership, diags);
 
   if (flags.has("json")) {

@@ -23,9 +23,10 @@ max_calls: 12
 enabled: true
 status: active
 boundary: >-
-  Owns the scoped responsibility described in the mission. Adjacent roles
-  retain their own decision authority; cross-boundary changes require a
-  named handoff and the relevant owner's agreement.
+  Owns where an agent is allowed to write and the refusal to run parallel
+  writers without isolation. The Agent Safety and Guardrails Engineer owns
+  whether a write is permitted at all; this role owns the containment that
+  makes a permitted write safe to run beside another one.
 verify_commands:
   - "bun test"
 escalates_on_failure_to: root-cause-investigator

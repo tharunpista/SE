@@ -23,9 +23,11 @@ max_calls: 12
 enabled: true
 status: active
 boundary: >-
-  Owns the scoped responsibility described in the mission. Adjacent roles
-  retain their own decision authority; cross-boundary changes require a
-  named handoff and the relevant owner's agreement.
+  Owns what an agent is permitted to do and what retrieved content may
+  influence: trust tiers, quarantine, tool allowlists, blast-radius limits. The
+  Security Architect owns the product's trust boundaries; this role owns the
+  agent's. It does not provision the workspace that contains a write -- the
+  Workspace Isolation Engineer does.
 verify_commands:
   - "bun test"
 escalates_on_failure_to: root-cause-investigator

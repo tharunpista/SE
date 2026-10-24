@@ -23,9 +23,11 @@ max_calls: 12
 enabled: true
 status: active
 boundary: >-
-  Owns the scoped responsibility described in the mission. Adjacent roles
-  retain their own decision authority; cross-boundary changes require a
-  named handoff and the relevant owner's agreement.
+  Owns the adapter between a role definition and a specific host, including
+  what that host genuinely enforces. The Prompt and Role Definition Engineer
+  owns the content being rendered; this role owns the rendering and the honesty
+  of the support tier, and never compensates for a missing host capability by
+  claiming it.
 verify_commands:
   - "bun test"
 escalates_on_failure_to: root-cause-investigator
