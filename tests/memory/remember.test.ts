@@ -416,6 +416,96 @@ describe("the session brief", () => {
   });
 });
 
+/*
+ * `--hook` answers the host's SessionStart payload. Two properties matter more
+ * than the content: it must never inject twice into one conversation (resume,
+ * compact and fork already carry the brief), and it must never fail, because a
+ * hook that errors on session start breaks every session in the project --
+ * strictly worse than a session with no memory.
+ */
+describe("the SessionStart hook", () => {
+  /** Run the real CLI with a payload on stdin; the hook path reads fd 0. */
+  async function hook(source: string | null, raw?: string): Promise<{ code: number; out: string }> {
+    const proc = Bun.spawn(
+      ["bun", "run", join(import.meta.dir, "..", "..", "src", "cli.ts"), "memory", "brief", "--hook"],
+      { stdin: "pipe", stdout: "pipe", stderr: "pipe", cwd: join(import.meta.dir, "..", "..") },
+    );
+    proc.stdin.write(raw ?? (source === null ? "" : JSON.stringify({ source })));
+    await proc.stdin.end();
+    const out = await new Response(proc.stdout).text();
+    return { code: await proc.exited, out };
+  }
+
+  test("a new session is answered in the host's hook format", async () => {
+    const { code, out } = await hook("startup");
+    expect(code).toBe(0);
+    const parsed = JSON.parse(out) as {
+      hookSpecificOutput?: { hookEventName: string; additionalContext: string };
+    };
+    expect(parsed.hookSpecificOutput?.hookEventName).toBe("SessionStart");
+    expect(parsed.hookSpecificOutput?.additionalContext).toContain("Project:");
+  });
+
+  /*
+   * The cost control. resume, compact and fork continue a conversation that
+   * already carries the brief, so injecting again pays twice for the same
+   * records and displaces the conversation it was meant to inform.
+   */
+  test.each(["resume", "compact", "fork"])("%s injects nothing", async (source) => {
+    const { code, out } = await hook(source);
+    expect(code).toBe(0);
+    expect(JSON.parse(out)).toEqual({});
+  });
+
+  test("clear is a new context window, so it does inject", async () => {
+    const { out } = await hook("clear");
+    expect(JSON.parse(out).hookSpecificOutput).toBeDefined();
+  });
+
+  test("an unparseable payload still injects rather than failing the session", async () => {
+    const { code, out } = await hook(null, "this is not json");
+    expect(code).toBe(0);
+    expect(JSON.parse(out).hookSpecificOutput).toBeDefined();
+  });
+
+  test("empty stdin exits 0", async () => {
+    const { code } = await hook(null, "");
+    expect(code).toBe(0);
+  });
+
+  test("an unknown source is treated as not-new and injects nothing", async () => {
+    expect(JSON.parse((await hook("something-new-in-a-later-version")).out)).toEqual({});
+  });
+
+  test("brief never throws and never exits non-zero, whatever the store holds", () => {
+    const h = harness();
+    try {
+      expect(h.run(["brief"]).code).toBe(0);
+      h.run(["remember", "a record"], { scope: "session" });
+      expect(h.run(["brief"]).code).toBe(0);
+    } finally {
+      h.dispose();
+    }
+  });
+
+  test("the injected brief stays within a bounded size", () => {
+    const h = harness();
+    try {
+      // Twelve records with long bodies; the budget must still cap the output.
+      const long = "x".repeat(600);
+      for (let i = 0; i < 12; i++) {
+        h.run(["remember", `decision ${i} ${long}`], { scope: "session", id: `d${i}` });
+      }
+      const out = h.run(["brief"], { budget: "1500" }).out;
+      // ~4 chars per token against a 1500-token budget, plus the header.
+      expect(out.length).toBeLessThan(1500 * 4 + 800);
+      expect(out).toContain("omitted by the 1500-token budget");
+    } finally {
+      h.dispose();
+    }
+  });
+});
+
 describe("recall returns the whole store in one call", () => {
   test("an empty store says so rather than failing", () => {
     const h = harness();

@@ -50,6 +50,10 @@ subcommands:
   doctor                    Check every invariant (Part XX 80). Exit 1 on failure.
   brief                     Project identity plus all memory, for a session's
                             first turn. Always exits 0; safe in a hook.
+                            --hook   read a SessionStart payload on stdin and
+                                     answer in the host's hook format. Injects
+                                     only for a new context window, never on
+                                     resume, compact or fork.
   recall [topic]            Every live record, newest first, with freshness.
                             --limit <n>        at most n records
                             --budget <tokens>  stop at this size (default 4000)
@@ -648,6 +652,69 @@ function cmdRecall(ctx: MemoryContext, positional: readonly string[], flags: Fla
  *   - It always exits 0. A session must start even when memory is unreadable;
  *     failing the hook would make a broken store look like a broken install.
  */
+/**
+ * Session sources at which injecting memory is worth its tokens.
+ *
+ * `resume`, `compact` and `fork` all continue a conversation that already
+ * carries the brief, so re-injecting pays for the same records twice and
+ * displaces the conversation it was meant to inform. Only a genuinely new
+ * context window gets one.
+ */
+const INJECT_AT_SOURCE = new Set(["startup", "clear"]);
+
+/**
+ * `--hook`: read the host's SessionStart payload from stdin and answer in the
+ * shape it expects.
+ *
+ * Kept inside the command rather than in a shell wrapper so the decision about
+ * *when* injection is worth its cost is tested, not duplicated per host.
+ *
+ * Three refusals are deliberate and silent: a non-new session source, an
+ * unparseable payload, and any error at all. A hook that fails loudly on
+ * session start breaks every session in the project, which is a far worse
+ * outcome than a session without memory. Exit is always 0.
+ */
+function cmdBriefHook(ctx: MemoryContext, flags: Flags): number {
+  let source = "startup";
+  try {
+    const raw = readFileSync(0, "utf8").trim();
+    if (raw.length > 0) {
+      const payload = JSON.parse(raw) as { source?: unknown };
+      if (typeof payload.source === "string") source = payload.source;
+    }
+  } catch {
+    // No payload, or not JSON. Treat as a new session rather than refusing:
+    // a host that calls the hook without one still deserves its memory.
+  }
+
+  if (!INJECT_AT_SOURCE.has(source)) {
+    // Nothing to say. An empty object is a valid no-op response.
+    console.log("{}");
+    return 0;
+  }
+
+  const captured: string[] = [];
+  const log = console.log;
+  console.log = (...args: unknown[]) => void captured.push(args.join(" "));
+  try {
+    cmdBrief(ctx, flags);
+  } catch (cause) {
+    captured.push(`Project memory could not be read: ${(cause as Error).message}`);
+  } finally {
+    console.log = log;
+  }
+
+  console.log(
+    JSON.stringify({
+      hookSpecificOutput: {
+        hookEventName: "SessionStart",
+        additionalContext: captured.join("\n"),
+      },
+    }),
+  );
+  return 0;
+}
+
 function cmdBrief(ctx: MemoryContext, flags: Flags): number {
   const lines: string[] = [];
   try {
@@ -905,7 +972,7 @@ export function cmdMemory(repoRoot: string, positional: readonly string[], flags
     case "context":
       return cmdContext(ctx, flags);
     case "brief":
-      return cmdBrief(ctx, flags);
+      return flags.has("hook") ? cmdBriefHook(ctx, flags) : cmdBrief(ctx, flags);
     case "recall":
       return cmdRecall(ctx, positional, flags);
     case "remember":
