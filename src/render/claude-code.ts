@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { Role } from "../roles/types.ts";
 import type { CapabilityMap, HostAdapter, RenderResult, RenderedFile } from "./host.ts";
-import { estimateTokens, mapCapabilities, routingDescription, stripEvalOnlySections } from "./host.ts";
+import { estimateTokens, mapCapabilities, renderRoleInstructions, routingDescription } from "./host.ts";
 import { agentsMdAdapter } from "./agents-md.ts";
 import { agentSkillsAdapter, claudeConfigDir, claudeSkillsAdapter } from "./agent-skills.ts";
 import { antigravityAdapter } from "./antigravity.ts";
@@ -95,7 +95,11 @@ function stackDiscipline(root: string): string | null {
 function renderRole(role: Role, root: string): { file: RenderedFile; unmapped: string[]; descriptionTokens: number } {
   const { tools, unmapped } = mapCapabilities(role, CAPABILITIES);
   const genuinelyUnmapped = unmapped.filter((c) => !INTERNAL_CAPABILITIES.has(c));
-  const description = routingDescription(role);
+  // Claude Code loads every subagent description into every session. A compact
+  // 180-character routes let all 191 active roles remain selectable without
+  // loading their full bodies. The complete active roster fits under the 9k
+  // project budget; the 30 deferred hardware roles are not emitted.
+  const description = routingDescription(role, 180);
 
   const fm: string[] = [
     "---",
@@ -262,7 +266,7 @@ function renderRole(role: Role, root: string): { file: RenderedFile; unmapped: s
   return {
     file: {
       path: `${role.id}.md`,
-      contents: [...fm, ...header, stripEvalOnlySections(role.body), ...footer].join("\n"),
+      contents: [...fm, ...header, renderRoleInstructions(role.body), ...footer].join("\n"),
     },
     unmapped: genuinelyUnmapped,
     descriptionTokens: estimateTokens(description),
@@ -287,9 +291,9 @@ export const claudeCodeAdapter: HostAdapter = {
    * large subagent tree also slows session start and crowds out context that
    * the actual task needs.
    *
-   * The budget here is deliberately well below that ceiling. A 220-role
-   * catalogue rendered whole would blow through it, which is precisely why
-   * roster selection exists -- only the active roster is ever rendered.
+   * The 9,000-token budget leaves headroom below the host warning threshold.
+   * Compact descriptions keep all 191 active roles under this project's
+   * 9,000-token budget; deferred roles are not routable or rendered.
    */
   metadataTokenBudget: 9000,
 

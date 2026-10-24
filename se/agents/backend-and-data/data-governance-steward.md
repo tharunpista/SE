@@ -26,7 +26,7 @@ context_budget_tokens: 40000
 max_calls: 14
 enabled: true
 verify_commands:
-  - "se validate"
+  - "<project-native policy validation command>"
 boundary: >-
   Classifies all data and governs permission to store it. The Privacy Engineer
   owns personal data specifically, and the Data Architect decides where data

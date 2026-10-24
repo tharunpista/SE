@@ -51,7 +51,7 @@ boundary: >-
 verify_commands:
   - "bun test tests/memory"
   - "se memory doctor"
-  - "bun test tests/memory/crash --repeat 20"
+  - "bun test tests/memory/crash --rerun-each=20"
 escalates_on_failure_to: root-cause-investigator
 requires_evidence: true
 writes_files: true
@@ -89,31 +89,36 @@ schema, the write path, retrieval, the index, or the degraded-mode behaviour.
 
 ## 4. Responsibilities
 
-1. **Keep the three tiers separate and keep Tier 0 sovereign.** Canonical
-   files are the only source of truth; the index is a cache. When they
-   disagree, the files win and the index is rebuilt. There is no case in
-   which the index is "probably right."
-2. **Implement the write protocol in its exact order**: acquire lease, read
-   the current revision *from the pointer file*, compare-and-swap, validate,
-   write a new version and fsync, atomically publish the pointer, then update
-   the index. The ordering is the design.
-3. **Guarantee crash behaviour at every step**, matching the recorded crash
-   table. A kill at any point must leave the invariants intact.
-4. **Make multi-record updates atomic** via changesets: all pointers publish
-   together or none do.
+1. **Keep the canonical store authoritative.** Version files are immutable;
+   the highest valid generation manifest is the commit record and names the
+   live revision of every record. Per-record `current` files are derived
+   mirrors and must never be used to decide what is live.
+2. **Preserve the implemented publish protocol.** Stage immutable record
+   versions, build the next manifest from the observed live generation, and
+   publish it with create-if-absent semantics. If another writer publishes
+   first, report a conflict; never overwrite or silently retry against changed
+   content. Do not describe this as a lease or pointer-file protocol.
+3. **Verify crash behavior at the implemented commit boundary.** Before the
+   manifest appears, staged versions are invisible; after it appears, the
+   changeset is committed. Keep the documented Windows directory-durability
+   limitation visible.
+4. **Make multi-record updates atomic** by publishing one manifest generation
+   for the whole changeset, or publishing nothing.
 5. **Enforce the record state machine.** An illegal transition is a rejected
    write. Supersession cycles are rejected at write time.
 6. **Enforce phase gating.** The store, not agent good behaviour, rejects a
    write outside the granted phase and write targets. Context assembly is
    read-only, with zero exceptions.
-7. **Keep the project snapshot derived.** Nobody writes it. It is a
-   projection over canonical records, invalidated by revision change. This is
-   what removes the worst write-contention point in the system.
+7. **Treat the snapshot and index as planned work until implemented.** The
+   current source has no Tier 1 index or snapshot projection. Do not claim
+   either is available, rebuildable, or invalidated automatically.
 8. **Make writes idempotent** so that replay and retry never inflate history.
 9. **Implement degraded modes that never report false success**, and surface
    the work product to the operator when memory cannot accept it.
-10. **Maintain the invariants and the diagnostic command**, and keep them
-    enforced in continuous integration rather than logged.
+10. **Maintain the diagnostic without overstating coverage.** It currently
+    checks eight invariants and reports three as not implemented. A green exit
+    code does not mean those three were checked; make that distinction explicit
+    in release reporting.
 
 ## 5. Explicit non-responsibilities
 
@@ -135,28 +140,32 @@ schema, the write path, retrieval, the index, or the degraded-mode behaviour.
 | Input | Authority |
 |---|---|
 | Canonical record files (Tier 0) | **Sole source of truth** |
-| Pointer file | Authoritative for which revision is live |
-| Derived index (Tier 1) | None; a cache, always rebuildable |
+| Highest valid manifest generation | Authoritative for which revisions are live |
+| Per-record `current` mirror | Convenience only; never consulted as authority |
+| Derived index (Tier 1) | Not implemented |
 | Record schemas | Authoritative for record validity |
 | Source revision hashes | Authoritative for freshness |
 | Live source code | Supersedes any memory summary about code |
 
 ## 7. Outputs
 
-- `memory-schema`: versioned record schemas plus the migration runner.
-- `memory-record`: the store implementation and its write/read API.
-- `project-snapshot`: the projection logic, never a hand-written document.
-- The invariant diagnostic and the crash/concurrency test suite.
+- `memory-schema`: versioned record schemas; a migration runner remains future
+  work.
+- `memory-record`: the implemented local store and its read/write API.
+- The invariant diagnostic and crash/concurrency tests, with unchecked
+  invariants reported as gaps.
+- Proposals for an index or snapshot only when their implementation is in
+  scope; never claim those components already exist.
 
 ## 8. Independent decision authority
 
-- Storage layout, pointer format, and index schema.
+- Storage layout and manifest schema, within the documented generation protocol.
 - The write protocol's implementation details, provided the ordering and
   guarantees hold.
 - **Rejecting any write that fails validation, phase gating, redaction, CAS,
   or a state transition.** This authority is absolute: no agent, including the
   orchestrator, may override a rejected write.
-- Declaring the index dirty and rebuilding it.
+- Refusing to claim index rebuild behavior until a Tier 1 index exists.
 - Entering read-only degraded mode.
 
 ## 9. Decisions requiring escalation
@@ -201,13 +210,14 @@ a layer with a bug waiting.
 
 ## 13. Definition of done
 
-All ten invariants pass; the crash table is verified by a test that kills the
-process at each step; two racing writers produce exactly one success and one
-named conflict; a changeset with a failing member publishes nothing; replaying
-a completed run creates zero revisions; the index is provably rebuildable;
-a planted fake secret is rejected; disk-full surfaces the work product with
-`accepted: false`; a write during context assembly is rejected; and every one
-of these runs on **every supported platform**, not just the author's.
+For changes to the current store: relevant memory tests pass; racing writers
+produce one commit and a named conflict; a failed changeset publishes nothing;
+crash recovery preserves manifest authority; replay is idempotent; planted
+secrets are rejected; phase and scope grants are enforced; and writes are
+reported accepted only after manifest publication. Report the three currently
+unimplemented doctor checks and the weaker Windows directory-fsync guarantee
+as limitations. Do not claim cross-platform production readiness until those
+gaps have implementation and platform evidence.
 
 ## 14. Verification and evidence
 
@@ -216,20 +226,20 @@ per platform. Reasoning about correctness is not evidence here --- this is the
 one layer where the failure mode is silent, so only an executed test counts.
 
 The invariant diagnostic must run in continuous integration. A failing
-invariant is a build failure, not a logged warning.
+implemented invariant is a build failure. Unimplemented checks remain explicit
+release gaps and must not be described as passing.
 
 ## 15. Common failure modes and mitigations
 
 | Failure | Mitigation |
 |---|---|
-| Index treated as authoritative | Files win by rule; index is rebuilt, never trusted |
-| Delete-then-rename on the pointer | Forbidden; atomic replace only, tested per platform |
-| Lost update from concurrent writes | Lease plus CAS on the pointer revision |
-| Deadlock on a crashed holder's lock | Leases expire; there is no manual unlock |
-| Half-applied multi-record update | Changesets publish all pointers or none |
-| Snapshot write contention and staleness | Snapshot is derived, not written |
+| Stale per-record mirror treated as authoritative | Resolve live state from the highest valid manifest generation |
+| Replace-in-place publication under Windows readers | Publish a new immutable generation using create-if-absent semantics |
+| Lost update from concurrent writers | Competing writers cannot claim the same generation; report the loser as a conflict |
+| Half-applied multi-record update | One manifest generation publishes the complete changeset or none |
+| Snapshot/index claimed before implementation | Report these components as not implemented; do not imply they can be rebuilt |
 | Retry inflating record history | Idempotency key per write |
-| Memory failure reported as success | `accepted` is set by the store after the pointer swap only |
+| Memory failure reported as success | `accepted` is set by the store only after the generation manifest is published |
 | Agent self-persuasion during retrieval | Context assembly is read-only, enforced by the store |
 | Truncated contract in a tight budget | Whole records are dropped and named; never truncated |
 | Cross-project leak via global ranking | Project id is a pre-filter at the storage boundary, never a post-filter |
@@ -237,19 +247,19 @@ invariant is a build failure, not a logged warning.
 
 ## 16. Acceptance tests
 
-1. Process killed at each step of the write protocol; all invariants hold.
+1. Process killed before and after manifest publication; visibility matches the commit boundary.
 2. Two writers racing one record: one succeeds, the other gets a conflict
    naming the record.
 3. A changeset with one failing member publishes nothing.
 4. A reader concurrent with a writer never observes a torn state.
-5. Index deleted mid-run: degrades to read-only, then recovers by rebuild.
+5. Once a Tier 1 index exists, deletion must trigger the specified degraded mode and rebuild; this test is pending until then.
 6. Disk full: the work product is surfaced; nothing is reported as saved.
 7. Replaying a completed run creates zero new revisions.
 8. An illegal status transition is rejected.
 9. A supersession cycle is rejected at write time.
 10. A write attempted during context assembly is rejected.
-11. Retrieval under a tight budget drops whole records and names them.
+11. Once automatic retrieval exists, a tight budget must drop whole records and name them; this test is pending until then.
 12. A planted fake secret is rejected on write.
 13. Two projects with similar names and stacks never cross-retrieve.
-14. The snapshot recomputes identically from canonical records.
+14. Once snapshot projection exists, it must recompute identically from canonical records; this test is pending until then.
 15. An unknown `schema_version` causes a loud refusal, never a guess.

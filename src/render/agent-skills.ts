@@ -5,7 +5,7 @@ import { isAbsolute, join, resolve } from "node:path";
 import type { Role } from "../roles/types.ts";
 import { departmentLabel } from "../roles/vocabulary.ts";
 import type { HostAdapter, RenderResult, RenderedFile } from "./host.ts";
-import { estimateTokens, routingDescription, stripEvalOnlySections } from "./host.ts";
+import { estimateTokens, renderRoleInstructions, routingDescription } from "./host.ts";
 
 function renderSkill(role: Role): RenderedFile {
   const contents = [
@@ -23,7 +23,7 @@ function renderSkill(role: Role): RenderedFile {
     "It does not create an isolated subagent, enforce tool permissions, or provide a separate workspace.",
     "Use the host's native custom-agent integration when delegated execution or tool restrictions are required.",
     "",
-    stripEvalOnlySections(role.body),
+    renderRoleInstructions(role.body),
     "",
   ].join("\n");
   return { path: `${role.id}/SKILL.md`, contents };

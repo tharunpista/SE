@@ -2,17 +2,17 @@
 .se/state/
 .se/cache/
 .se/workspaces/
-.se/project.json
+# Stable project identity only (schema, id, label, origin) is committed with
+# the project so every clone resolves the same memory namespace. Runtime state
+# and personal data remain local.
 *.sqlite
 *.sqlite-journal
 *.sqlite-wal
 *.sqlite-shm
 
-# Memory records are runtime/user data, not the memory implementation.
-# Keep the storage code, schemas, and reviewed documentation under src/,
-# schemas/, and docs/ in version control. Do not publish local memory records.
-memory/*
-!memory/README.md
+# Runtime memory is private user/project data, never generated source or a
+# repository artifact. Store its policy under docs/memory/ instead.
+/memory/
 
 # Secrets
 .env

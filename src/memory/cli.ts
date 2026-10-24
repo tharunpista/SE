@@ -31,8 +31,8 @@ usage: se memory <subcommand> [options]
 subcommands:
   init [--id <id>]          Pin this project's memory namespace in .se/project.json.
                             Derived from the git remote when --id is omitted.
-                            --local  keep the store inside the project, so it can
-                                     be committed and shared (default is global)
+                            --local  keep private runtime records in ./memory
+                                     (default is the user-level store)
   status                    Generation, record count, and store location.
   doctor                    Check every invariant (Part XX 80). Exit 1 on failure.
   list                      List live record ids with status and revision.
@@ -42,7 +42,8 @@ subcommands:
                             --approve <who>    operator approval, required by promotion
 
 options:
-  --project <id>            Project namespace. Defaults to the repository directory name.
+  --project <id>            Project namespace override. Otherwise resolved from
+                            .se/project.json, Git remote, or package name.
   --memory-root <path>      Tier 0 root. Overrides the resolved placement.
                             Resolution: --memory-root, SE_MEMORY_ROOT,
                             <project>/memory if it exists, else ~/.se/memory.
@@ -117,9 +118,11 @@ function cmdStatus(ctx: MemoryContext, flags: Flags): number {
   );
   console.log(
     `store:        ${ctx.location.source}` +
-      (ctx.location.committable
-        ? " (inside the project; commit it to share with the team)"
-        : " (personal; not shared, not reviewed)"),
+      (ctx.location.source === "repo-local"
+        ? " (private to this checkout; ignored by Git)"
+        : ctx.location.source === "global"
+          ? " (private to this user account)"
+          : " (custom location; check its access and backup policy)"),
   );
   console.log(`memory root:  ${ctx.memoryRoot}`);
   if (!live) {
@@ -303,9 +306,7 @@ function cmdInit(repoRoot: string, flags: Flags): number {
   try {
     const result = initProject(repoRoot, flagString(flags, "id"));
 
-    // Opting in to the committed placement is creating the directory. Keeping
-    // the choice in the file tree rather than in configuration means a reviewer
-    // can see it, and a clone inherits it without reading any config.
+    // Opting in to checkout-local private placement is creating the directory.
     if (flags.has("local")) {
       const local = join(repoRoot, REPO_LOCAL_MEMORY_DIR);
       mkdirSync(local, { recursive: true });

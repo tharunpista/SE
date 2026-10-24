@@ -26,7 +26,7 @@ context_budget_tokens: 40000
 max_calls: 12
 enabled: true
 verify_commands:
-  - "se validate"
+  - "<project-native policy validation command>"
 boundary: >-
   Owns the shape of the whole journey including its failure and handoff paths.
   The Interaction Designer owns behaviour within a single control or screen,

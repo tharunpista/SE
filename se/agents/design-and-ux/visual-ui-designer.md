@@ -26,7 +26,7 @@ context_budget_tokens: 40000
 max_calls: 14
 enabled: true
 verify_commands:
-  - "se validate"
+  - "<project-native policy validation command>"
 boundary: >-
   Owns the composition of a surface using the system's tokens. The Design
   Systems Architect owns the tokens themselves; a composition that needs a

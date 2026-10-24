@@ -25,7 +25,7 @@ context_budget_tokens: 40000
 max_calls: 12
 enabled: true
 verify_commands:
-  - "se validate"
+  - "<project-native policy validation command>"
 boundary: >-
   Studies a specific interface against a specific design question. The User
   Researcher owns the durable, product-wide research record; this role feeds

@@ -26,7 +26,7 @@ context_budget_tokens: 40000
 max_calls: 14
 enabled: true
 verify_commands:
-  - "se validate"
+  - "<project-native policy validation command>"
 boundary: >-
   Records and quantifies debt; does not repay it. Remediation is owned by the
   role that owns the code, and sequencing by the Project Manager.

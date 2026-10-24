@@ -80,4 +80,18 @@ describe("the shipped starter roster", () => {
     const orphans = checkIntegrity(resolveRoles(root)).interfaces.filter((r) => r.owner === null);
     expect(orphans.map((o) => o.interface)).toEqual([]);
   });
+
+  test("native mobile implementers own distinct implementation artifacts", () => {
+    const root = findRepoRoot(import.meta.dir)!;
+    const integrity = checkIntegrity(resolveRoles(root));
+    const matrix = integrity.ownership;
+
+    expect(hasCode(integrity.diagnostics.items, "catalogue/ownership-collision")).toBe(false);
+    expect(matrix.find((row) => row.artifact === "android-application")?.owner)
+      .toBe("android-application-engineer");
+    expect(matrix.find((row) => row.artifact === "ios-application")?.owner)
+      .toBe("ios-application-engineer");
+    expect(matrix.find((row) => row.artifact === "cross-platform-mobile-implementation")?.owner)
+      .toBe("cross-platform-mobile-engineer");
+  });
 });

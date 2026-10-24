@@ -26,7 +26,7 @@ max_calls: 14
 enabled: true
 stack_aware: true
 verify_commands:
-  - "se validate"
+  - "<project-native policy validation command>"
   - "<project test command> --filter experiment"
 boundary: >-
   Owns experimental design and the decision rule. The Feature Flag and

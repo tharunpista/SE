@@ -26,7 +26,7 @@ max_calls: 16
 enabled: true
 stack_aware: true
 verify_commands:
-  - "se validate"
+  - "<project-native policy validation command>"
   - "<project build command>"
 boundary: >-
   Builds throwaway artifacts to answer a design question. The Technical

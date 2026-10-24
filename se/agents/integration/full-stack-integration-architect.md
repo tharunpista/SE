@@ -26,7 +26,7 @@ context_budget_tokens: 50000
 max_calls: 18
 enabled: true
 verify_commands:
-  - "se validate"
+  - "<project-native policy validation command>"
 boundary: >-
   Owns how responsibility is divided across the client-server seam. The API
   Contract Owner is accountable for the contract document itself; this role

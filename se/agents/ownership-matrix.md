@@ -15,6 +15,7 @@ Exactly one role is accountable per artifact kind. Others contribute.
 | `ai-system-design` | `ai-systems-architect` | — | `ai-evaluation-engineer`, `llm-application-engineer`, `ml-engineer`, `responsible-ai-risk-engineer` |
 | `ai-workflow` | `ai-workflow-engineer` | — | `agent-systems-engineer`, `agent-tooling-engineer` |
 | `analytical-dataset` | `analytics-engineer` | — | `ai-data-engineer`, `data-pipeline-engineer`, `data-quality-engineer`, `ml-engineer`, `product-data-analyst` |
+| `android-application` | `android-application-engineer` | — | — |
 | `api-convention` | `api-contract-owner` | — | `api-architect` |
 | `api-documentation` | `api-documentation-engineer` | — | `agent-tooling-engineer`, `api-architect`, `api-contract-owner` |
 | `api-endpoint` | `backend-lead` | — | `api-contract-owner`, `backend-service-engineer`, `file-object-storage-engineer`, `frontend-backend-integration-engineer`, `identity-access-integration-engineer` |
@@ -39,6 +40,7 @@ Exactly one role is accountable per artifact kind. Others contribute.
 | `context-assembly-policy` | `context-engineer` | — | `ai-workflow-engineer`, `memory-systems-engineer`, `prompt-role-definition-engineer`, `retrieval-knowledge-engineer` |
 | `contract-test` | `contract-test-engineer` | — | `api-contract-owner`, `external-integration-engineer`, `frontend-data-fetching-engineer`, `integration-test-engineer`, `messaging-event-engineer` |
 | `cost-ledger` | `token-cost-governance-engineer` | — | `capacity-cost-engineer`, `context-engineer`, `model-integration-engineer`, `model-performance-engineer`, `workload-capacity-planner` |
+| `cross-platform-mobile-implementation` | `cross-platform-mobile-engineer` | — | — |
 | `customer-feedback-analysis` | `customer-feedback-analyst` | — | `defect-triage-engineer`, `product-operations-specialist`, `user-researcher` |
 | `customer-onboarding-plan` | `customer-success-specialist` | — | — |
 | `data-architecture` | `data-architect` | — | `data-governance-steward`, `data-modeling-engineer`, `data-pipeline-engineer` |
@@ -94,6 +96,7 @@ Exactly one role is accountable per artifact kind. Others contribute.
 | `integration-test` | `integration-test-engineer` | — | `backend-service-engineer`, `concurrency-transaction-engineer`, `data-flow-state-consistency-engineer`, `end-to-end-workflow-engineer`, `error-recovery-integration-specialist`, `frontend-backend-integration-engineer`, `test-architect`, `test-data-engineer` |
 | `interaction-spec` | `interaction-designer` | — | `accessibility-specialist`, `journey-workflow-designer`, `prototype-specialist`, `ux-content-designer`, `ux-lead`, `ux-researcher` |
 | `interface-contract` | `api-contract-owner` | — | `api-architect`, `backend-lead`, `contract-test-engineer`, `error-recovery-integration-specialist`, `external-integration-engineer`, `frontend-backend-integration-engineer`, `frontend-data-fetching-engineer`, `frontend-lead`, `full-stack-integration-architect`, `integration-architect`, `integration-release-coordinator`, `messaging-event-engineer`, `realtime-systems-engineer`, `solution-architect`, `technical-program-manager` |
+| `ios-application` | `ios-application-engineer` | — | — |
 | `key-management-policy` | `cryptography-key-management-engineer` | — | `cloud-infrastructure-engineer`, `secrets-management-engineer`, `security-architect` |
 | `knowledge-index` | `knowledge-steward` | — | `retrieval-knowledge-engineer` |
 | `license-compliance-record` | `license-compliance-engineer` | — | `supply-chain-security-engineer` |

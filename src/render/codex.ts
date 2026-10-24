@@ -4,7 +4,7 @@ import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 import type { Role } from "../roles/types.ts";
 import type { HostAdapter, RenderResult, RenderedFile } from "./host.ts";
-import { estimateTokens, routingDescription, stripEvalOnlySections } from "./host.ts";
+import { estimateTokens, renderRoleInstructions, routingDescription } from "./host.ts";
 
 function renderAgent(role: Role): RenderedFile {
   const instructions = [
@@ -18,7 +18,7 @@ function renderAgent(role: Role): RenderedFile {
     "The role's capability list is guidance; this file cannot enforce per-role tool restrictions.",
     "Do not claim a capability or verification step that the parent session does not provide.",
     "",
-    stripEvalOnlySections(role.body),
+    renderRoleInstructions(role.body),
   ].join("\n");
 
   // JSON string literals are valid TOML basic strings and preserve arbitrary

@@ -191,6 +191,12 @@ describe("the AGENTS.md adapter emits an index, not a roster", () => {
     expect(contents).toContain("stale");
   });
 
+  test("it does not pretend a collaborator list performs delegation", () => {
+    const contents = renderAll(["alpha"]).files[0]!.contents;
+    expect(contents).toContain("not proof of automatic delegation");
+    expect(contents).toContain("receiver confirms acceptance");
+  });
+
   test("it does not point at a catalogue path that may not exist locally", () => {
     // The catalogue is often outside the project being worked on, so a relative
     // path instruction is wrong exactly when the CLI is used globally.

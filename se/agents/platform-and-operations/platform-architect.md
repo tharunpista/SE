@@ -26,7 +26,7 @@ context_budget_tokens: 50000
 max_calls: 18
 enabled: true
 verify_commands:
-  - "se validate"
+  - "<project-native policy validation command>"
   - "<project build command>"
 boundary: >-
   Owns the deployment and operations model, and is the accountable owner of the

@@ -26,7 +26,7 @@ context_budget_tokens: 50000
 max_calls: 18
 enabled: true
 verify_commands:
-  - "se validate"
+  - "<project-native policy validation command>"
   - "<project test command> --filter ai"
 boundary: >-
   Owns where AI sits in the system and the boundary around it. The LLM

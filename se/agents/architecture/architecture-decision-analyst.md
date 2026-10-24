@@ -26,7 +26,7 @@ context_budget_tokens: 45000
 max_calls: 14
 enabled: true
 verify_commands:
-  - "se validate"
+  - "<project-native policy validation command>"
 boundary: >-
   Compares options already known to be buildable. The Technical Feasibility
   and Spike Engineer establishes whether an option is viable at all, and the

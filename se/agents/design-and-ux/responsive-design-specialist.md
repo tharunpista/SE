@@ -26,7 +26,7 @@ context_budget_tokens: 35000
 max_calls: 12
 enabled: true
 verify_commands:
-  - "se validate"
+  - "<project-native policy validation command>"
 boundary: >-
   Owns behaviour across sizes and input modes for web surfaces. The
   Internationalization Engineer owns locale-driven text expansion and

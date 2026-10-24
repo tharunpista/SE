@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { accessSync, closeSync, constants, existsSync, mkdirSync, openSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, isAbsolute, join } from "node:path";
 import {
@@ -18,6 +18,7 @@ import { Diagnostics } from "./util/diagnostics.ts";
 import { DEPARTMENTS, DEPARTMENT_EXPECTED_COUNTS, EXPECTED_ROLE_TOTAL, departmentLabel } from "./roles/vocabulary.ts";
 import type { Role } from "./roles/types.ts";
 import { ADAPTERS, findAdapter } from "./render/claude-code.ts";
+import { renderRoleInstructions } from "./render/host.ts";
 import { effectiveRoster, hostSites } from "./render/sites.ts";
 import { cmdMemory } from "./memory/cli.ts";
 import {
@@ -39,8 +40,8 @@ commands:
   ownership [--artifact <k>] Show the artifact ownership matrix.
   departments               Show department counts against the specification.
   doctor                    Report environment and catalogue health.
-  memory <subcommand>       Project memory: status, doctor, list, get, put,
-                            recall, graph. Run "se memory help" for its options.
+  memory <subcommand>       Project memory: init, status, doctor, list, get,
+                            put. Run "se memory help" for its options.
   install                   Put "se" on PATH for every shell and register this
                             catalogue. Run this once after cloning.
                             --bin-dir <dir>  --add-path  --dry-run
@@ -56,7 +57,8 @@ commands:
                             --roster a,b,c  explicit roles
                             --global        install for every project
                             --project <dir> the directory the host has open
-                            --out <dir>  --dry-run  --all  --force
+                            --out <dir>  --dry-run  --all  --force  --merge
+                            --merge updates selected files without removing other generated roles.
   agents enable             Install the starter roster globally in supported clients.
                             --host <id>  --roster a,b,c  --all  --force
   agents disable            Remove generated global agents; --host <id> for one.
@@ -283,7 +285,7 @@ function cmdRole(root: string, args: Args): number {
     const from = layer && layer !== "builtin" ? `   [overridden by ${layer} layer]` : "";
     console.log(`${k.padEnd(24)} ${JSON.stringify(v)}${from}`);
   }
-  console.log(`\n---\n${body}`);
+  console.log(`\n---\n${renderRoleInstructions(body)}`);
   return 0;
 }
 
@@ -784,48 +786,103 @@ known: ${DEPARTMENTS.join(", ")}`);
   if (flags.has("dry-run")) {
     for (const f of result.files) console.log(`${outDir}/${f.path}`);
   } else {
-    mkdirSync(absOut, { recursive: true });
+    try {
+      mkdirSync(absOut, { recursive: true });
+    } catch (cause) {
+      console.error(`error: cannot create output directory ${absOut}: ${(cause as NodeJS.ErrnoException).message}`);
+      return 1;
+    }
 
     // Refuse name collisions before cleanup or writes. A generated agent must
     // never silently replace a hand-authored host definition, especially
     // AGENTS.md which may contain the project's primary instructions.
     for (const file of result.files) {
       const target = join(absOut, file.path);
-      if (existsSync(target) && !readFileSync(target, "utf8").includes("GENERATED from se/agents/")) {
-        console.error(`error: refusing to overwrite hand-written file ${target}`);
-        console.error("Move it, choose another --out directory, or explicitly remove it yourself.");
+      try {
+        if (existsSync(target) && !readFileSync(target, "utf8").includes("GENERATED from se/agents/")) {
+          console.error(`error: refusing to overwrite hand-written file ${target}`);
+          console.error("Move it, choose another --out directory, or explicitly remove it yourself.");
+          return 1;
+        }
+      } catch (cause) {
+        console.error(`error: cannot inspect ${target}: ${(cause as NodeJS.ErrnoException).message}`);
         return 1;
       }
     }
 
-    // Remove previously generated files that no longer correspond to a
-    // selected role. Without this, disabling a role in a local override
-    // layer leaves its agent definition behind and the host keeps offering a
-    // role the project has deliberately switched off.
-    let removed = 0;
-    const existingFiles: string[] = [];
-    const collectFiles = (dir: string, prefix = "") => {
-      for (const entry of readdirSync(dir, { withFileTypes: true })) {
-        const rel = prefix === "" ? entry.name : `${prefix}/${entry.name}`;
-        if (entry.isDirectory()) collectFiles(join(dir, entry.name), rel);
-        else if (entry.isFile() && /\.(?:md|toml)$/.test(entry.name)) existingFiles.push(rel);
+    // Preflight every changed output before replacing files or pruning the old
+    // roster. Windows clients often hold generated files open; discover that
+    // conflict up front so one locked file cannot cause a half-updated roster.
+    const pendingWrites: typeof result.files[number][] = [];
+    for (const file of result.files) {
+      const target = join(absOut, file.path);
+      try {
+        mkdirSync(dirname(target), { recursive: true });
+        if (existsSync(target)) {
+          if (readFileSync(target, "utf8").replace(/\r\n?/g, "\n") === file.contents.replace(/\r\n?/g, "\n")) continue;
+          const fd = openSync(target, "r+");
+          closeSync(fd);
+        } else {
+          accessSync(dirname(target), constants.W_OK);
+        }
+        pendingWrites.push(file);
+      } catch (cause) {
+        const code = (cause as NodeJS.ErrnoException).code;
+        console.error(`error: cannot update generated file ${target}${code ? ` (${code})` : ""}.`);
+        console.error("Close the client or editor holding it, check directory permissions, and rerun the render command.");
+        return 1;
       }
-    };
-    collectFiles(absOut);
+    }
+
+    let removed = 0;
+    let existingFiles: string[] = [];
+    if (!flags.has("merge")) {
+      // Replacement mode removes generated files no longer in the selected
+      // roster. Merge mode refreshes a subset without uninstalling other roles.
+      const collectFiles = (dir: string, prefix = "") => {
+        for (const entry of readdirSync(dir, { withFileTypes: true })) {
+          const rel = prefix === "" ? entry.name : `${prefix}/${entry.name}`;
+          if (entry.isDirectory()) collectFiles(join(dir, entry.name), rel);
+          else if (entry.isFile() && /\.(?:md|toml)$/.test(entry.name)) existingFiles.push(rel);
+        }
+      };
+      collectFiles(absOut);
+    }
+
+    for (const f of pendingWrites) {
+      const target = join(absOut, f.path);
+      try {
+        writeFileSync(target, f.contents, "utf8");
+      } catch (cause) {
+        const code = (cause as NodeJS.ErrnoException).code;
+        console.error(`error: write failed for ${target}${code ? ` (${code})` : ""}; some earlier files may already be updated.`);
+        console.error("Close the client or editor holding the file, then rerun the render command to converge the roster.");
+        return 1;
+      }
+    }
+
+    // Prune stale generated files only after all selected output was written.
+    // A cleanup failure leaves stale definitions, but never destroys the old
+    // roster before the replacement has been installed.
     for (const existing of existingFiles) {
       const abs = join(absOut, existing);
       if (result.files.some((f) => f.path === existing)) continue;
-      if (!readFileSync(abs, "utf8").includes("GENERATED from se/agents/")) continue; // never touch hand-written files
-      rmSync(abs);
-      removed++;
+      try {
+        if (!readFileSync(abs, "utf8").includes("GENERATED from se/agents/")) continue;
+        rmSync(abs);
+        removed++;
+      } catch (cause) {
+        const code = (cause as NodeJS.ErrnoException).code;
+        console.error(`error: rendered files updated, but stale file cleanup failed for ${abs}${code ? ` (${code})` : ""}.`);
+        return 1;
+      }
     }
-
-    for (const f of result.files) {
-      const target = join(absOut, f.path);
-      mkdirSync(dirname(target), { recursive: true });
-      writeFileSync(target, f.contents, "utf8");
-    }
-    console.log(`rendered ${result.files.length} role(s) to ${outDir}/${removed > 0 ? `  (removed ${removed} stale)` : ""}`);
+    const renderNote = flags.has("merge")
+      ? "  (merged; other generated roles preserved)"
+      : removed > 0
+        ? `  (removed ${removed} stale)`
+        : "";
+    console.log(`rendered ${result.files.length} role(s) to ${outDir}/${renderNote}`);
   }
 
   console.log(
@@ -936,10 +993,33 @@ function cmdAgents(root: string, args: Args): number {
       console.error(`error: ${adapter.id} roster is ~${rendered.metadataTokens} metadata tokens, over its ${adapter.metadataTokenBudget} budget; use --roster or --force.`);
       return 1;
     }
+    try {
+      mkdirSync(adapter.userOut!, { recursive: true });
+    } catch (cause) {
+      console.error(`error: cannot prepare ${adapter.id} output directory ${adapter.userOut}: ${(cause as NodeJS.ErrnoException).message}`);
+      return 1;
+    }
     for (const file of rendered.files) {
       const target = join(adapter.userOut!, file.path);
-      if (existsSync(target) && !readFileSync(target, "utf8").includes("GENERATED from se/agents/")) {
-        console.error(`error: refusing to overwrite hand-written file ${target}`);
+      try {
+        if (existsSync(target)) {
+          const current = readFileSync(target, "utf8");
+          if (!current.includes("GENERATED from se/agents/")) {
+            console.error(`error: refusing to overwrite hand-written file ${target}`);
+            return 1;
+          }
+          if (current.replace(/\r\n?/g, "\n") !== file.contents.replace(/\r\n?/g, "\n")) {
+            const fd = openSync(target, "r+");
+            closeSync(fd);
+          }
+        } else {
+          mkdirSync(dirname(target), { recursive: true });
+          accessSync(dirname(target), constants.W_OK);
+        }
+      } catch (cause) {
+        const code = (cause as NodeJS.ErrnoException).code;
+        console.error(`error: cannot update ${adapter.id} generated file ${target}${code ? ` (${code})` : ""}.`);
+        console.error("Close the client or editor holding it, check directory permissions, and rerun agents enable.");
         return 1;
       }
     }

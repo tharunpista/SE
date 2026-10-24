@@ -4,7 +4,7 @@ import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 import type { Role } from "../roles/types.ts";
 import type { HostAdapter, RenderResult, RenderedFile } from "./host.ts";
-import { estimateTokens, routingDescription, stripEvalOnlySections } from "./host.ts";
+import { estimateTokens, renderRoleInstructions, routingDescription } from "./host.ts";
 
 const TOOL_MAP: Readonly<Record<string, readonly string[]>> = {
   "read-files": ["read_file", "list_directory"],
@@ -50,7 +50,7 @@ function renderAgent(role: Role): { file: RenderedFile; unmapped: string[] } {
     "",
     "The listed tools are the Gemini CLI tools mapped by this renderer. The parent session's policy remains authoritative. Do not claim a tool or verification step you did not use.",
     "",
-    stripEvalOnlySections(role.body),
+    renderRoleInstructions(role.body),
     "",
   ].join("\n");
   return { file: { path: `${role.id}.md`, contents: [...frontmatter, body].join("\n") }, unmapped };

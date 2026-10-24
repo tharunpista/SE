@@ -26,7 +26,7 @@ context_budget_tokens: 50000
 max_calls: 18
 enabled: true
 verify_commands:
-  - "se validate"
+  - "<project-native policy validation command>"
 boundary: >-
   Owns the conceptual model and the boundaries between contexts. The Data
   Modeling Engineer owns the physical schema, and the Domain Logic Engineer

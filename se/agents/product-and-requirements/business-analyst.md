@@ -26,7 +26,7 @@ context_budget_tokens: 45000
 max_calls: 14
 enabled: true
 verify_commands:
-  - "se validate"
+  - "<project-native policy validation command>"
 boundary: >-
   Models the business process and its exceptions. The Domain Architect turns
   that model into a bounded software domain, and the Journey and Workflow

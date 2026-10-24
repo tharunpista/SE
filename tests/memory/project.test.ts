@@ -261,9 +261,9 @@ describe("init pins the identity", () => {
 });
 
 /*
- * Where Tier 0 lives decides who can see it: committed beside the source and
- * shared with the team, or personal in the user's home. Both are legitimate, so
- * the resolution has to be explicit and testable -- a silent change of
+ * Where Tier 0 lives decides which local boundary contains it: one checkout
+ * or the user's home. Both are legitimate, so resolution has to be explicit
+ * and testable -- a silent change of
  * placement would make an existing store look empty.
  */
 describe("memory placement", () => {
@@ -274,8 +274,6 @@ describe("memory placement", () => {
     try {
       const location = resolveMemoryLocation(p.root, { env: NO_MEMORY_ENV });
       expect(location.source).toBe("global");
-      // Personal: nothing is shared and nothing is reviewed.
-      expect(location.committable).toBe(false);
       expect(location.root).not.toContain(p.root);
     } finally {
       p.dispose();

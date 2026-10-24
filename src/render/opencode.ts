@@ -4,7 +4,7 @@ import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 import type { Role } from "../roles/types.ts";
 import type { HostAdapter, RenderResult, RenderedFile } from "./host.ts";
-import { estimateTokens, routingDescription, stripEvalOnlySections } from "./host.ts";
+import { estimateTokens, renderRoleInstructions, routingDescription } from "./host.ts";
 
 function renderAgent(role: Role): RenderedFile {
   const frontmatter = [
@@ -25,7 +25,7 @@ function renderAgent(role: Role): RenderedFile {
     "",
     "OpenCode permissions and the active session control actual tool access. The capability list is guidance; do not claim unavailable tools or verification.",
     "",
-    stripEvalOnlySections(role.body),
+    renderRoleInstructions(role.body),
     "",
   ].join("\n");
   return { path: `${role.id}.md`, contents: [...frontmatter, body].join("\n") };

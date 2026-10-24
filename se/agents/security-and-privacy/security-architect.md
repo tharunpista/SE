@@ -26,7 +26,7 @@ context_budget_tokens: 50000
 max_calls: 18
 enabled: true
 verify_commands:
-  - "se validate"
+  - "<project-native policy validation command>"
   - "<project test command> --filter security"
 boundary: >-
   Owns the threat model and the security requirements derived from it. The

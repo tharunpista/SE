@@ -26,7 +26,7 @@ context_budget_tokens: 40000
 max_calls: 14
 enabled: true
 verify_commands:
-  - "se validate"
+  - "<project-native policy validation command>"
 boundary: >-
   Owns behaviour: what a control does, in which state, with what feedback.
   The Visual/UI Designer owns how it looks, and the Design Systems Engineer

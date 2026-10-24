@@ -26,7 +26,7 @@ context_budget_tokens: 60000
 max_calls: 20
 enabled: true
 verify_commands:
-  - "se validate"
+  - "<project-native policy validation command>"
 boundary: >-
   Arbitrates across components and over time; does not design any single
   component. The Solution Architect owns the structure of the system being

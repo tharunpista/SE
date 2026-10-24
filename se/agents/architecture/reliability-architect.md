@@ -26,7 +26,7 @@ context_budget_tokens: 45000
 max_calls: 16
 enabled: true
 verify_commands:
-  - "se validate"
+  - "<project-native policy validation command>"
 boundary: >-
   Sets the targets and the failure design. The Site Reliability Engineer
   operates against them and owns the live SLOs, and the Disaster Recovery

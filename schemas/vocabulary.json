@@ -95,7 +95,8 @@
     "disaster-recovery-plan", "database-operations-runbook",
     "tenancy-isolation-model", "feature-flag",
 
-    "mobile-architecture", "mobile-screen", "offline-sync-policy",
+    "mobile-architecture", "mobile-screen", "android-application",
+    "ios-application", "cross-platform-mobile-implementation", "offline-sync-policy",
     "push-notification-config", "mobile-performance-budget",
     "store-submission-record", "deep-link-map", "desktop-application",
     "desktop-package",

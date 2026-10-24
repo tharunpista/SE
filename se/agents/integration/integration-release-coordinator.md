@@ -27,7 +27,7 @@ context_budget_tokens: 40000
 max_calls: 14
 enabled: true
 verify_commands:
-  - "se validate"
+  - "<project-native policy validation command>"
 boundary: >-
   Sequences releases across the integration boundary. The Release and Rollback
   Engineer owns the deployment mechanics, and the Technical Program Manager

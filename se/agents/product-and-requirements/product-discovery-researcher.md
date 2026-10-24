@@ -25,7 +25,7 @@ context_budget_tokens: 45000
 max_calls: 14
 enabled: true
 verify_commands:
-  - "se validate"
+  - "<project-native policy validation command>"
 boundary: >-
   Characterises the problem and the current workaround. The User Researcher
   owns study design and participant work; this role owns the problem framing

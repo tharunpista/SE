@@ -26,7 +26,7 @@ context_budget_tokens: 45000
 max_calls: 14
 enabled: true
 verify_commands:
-  - "se validate"
+  - "<project-native policy validation command>"
 boundary: >-
   Owns the record of what users need and do, across the product. The UX
   Researcher studies a specific interface against a specific design question;

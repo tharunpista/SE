@@ -25,7 +25,7 @@ context_budget_tokens: 45000
 max_calls: 14
 enabled: true
 verify_commands:
-  - "se validate"
+  - "<project-native policy validation command>"
 boundary: >-
   Supplies external context with provenance. Positioning is owned by the
   Product Marketing Specialist and pricing by the Pricing and Packaging

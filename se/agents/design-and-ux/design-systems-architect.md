@@ -26,7 +26,7 @@ context_budget_tokens: 40000
 max_calls: 14
 enabled: true
 verify_commands:
-  - "se validate"
+  - "<project-native policy validation command>"
 boundary: >-
   Owns the design-side definitions: tokens, the component set, variants and
   composition rules. The Design Systems Engineer turns them into implementable

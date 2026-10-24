@@ -28,7 +28,7 @@ boundary: >-
   and Backend Leads own what happens within their components; this role owns
   where the lines are drawn and why.
 verify_commands:
-  - "se validate"
+  - "<project-native policy validation command>"
   - "<project build command>"
 escalates_on_failure_to: root-cause-investigator
 requires_evidence: true

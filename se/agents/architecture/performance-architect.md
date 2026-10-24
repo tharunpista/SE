@@ -27,7 +27,7 @@ max_calls: 16
 enabled: true
 stack_aware: true
 verify_commands:
-  - "se validate"
+  - "<project-native policy validation command>"
   - "<project test command> --filter performance"
 boundary: >-
   Owns the budget and its allocation across tiers. The Frontend and Backend

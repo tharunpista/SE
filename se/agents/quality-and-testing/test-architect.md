@@ -27,7 +27,7 @@ enabled: true
 stack_aware: true
 verify_commands:
   - "<project test command>"
-  - "se validate"
+  - "<project-native policy validation command>"
 boundary: >-
   Decides the shape of the suite: levels, boundaries, and what each level is
   responsible for. The QA Lead owns the verification strategy and the release

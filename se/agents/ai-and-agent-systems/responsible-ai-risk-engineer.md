@@ -25,7 +25,7 @@ context_budget_tokens: 45000
 max_calls: 16
 enabled: true
 verify_commands:
-  - "se validate"
+  - "<project-native policy validation command>"
   - "<project test command> --filter safety"
 boundary: >-
   Measures harm. The AI Evaluation Engineer measures task success, and the

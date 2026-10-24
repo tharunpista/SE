@@ -26,7 +26,7 @@ context_budget_tokens: 40000
 max_calls: 14
 enabled: true
 verify_commands:
-  - "se validate"
+  - "<project-native policy validation command>"
 boundary: >-
   Decides what is worth building and in what order. The Project Manager owns
   the schedule and status of the work once chosen, and the Requirements

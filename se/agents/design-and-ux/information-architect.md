@@ -25,7 +25,7 @@ context_budget_tokens: 40000
 max_calls: 12
 enabled: true
 verify_commands:
-  - "se validate"
+  - "<project-native policy validation command>"
 boundary: >-
   Owns structure and naming of the information space. The Routing and
   Navigation Engineer implements addresses for that structure, and the UX

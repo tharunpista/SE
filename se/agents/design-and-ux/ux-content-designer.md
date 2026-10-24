@@ -25,7 +25,7 @@ context_budget_tokens: 35000
 max_calls: 12
 enabled: true
 verify_commands:
-  - "se validate"
+  - "<project-native policy validation command>"
 boundary: >-
   Owns interface language within the controlled vocabulary set by the
   Information Architect. Marketing language belongs to the Content Specialist,

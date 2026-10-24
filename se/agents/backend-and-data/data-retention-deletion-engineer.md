@@ -28,7 +28,7 @@ enabled: true
 stack_aware: true
 verify_commands:
   - "<project test command> --filter retention"
-  - "se validate"
+  - "<project-native policy validation command>"
 boundary: >-
   Owns retention schedules and the deletion mechanism with its proof. The Data
   Governance Steward classifies data and the Privacy Engineer owns lawful

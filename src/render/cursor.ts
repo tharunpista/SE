@@ -4,7 +4,7 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import type { Role } from "../roles/types.ts";
 import type { HostAdapter, RenderResult, RenderedFile } from "./host.ts";
-import { estimateTokens, routingDescription, stripEvalOnlySections } from "./host.ts";
+import { estimateTokens, renderRoleInstructions, routingDescription } from "./host.ts";
 
 function quoteYaml(value: string): string {
   return JSON.stringify(value);
@@ -30,7 +30,7 @@ function renderAgent(role: Role): RenderedFile {
     "This host does not enforce the role's declared tool list. The role inherits the tools and permissions available in the Cursor session.",
     "Do not claim a capability or verification step that the current session does not provide.",
     "",
-    stripEvalOnlySections(role.body),
+    renderRoleInstructions(role.body),
     "",
   ].join("\n");
   return { path: `${role.id}.md`, contents: [...frontmatter, body].join("\n") };

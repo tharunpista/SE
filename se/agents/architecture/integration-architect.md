@@ -27,7 +27,7 @@ context_budget_tokens: 45000
 max_calls: 16
 enabled: true
 verify_commands:
-  - "se validate"
+  - "<project-native policy validation command>"
 boundary: >-
   Owns the pattern and the boundary for external systems. The External
   Integration Engineer implements each specific integration, and the API

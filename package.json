@@ -2,7 +2,7 @@
   "name": "se-org",
   "version": "0.0.0",
   "private": false,
-  "description": "An open-source AI engineering organization: 220 role definitions and a crash-safe project-memory layer for coding agents.",
+  "description": "An open-source engineering-role catalogue with 191 active role definitions and a local project-memory CLI.",
   "license": "Apache-2.0",
   "type": "module",
   "bin": {

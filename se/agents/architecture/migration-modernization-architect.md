@@ -27,7 +27,7 @@ enabled: true
 stack_aware: true
 verify_commands:
   - "<project test command> --filter migration"
-  - "se validate"
+  - "<project-native policy validation command>"
 boundary: >-
   Moves systems. The Database Migration Engineer moves schemas within a
   system, and the Release and Rollback Engineer owns the deployment mechanics

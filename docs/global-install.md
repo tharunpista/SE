@@ -66,38 +66,36 @@ The roles live in one repository. Nothing is copied into the projects that use
 them automatically. The catalogue remains the source of truth, but host files
 are generated copies; rerun `se agents enable` after editing or updating roles.
 
-## 1. Put `se` on PATH
+## Install and register the CLI
 
-```bash
-cd /path/to/se-org
-bun link
+Run this from the catalogue checkout:
+
+```powershell
+Set-Location C:\path\to\se-org
+bun.cmd run src/cli.ts install --add-path
 ```
 
-`bun link` builds `se` into bun's bin directory. On Windows that is
-`%USERPROFILE%\.bun\bin`, which is **not** on PATH by default. Either add it, or
-place a shim in a directory that already is — on this machine
-`%USERPROFILE%\.local\bin` was already on PATH, so the shims live there:
+On macOS or Linux, use `bun run src/cli.ts install --add-path`. This command
+registers the catalogue and writes launchers into a user bin directory. Open a
+new terminal after changing PATH. To skip PATH setup, omit `--add-path` and keep
+running the CLI through `bun run src/cli.ts ...` from the checkout.
 
-```
-~/.local/bin/se       # sh, for Git Bash
-~/.local/bin/se.cmd   # cmd.exe and PowerShell
-```
-
-Verify from a directory outside the catalogue:
+Verify from another project or directory:
 
 ```bash
 se link --show
 ```
 
-## 2. Register the catalogue
+## Change the registered catalogue
 
 ```bash
-cd /path/to/se-org
-se link
+se link --path /path/to/se-org
 ```
 
-This writes `~/.se/config.json` with the catalogue path. Every later command
-resolves the catalogue in this order:
+`se install` already registers the checkout from which it runs. Use `se link`
+when switching to a different checkout or repairing registration. It writes
+`~/.se/config.json` with the catalogue path. Every later command resolves the
+catalogue in this order:
 
 1. `SE_CATALOGUE` — an operator saying so for one invocation.
 2. Walking up from the working directory — you are inside the catalogue repo.
@@ -121,7 +119,7 @@ catalogue would write one project's agents into the catalogue repository, and
 project memory likewise. When you are working inside the catalogue repo the two
 coincide, which is why the bug is easy to miss.
 
-## 4. Memory, globally
+## Memory, globally
 
 Memory is resolved in two independent parts: **which project** it belongs to,
 and **where the store lives**. Conflating them is how a store silently appears
@@ -143,25 +141,29 @@ se memory init              # pin the id in .se/project.json; commit it
 ### Where the store lives — the placement
 
 Resolved in order: `--memory-root`, `SE_MEMORY_ROOT`, `<project>/memory/` if
-that directory exists, otherwise the global store at `~/.se/memory/`.
+that directory exists, otherwise the user-level store at `~/.se/memory/`.
 
 | Placement | Path | Shared? |
 |---|---|---|
-| global (default) | `~/.se/memory/<project-id>/` | personal; not shared, not reviewed |
-| repo-local (opt in) | `<project>/memory/<project-id>/` | committed with the source, diffable, reviewable |
+| global (default) | `~/.se/memory/<project-id>/` | private to this user; not shared |
+| repo-local (opt in) | `<project>/memory/<project-id>/` | private to this checkout; ignored by Git |
 
 Global is the default because a globally installed CLI is used across many
 projects, and a tool that writes an uncommitted `memory/` directory into every
 repository it touches is worse than one that keeps personal state in one place.
 
-A project opts in to the committed placement by **having the directory**:
+A project opts in to checkout-local placement by **having the directory**:
 
 ```bash
-se memory init --local      # creates ./memory and uses it from then on
+se memory init --local      # creates ./memory and a local ignore rule
 ```
 
-That keeps existing repo-local stores working with no migration, and makes the
-choice visible in the file tree instead of hidden in configuration.
+That keeps existing repo-local stores working and makes the placement visible
+in the file tree. The command adds a marked ignore block to `memory/.gitignore`
+without replacing existing rules; commit that file if future clones should get
+the same protection. It does not share or commit the records. Already tracked
+records remain tracked until removed from the Git index. Review and explicitly
+curate any information before sharing it; raw memory is never a team-sync format.
 
 Either way the store is namespaced by project id, so the placement changes *who
 can see* the memory and never *which project it belongs to*. Two projects in the
@@ -172,18 +174,15 @@ global store never cross-retrieve, even with identical record ids:
 ~/.se/memory/project-b/records/...
 ```
 
-`se memory status` reports both the identity and the placement, including
-whether the store is committable.
+`se memory status` reports the project identity and the selected placement.
 
-### A caveat worth stating
+For personal work across many projects, use the global store. Repo-local mode is
+useful when memory must stay beside one checkout, but its records remain private
+and ignored by Git. Multi-user sharing belongs in the separately secured hosted
+Memory Layer 4; it must not be implemented by committing raw local records.
 
-The global store cannot be committed, so it is outside Part XX 70's guarantee
-that memory survives beside the source and is reviewable in a pull request. For
-a team repository, prefer `se memory init --local`. For personal work across
-many projects, the global store is the right default. Sharing a store between
-people is Memory Layer 4 — a hosted service — and does not exist yet.
 
-## 3. Install the roles for a host
+## Render roles for a host
 
 ### One global switch for supported clients
 
@@ -218,6 +217,11 @@ Each client has its own discovery format and workspace root. Run the renderer
 from the target repository (or pass `--project <repo>`); these are generated
 files, so a fresh clone must render them locally. `git pull` does not generate
 or install host agent files.
+
+By default, rendering replaces the generated roster for that host and removes
+generated role files no longer selected. To refresh one role while preserving
+the rest of the generated roster, pass `--merge`, for example
+`se render --host codex --roster memory-systems-engineer --merge`.
 
 ### Windows PowerShell
 

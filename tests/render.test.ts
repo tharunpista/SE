@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { claudeCodeAdapter } from "../src/render/claude-code.ts";
+import { ADAPTERS, claudeCodeAdapter } from "../src/render/claude-code.ts";
 import { estimateTokens, routingDescription } from "../src/render/host.ts";
 import { hasCode, roleFile, tempRepo } from "./harness.ts";
 import type { Role } from "../src/roles/types.ts";
@@ -57,6 +57,27 @@ function render(repo: ReturnType<typeof tempRepo>, ids?: string[]) {
     : registry.all.filter((r) => r.enabled && r.status === "active");
   return claudeCodeAdapter.render(roles);
 }
+
+describe("shared role execution and handoff contract", () => {
+  test("every full-definition host renders the same coordination rules", () => {
+    const repo = tempRepo();
+    try {
+      repo.builtin("orchestration/a.md", roleFile("a"));
+      const role = repo.resolve().byId.get("a")!;
+      for (const adapter of ADAPTERS.filter((candidate) => candidate.id !== "agents-md")) {
+        const rendered = adapter.render([role], repo.root);
+        expect(rendered.files.length).toBeGreaterThan(0);
+        for (const file of rendered.files) {
+          expect(file.contents).toContain("Mandatory execution and handoff contract");
+          expect(file.contents).toContain("delivery alone is not acceptance");
+          expect(file.contents).toContain("Never invent a package, command, or tool result");
+        }
+      }
+    } finally {
+      repo.dispose();
+    }
+  });
+});
 
 function frontmatter(contents: string): Record<string, string> {
   const end = contents.indexOf("\n---", 4);
@@ -253,24 +274,17 @@ describe("always-loaded metadata budget", () => {
     expect(claudeCodeAdapter.metadataTokenBudget!).toBeLessThan(15000);
   });
 
-  test("a full 220-role catalogue overruns the budget and nearly trips the host", () => {
-    // Measured, not assumed. The three real starter roles average 62.7
-    // description tokens each, so the full catalogue is about 13,800 tokens:
-    // it overruns this adapter's budget almost twice over, and leaves only
-    // ~8% headroom under Claude Code's own 15,000-token warning. One verbose
-    // mission trips it.
-    //
-    // This is the load-bearing reason roster selection exists. If this test
-    // starts passing trivially, the budget has been raised too far and
-    // someone in a hurry will render the catalogue whole.
-    const MEASURED_TOKENS_PER_ROLE = 62.7;
-    const fullCatalogue = Math.round(MEASURED_TOKENS_PER_ROLE * 220);
+  test("the full 191-role active catalogue fits under the metadata budget", () => {
+    const makeRoster = (count: number) => Array.from({ length: count }, (_, i) =>
+      synthesiseRole({
+        id: `role-${i}`,
+        mission: "Mission detail ".repeat(25),
+        activation: ["Routing condition ".repeat(12)],
+      }),
+    );
+    const fullActiveCatalogue = claudeCodeAdapter.render(makeRoster(191));
 
-    expect(fullCatalogue).toBeGreaterThan(claudeCodeAdapter.metadataTokenBudget! * 1.5);
-    expect(fullCatalogue).toBeGreaterThan(13000);
-    // Not yet over the host's hard threshold, which is exactly why a
-    // self-imposed budget is needed: the host will not stop you.
-    expect(15000 - fullCatalogue).toBeLessThan(2000);
+    expect(fullActiveCatalogue.metadataTokens).toBeLessThan(claudeCodeAdapter.metadataTokenBudget!);
   });
 
   test("the measured per-role cost has not silently inflated", () => {

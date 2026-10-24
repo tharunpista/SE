@@ -27,7 +27,7 @@ context_budget_tokens: 45000
 max_calls: 16
 enabled: true
 verify_commands:
-  - "se validate"
+  - "<project-native policy validation command>"
 boundary: >-
   Sets the conventions every interface follows. The API Contract Owner is
   accountable for each concrete contract and for classifying a specific change

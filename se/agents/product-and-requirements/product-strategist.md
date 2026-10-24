@@ -26,7 +26,7 @@ context_budget_tokens: 40000
 max_calls: 12
 enabled: true
 verify_commands:
-  - "se validate"
+  - "<project-native policy validation command>"
 boundary: >-
   Owns the stated direction and its exclusions. The Product Manager decides
   what gets built next within that direction; this role does not sequence

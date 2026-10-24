@@ -25,7 +25,7 @@ context_budget_tokens: 40000
 max_calls: 16
 enabled: true
 verify_commands:
-  - "se validate"
+  - "<project-native policy validation command>"
   - "<project cost report command>"
 boundary: >-
   Owns infrastructure capacity and spend. Inference spend belongs to the Token

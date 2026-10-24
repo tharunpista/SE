@@ -4,7 +4,7 @@ import type { Role } from "../roles/types.ts";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import type { HostAdapter, RenderResult, RenderedFile } from "./host.ts";
-import { estimateTokens, routingDescription, stripEvalOnlySections } from "./host.ts";
+import { estimateTokens, renderRoleInstructions, routingDescription } from "./host.ts";
 
 const TOOL_MAP: Readonly<Record<string, readonly string[]>> = {
   "read-files": ["read"],
@@ -56,7 +56,7 @@ function renderAgent(role: Role): RenderedFile {
     "",
     "Capabilities are mapped only where the VS Code harness has a documented tool alias. The harness and session permissions remain authoritative; do not claim a capability the selected session does not provide.",
     "",
-    stripEvalOnlySections(role.body),
+    renderRoleInstructions(role.body),
     "",
   ].join("\n");
   return { path: `${role.id}.agent.md`, contents: [...header, body].join("\n") };

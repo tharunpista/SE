@@ -26,7 +26,7 @@ context_budget_tokens: 35000
 max_calls: 12
 enabled: true
 verify_commands:
-  - "se validate"
+  - "<project-native policy validation command>"
 boundary: >-
   Keeps product processes and communications moving. The Operations
   Coordinator owns the escalation queue inside the engineering organization;

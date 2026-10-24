@@ -27,7 +27,7 @@ context_budget_tokens: 45000
 max_calls: 16
 enabled: true
 verify_commands:
-  - "se validate"
+  - "<project-native policy validation command>"
   - "<project test command> --filter accessibility"
 boundary: >-
   Defines the accessibility requirement and verifies behaviour with assistive

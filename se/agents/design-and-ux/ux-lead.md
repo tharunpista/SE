@@ -26,7 +26,7 @@ context_budget_tokens: 50000
 max_calls: 18
 enabled: true
 verify_commands:
-  - "se validate"
+  - "<project-native policy validation command>"
 boundary: >-
   Owns coherence and design quality across flows; does not own any single
   artifact of the design system. Tokens and components belong to the Design

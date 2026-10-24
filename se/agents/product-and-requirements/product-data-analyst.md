@@ -27,7 +27,7 @@ max_calls: 14
 enabled: true
 stack_aware: true
 verify_commands:
-  - "se validate"
+  - "<project-native policy validation command>"
   - "<project test command> --filter analytics"
 boundary: >-
   Defines metrics and the instrumentation they require. The Analytics Engineer

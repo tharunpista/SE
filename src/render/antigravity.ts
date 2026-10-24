@@ -4,7 +4,7 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import type { Role } from "../roles/types.ts";
 import type { HostAdapter, RenderResult, RenderedFile } from "./host.ts";
-import { estimateTokens, routingDescription, stripEvalOnlySections } from "./host.ts";
+import { estimateTokens, renderRoleInstructions, routingDescription } from "./host.ts";
 
 const TOOL_MAP: Readonly<Record<string, readonly string[]>> = {
   "read-files": ["view_file"],
@@ -53,7 +53,7 @@ function renderAgent(role: Role): RenderedFile {
     "Use only the tools listed in this agent definition. A command tool is available only to roles that can write files; the sandbox is still controlled by the host.",
     "Do not claim a capability or verification step that the host does not provide.",
     "",
-    stripEvalOnlySections(role.body),
+    renderRoleInstructions(role.body),
     "",
   ].join("\n");
 

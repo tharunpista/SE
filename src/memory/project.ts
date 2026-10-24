@@ -213,11 +213,9 @@ export type MemoryRootSource = "flag" | "env" | "repo-local" | "global";
 export interface MemoryLocation {
   readonly root: string;
   readonly source: MemoryRootSource;
-  /** True when the store is inside the project and can be committed with it. */
-  readonly committable: boolean;
 }
 
-/** Repo-local Tier 0, committed beside the source it describes (Part XX 70). */
+/** Repo-local Tier 0, private to one checkout and ignored by Git. */
 export const REPO_LOCAL_MEMORY_DIR = "memory";
 
 const MEMORY_IGNORE_START = "# BEGIN se local-memory runtime exclusion";
@@ -259,23 +257,20 @@ export function ensureRepoLocalMemoryGitignore(repoRoot: string): { path: string
  *
  * Two placements are legitimate and they trade off against each other:
  *
- *   repo-local  `<project>/memory/` --- committed with the source, diffable,
- *               shared with the team, and reviewable in a pull request. This is
- *               what Part XX 70's "if the tooling is lost, the memory is still
- *               readable" argues for.
+ *   repo-local  `<project>/memory/` --- private to this checkout, useful for
+ *               keeping memory beside one working copy. Git ignores it.
  *   global      `~/.se/memory/` --- works in every project with no setup, and
  *               survives the project directory being moved or re-cloned, but is
  *               personal: nothing is shared and nothing is reviewed.
  *
  * Global is the default because a globally installed CLI is used across many
- * projects, most of which will never opt in to committing memory, and a tool
+ * projects, most of which will never opt in to checkout-local memory, and a tool
  * that silently writes an uncommitted `memory/` directory into every repository
  * it touches is worse than one that keeps personal state in one place.
  *
- * A project opts in to the committed placement simply by having the directory:
- * `se memory init --local` creates it. That keeps existing repo-local stores
- * working without migration, and makes the choice visible in the file tree
- * rather than hidden in configuration.
+ * A project opts in to checkout-local placement simply by having the directory:
+ * `se memory init --local` creates it. Runtime records remain ignored by Git;
+ * repo-local placement is not a mechanism for team sharing.
  */
 export function resolveMemoryLocation(
   repoRoot: string,
@@ -285,21 +280,21 @@ export function resolveMemoryLocation(
 
   if (options.flag) {
     const root = isAbsolute(options.flag) ? options.flag : join(repoRoot, options.flag);
-    return { root, source: "flag", committable: root.startsWith(repoRoot) };
+    return { root, source: "flag" };
   }
 
   const fromEnv = env["SE_MEMORY_ROOT"];
   if (fromEnv) {
     const root = isAbsolute(fromEnv) ? fromEnv : join(repoRoot, fromEnv);
-    return { root, source: "env", committable: root.startsWith(repoRoot) };
+    return { root, source: "env" };
   }
 
   const repoLocal = join(repoRoot, REPO_LOCAL_MEMORY_DIR);
   if (existsSync(repoLocal)) {
-    return { root: repoLocal, source: "repo-local", committable: true };
+    return { root: repoLocal, source: "repo-local" };
   }
 
-  return { root: join(seHome(), "memory"), source: "global", committable: false };
+  return { root: join(seHome(), "memory"), source: "global" };
 }
 
 export interface InitResult {
