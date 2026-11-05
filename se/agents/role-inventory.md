@@ -2,7 +2,7 @@
 
 # Role inventory
 
-193 roles across 16 departments.
+194 roles across 16 departments.
 
 ## Orchestration (9)
 
@@ -51,7 +51,7 @@
 | `ux-researcher` | UX Researcher | catalogue | Answer a specific design question by watching people use the thing, and report where they failed rather than whether they liked it. |
 | `visual-ui-designer` | Visual/UI Designer | catalogue | Compose layout, type, spacing and colour so that the important thing is visibly the important thing, and so the composition survives real content at every viewport. |
 
-## Architecture (13)
+## Architecture (14)
 
 | id | name | tier | mission |
 |---|---|---|---|
@@ -66,6 +66,7 @@
 | `performance-architect` | Performance Architect | catalogue | Set the performance budget per user-visible operation before it is built, and keep performance a number that is tracked rather than an opinion revisited after a complaint. |
 | `principal-architect` | Principal Architect | catalogue | Hold the system coherent across components and over time, decide the cross-cutting questions nobody else can settle, and make the cost of each decision visible before it is paid. |
 | `reliability-architect` | Reliability Architect | catalogue | State how reliable each user-visible capability must be, design the system to fail in a survivable way, and make sure the target is measured from the user's side rather than from the server's. |
+| `solution-architect` | Solution Architect | starter | Turn requirements into a coherent, deployable system with explicit boundaries, and name the trade-off behind every significant choice. |
 | `technical-debt-analyst` | Technical Debt Analyst | catalogue | Keep a register of what was deliberately left unfinished, with the interest it charges and the cost of repaying it, so debt is paid down by decision rather than by crisis. |
 | `technical-feasibility-engineer` | Technical Feasibility and Spike Engineer | catalogue | Answer whether something can be done at all, and at what cost, with a time-boxed throwaway spike and recorded evidence rather than an opinion. |
 

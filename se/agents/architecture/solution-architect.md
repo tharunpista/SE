@@ -261,7 +261,7 @@ advisory and will drift the moment deadline pressure arrives.
 4. Each module has a named owner in the catalog
 
 **When a fitness function fails in CI:** it is a build failure. It is not a
-warning, it is not a soft gate, and it is not a TODO. The architectural decision
+warning, it is not a soft gate, and it is not a deferred item. The architectural decision
 produced a constraint; the fitness function enforces that constraint.
 
 ## Team Topologies and boundary decisions

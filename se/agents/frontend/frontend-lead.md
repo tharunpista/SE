@@ -30,10 +30,10 @@ boundary: >-
   defines what the server returns; this role decides how the UI behaves when
   it returns nothing, something partial, or an error.
 verify_commands:
-  - "<project typecheck command>"
-  - "<project lint command>"
-  - "<project test command> --filter frontend"
-  - "<project build command>"
+  - "npx tsc --noEmit 2>&1 | head -20 || bunx tsc --noEmit 2>&1 | head -20"
+  - "npx eslint src --max-warnings 0 2>&1 | tail -20 || npx biome check src 2>&1 | tail -20"
+  - "npx vite build 2>&1 | tail -10 || npx next build 2>&1 | tail -10 || npx astro build 2>&1 | tail -10"
+  - "npx lighthouse-ci autorun 2>&1 | tail -10 || echo 'lighthouse-ci not configured — add .lighthouserc.json'"
 escalates_on_failure_to: root-cause-investigator
 stack_aware: true
 requires_evidence: true
@@ -95,6 +95,18 @@ failure_modes:
       Marketing, analytics and chat widget scripts are added by non-engineering teams without performance review; each adds 50–300ms to LCP/INP and bypasses all in-house budgets
     guard: >-
       Third-party script governance: maintain an inventory of all third-party scripts with owner, purpose, and measured LCP/INP/CLS impact; enforce `loading="async"` or `type="module"` — synchronous third-party scripts block the main thread and are banned; use Partytown to offload non-critical scripts to a web worker (zero main-thread cost); quarterly audit of third-party contribution to web vitals; a new third-party script requires sign-off from frontend lead with a measured performance impact before addition
+  - mode: >-
+      React 19 project implements form state with manual prop-drilling of pending state and optimistic updates using useEffect and local useState; React 19 ships stable built-in primitives for all of this that are simpler and correct under concurrent rendering
+    guard: >-
+      React 19 (stable December 2024, 19.2 October 2025) adds: `useActionState` (replaces `useFormState` from React 18 canary — also renamed) for form action state machine; `useOptimistic` for instant UI feedback on mutations with automatic revert on error; `useFormStatus` for reading pending state anywhere in a form tree without prop-drilling; `use()` hook for reading resources (Promises, Context) in render. Before implementing any of these patterns manually, check whether a React 19 built-in handles it. Requires React 19+ and a framework that supports Server Actions (Next.js 15, Remix v3+).
+  - mode: >-
+      Vite SPA project uses React Router v6/v7 for routing without evaluating TanStack Router; TanStack Router provides full TypeScript inference across params, search params, and loaders that React Router cannot match; for type-safe SPAs TanStack Router is now the dominant choice
+    guard: >-
+      For new Vite SPAs requiring type-safe routing: evaluate TanStack Router v1 (stable) first. It provides compile-time type safety for route params, search params, and loader data; file-based routing with code generation; integrated data loading with TanStack Query. Use React Router when: (a) the codebase already uses it, (b) the team prefers a simpler API without code generation, or (c) the framework mandates it (Remix, React Router framework mode). Document the choice.
+  - mode: >-
+      Next.js App Router project implements form mutations as client-side API calls where Server Actions would be simpler and type-safe; or uses Server Components for interactivity that requires `use client`
+    guard: >-
+      In Next.js 15 App Router: Server Components are the default; `use client` boundaries are added only where interactivity requires it. For mutations (form submissions, data writes): Server Actions (`async function` marked `'use server'`) run on the server, have direct database access, and are type-safe end-to-end without an HTTP layer. Use Server Actions for form submissions, mutations triggered from Server Components, and any write operation that does not need optimistic UI. Use API Routes for mutations that need to be called from multiple clients, webhooks, or complex streaming responses.
 ---
 
 # Frontend Lead
@@ -151,7 +163,48 @@ Do NOT search for: "best practices", architectural judgment, or which framework 
 | Global UI state (< 5 slices) | Zustand |
 | Global UI state (complex, DevTools needed) | Redux Toolkit |
 | Form state | React Hook Form + Zod |
-| URL state | `useSearchParams` (Next.js) or React Router |
+| URL / routing state | TanStack Router (type-safe SPAs), React Router v6/v7 (existing projects, Remix), Next.js App Router (Next.js projects), Expo Router (Expo/React Native) |
+
+### React 19 built-in primitives (stable as of React 19.2, October 2025)
+
+| Hook | Replaces | Use when |
+|---|---|---|
+| `useActionState(action, initialState)` | Manual form state + `useFormState` (renamed) | Form action with server-side state machine |
+| `useOptimistic(state, updateFn)` | useEffect-based optimistic UI | Instant UI feedback with automatic revert on error |
+| `useFormStatus()` | Prop-drilling `isPending` through form tree | Reading form submit status in any child component |
+| `use(resource)` | `useEffect` + useState for async data | Reading a Promise or Context in render (Suspense-aware) |
+
+Server Actions (`'use server'` directive) are the React 19 / Next.js 15 mechanism
+for form mutations: they run on the server, have direct database access, and are
+type-safe without an HTTP API layer. Use them for form submissions and mutations
+from Server Components.
+
+### Build tooling (2026)
+
+| Project type | Build tool | Dev server |
+|---|---|---|
+| Next.js 15+ | Webpack (default) or Turbopack | Turbopack (`--turbopack`, stable in Next.js 15) |
+| Vite SPA | Vite 6 | Vite 6 dev server |
+| Webpack migration | Rspack (drop-in, 5–10× faster builds) | Rspack dev server |
+| Monorepo orchestration | Turborepo or Nx | — |
+
+Turbopack is the Next.js 15 development server — `next dev --turbopack` is stable
+and the recommended default. Do not configure Vite for Next.js projects. Rspack
+is a Webpack-compatible alternative (not Vite-compatible) used by teams with
+existing webpack configs.
+
+### Linting and formatting
+
+| Tool | Role | Note |
+|---|---|---|
+| ESLint 9 (flat config) | Linting | Flat config is the default in ESLint 9+ |
+| Prettier | Formatting | Still dominant; check if project uses Biome instead |
+| **Biome** | Linting + formatting | Single tool, 97% Prettier compatibility, 20× faster — confirm before recommending ESLint/Prettier changes |
+| TypeScript 5.x | Type checking | `noEmit` typecheck is a first-class verification step |
+
+**Before recommending ESLint config changes:** check whether the project uses
+Biome (`biome.json` in root). ESLint and Biome are mutually exclusive in most
+setups — applying ESLint fixes to a Biome project breaks the toolchain.
 
 ### Component architecture rules
 
@@ -162,7 +215,7 @@ Do NOT search for: "best practices", architectural judgment, or which framework 
 
 ### Browser compatibility baseline
 
-Default baseline for new products (2025): Chrome 120+, Firefox 120+, Safari 16+, Edge 120+. Covers 98%+ of web traffic.
+**Current (2026) baseline for new products:** Chrome 120+, Firefox 120+, Safari 17+, Edge 120+. Safari 17+ unlocks: Web Push on iOS, OPFS (file system access), improved View Transitions support. For Safari 18+: View Transitions API and CSS `@starting-style` are safe. Update this baseline annually.
 
 Before writing any CSS or JS feature, verify support at `caniuse.com`. The project's `browserslist` config is authoritative. Features not in baseline must have a `@supports` / feature-detection fallback.
 

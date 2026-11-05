@@ -64,6 +64,22 @@ failure_modes:
       Platform choice made without knowing the compliance regime; PCI DSS or HIPAA requirements discovered post-adoption; architecture must be rebuilt to add network segmentation and audit controls
     guard: >-
       Pre-flight question 3 (compliance) is mandatory; PCI DSS requires cardholder data environment isolation and specific logging controls; HIPAA requires encryption at rest, audit logging, and BAA with cloud provider; these constraints change the entire platform topology
+  - mode: >-
+      Team uses Terraform without awareness of the August 2023 Business Source License (BSL) change; organizations that compete with HashiCorp cloud products are explicitly restricted; using Terraform in such a context creates legal exposure that was never evaluated
+    guard: >-
+      Before recommending Terraform, state the license: Terraform has been under the Business Source License (BSL) since August 2023. For teams where this is a concern, OpenTofu is the CNCF-backed, Linux Foundation open-source fork that reached GA in January 2024 and is a drop-in replacement — substitute `tofu` for `terraform` in all commands. The choice between Terraform (BSL) and OpenTofu (MPL-2.0) must be a recorded architectural decision, not a default. Pulumi (uses general-purpose languages: TypeScript/Python/Go) and Crossplane (K8s-native continuous reconciliation) are additional alternatives for specific use cases.
+  - mode: >-
+      Platform uses Kubernetes Ingress for all HTTP routing in 2024+; Kubernetes Gateway API v1.0 (GA October 2023) is now the recommended replacement for complex routing; Ingress has limited expressiveness for traffic splitting, header-based routing, and multi-team tenancy
+    guard: >-
+      For new K8s environments, evaluate Gateway API (v1.0 GA, October 2023) over Ingress. Gateway API supports HTTPRoute, TLSRoute, and GRPCRoute as separate resources, enables multi-team gateway sharing, and is the upstream standard. Ingress remains valid for simple single-tenant setups. Document the choice. Gateway API is natively supported by Cilium, Istio, Envoy Gateway, and GKE/EKS/AKS.
+  - mode: >-
+      Platform builds on Kubernetes without an Internal Developer Platform (IDP); developers interact directly with kubectl and raw YAML; self-service is non-existent; every deploy requires platform team intervention; this is 2018-era DevOps, not platform engineering
+    guard: >-
+      Platform engineering in 2024+ is defined by Internal Developer Platforms. Backstage (CNCF graduated project, Spotify-open-sourced) is the dominant IDP framework: software catalog, golden path templates, TechDocs, and plugin ecosystem. At minimum: a software catalog that maps services to owners, golden path templates for new services, and self-service deployment. Teams without an IDP spend 40%+ of platform time on manual toil (DORA 2024). Backstage is not optional for a platform serving more than 10 engineering teams.
+  - mode: >-
+      Kubernetes node autoscaling uses Cluster Autoscaler on EKS; AWS has deprecated Cluster Autoscaler in favor of Karpenter since 2022; Karpenter provides 50-70% faster node provisioning, direct EC2 Spot integration without managed node groups, and native Savings Plans support
+    guard: >-
+      For EKS environments: use Karpenter instead of Cluster Autoscaler. Karpenter is production-ready and AWS's recommended autoscaler since 2022. It eliminates the need for managed node groups, provisions nodes in 30-60 seconds vs. 3-5 minutes, and integrates directly with EC2 Spot and Savings Plans for automatic cost optimization. For GKE: use GKE Autopilot or the GKE cluster autoscaler (Google's maintained variant). For AKS: use the Azure cluster autoscaler or KEDA for workload-driven scaling.
 ---
 
 # Platform Architect
@@ -126,6 +142,15 @@ Do NOT search for: deployment pattern judgment, architectural trade-offs, or "be
 - State in remote backend: S3 + DynamoDB lock (AWS), GCS (GCP)
 - `terraform plan` runs in CI on every PR; `terraform apply` requires manual approval for prod
 - `terraform plan` on a daily schedule in CI; alert if plan shows changes without a code change (drift)
+
+> **IaC license note:** Terraform has been under the Business Source License
+> (BSL) since August 2023. If your organization competes with HashiCorp cloud
+> products or requires a fully open-source IaC tool, use **OpenTofu** — a
+> CNCF-backed, Linux Foundation fork that reached GA in January 2024 and is
+> a drop-in replacement (substitute `tofu` for `terraform`). The
+> Terraform/OpenTofu choice is an architectural decision to record. **Pulumi**
+> (TypeScript/Python/Go, no HCL) and **Crossplane** (K8s-native, continuous
+> reconciliation) are additional alternatives for specific use cases.
 
 **Checkov in CI (mandatory):**
 ```
@@ -206,6 +231,59 @@ per service and a surprise in every incident.
 Production, staging and development differ; the differences are written down,
 because an undocumented difference is the cause of the failure that only
 happens in production.
+
+## GitOps and continuous reconciliation
+
+For Kubernetes environments, GitOps is now the standard deployment model —
+continuous reconciliation from Git, not push-based `kubectl apply` from CI.
+
+**Tooling:**
+- **ArgoCD 2.x**: pull-based, web UI, multi-cluster, ApplicationSet for
+  templated environments. CNCF graduated.
+- **Flux v2**: pull-based, GitOps Toolkit, Helm and Kustomize native,
+  lighter-weight than ArgoCD.
+
+**Decision criteria:**
+- ArgoCD for teams that need a UI and multi-cluster management from day one
+- Flux for teams that prefer a purely CLI/GitOps-native model
+- Both support progressive delivery (canary, blue-green) via Flagger integration
+
+**Anti-pattern:** Manual `terraform apply` or `kubectl apply` in CD pipelines
+without reconciliation. These are imperative push models that drift from Git
+state and require manual remediation after partial failures.
+
+## Internal Developer Platform (Backstage)
+
+An IDP is not optional for a platform serving more than 10 engineering teams.
+
+**Backstage (CNCF graduated)** is the dominant IDP framework:
+- Software catalog: maps every service to its owner, documentation, and
+  dependencies — a single pane of glass replacing tribal knowledge
+- Golden path templates: Scaffolder plugin creates new services from approved
+  templates with security, CI/CD, and observability pre-wired
+- TechDocs: documentation-as-code, lives next to the service it describes
+- Plugin ecosystem: 200+ plugins for Kubernetes, PagerDuty, Datadog, GitHub
+
+**Adoption path:** Start with the catalog (import existing services), add
+TechDocs, add one golden path template, then incrementally add self-service
+actions. Full IDP does not require big-bang adoption.
+
+## CNI selection: Cilium (eBPF-based)
+
+For serious Kubernetes workloads, CNI selection is an architectural decision
+with meaningful performance and observability consequences.
+
+**Cilium** (eBPF-based, CNCF graduated) is the dominant CNI in 2024–2026:
+- Replaces kube-proxy with eBPF programs: 30–60% lower P99 latency at
+  >1,000 services
+- Native Kubernetes Network Policy + CiliumNetworkPolicy for L7 rules
+- Hubble: built-in network observability (flow logs, service map) with no
+  agent overhead
+- Gateway API native support (no Ingress controller needed)
+- Used by: Google GKE Dataplane v2, AWS EKS optional, Azure AKS Cilium
+
+**When to use Flannel/Calico instead:** Legacy clusters, operator familiarity,
+or environments where eBPF kernel requirements (Linux 5.4+) are not met.
 
 ## Rules that do not bend
 
