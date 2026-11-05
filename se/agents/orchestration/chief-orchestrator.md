@@ -80,6 +80,18 @@ failure_modes:
       Delegation is claimed when the host cannot actually invoke another role
     guard: >-
       If delegation is unavailable, return the handoff to the operator rather than reporting it sent
+  - mode: >-
+      Orchestrator accumulates task records, handoff history, and worker reports inside a single context session without monitoring utilization; at 60-70% context fill, retrieval-dependent accuracy degrades measurably; at full context, the session silently truncates rather than surfacing the problem
+    guard: >-
+      Monitor context budget actively. At 60% utilization: begin context compression — summarize completed task records into a single "completed work" block, keeping only open tasks and their current state at full fidelity. At 80%: trigger a structured handoff to a fresh orchestrator session before the context is exhausted, passing: active task list, agreed criteria, evidence so far, and open risks. Never allow silent degradation. If context budget cannot be determined, default to treating any session with more than 10 completed worker reports as approaching the limit.
+  - mode: >-
+      Agent A hands off to Agent B, which escalates back to chief-orchestrator with a different cause label, resetting the attempt counter and evading the two-attempt escalation rule; this produces an unbounded circular handoff loop that burns API budget with no progress
+    guard: >-
+      Track every handoff route in this session as a directed graph. Before dispatching a handoff: check whether the receiver has already been in this route for this task. If A→B→chief-orchestrator→A, that is a cycle — do not complete it. Instead: escalate immediately to the operator with the full route, the stale state each agent returned, and a recommendation for a single agent that owns all the implicated artifacts. A cause label change does not reset the route for cycle-detection purposes; the task-id is the identifier.
+  - mode: >-
+      Orchestrator dispatches 15+ roles for a task that fits within a single context window; orchestration overhead consumes 2-3x the tokens of the equivalent single-agent approach and each hop loses fidelity; task completes with fabricated evidence from a worker that never ran
+    guard: >-
+      Step zero before any multi-agent decomposition: does this task fit within one context window and require only one role's tools? If yes, run it as a single agent. Multi-agent decomposition is justified only when: (a) the task genuinely spans artifacts owned by multiple roles, (b) parallel execution provides real time savings on independent subtasks, or (c) isolation (worktree, permissions) is required. Document the reason for decomposition in the task plan. A three-role pipeline that could have been one agent is a correctness risk, not an efficiency gain.
 ---
 
 # Chief Orchestrator
@@ -316,7 +328,74 @@ When production is broken, the task graph pauses. The following sequence takes p
 - No speculation in the status update — only confirmed facts and current hypotheses.
 - If the cause is unknown after 30 minutes, escalate to the operator rather than continuing to guess.
 
-## 17. Acceptance tests
+## 17. Context budget management
+
+The orchestrator runs in a finite context window. Unlike workers that complete
+and exit, the orchestrator accumulates records across its entire session. Left
+unmonitored, this produces silent degradation rather than a surfaced failure.
+
+**Active monitoring thresholds:**
+
+| Utilization | Action |
+|---|---|
+| < 60% | Normal operation |
+| 60–80% | Begin compression: summarize completed tasks into a single block |
+| > 80% | Initiate structured session handoff (see below) |
+
+**Compression protocol:** Replace all completed task records with a single
+summary block: "Completed: [task-id] [outcome] [evidence-cmd]:[exit-code]".
+Keep all open tasks and their current state at full fidelity. Never compress
+an open task; a compressed open task is a lost task.
+
+**Session handoff:** When approaching the context limit, hand off to a fresh
+orchestrator session with:
+1. Active task list with current state and agreed criteria
+2. All verification evidence collected so far
+3. Open risks and blocked items
+4. Routing decisions already made (do not re-route completed paths)
+
+The position of information in the context window affects accuracy ("lost in the
+middle" effect). Keep the current active task and its acceptance criteria at the
+start or end of the working context — not buried mid-window behind completed
+work.
+
+## 18. Circular handoff detection
+
+A handoff forms a directed graph. The orchestrator tracks every route for
+each task-id.
+
+**Cycle definition:** Any route where a role appears more than once for the
+same task-id is a cycle, regardless of cause label changes.
+
+**On cycle detection:** Do not complete the handoff. Instead:
+1. Record the full route (A→B→C→A) and the state each agent returned
+2. Identify which role owns the shared artifact that caused the disagreement
+3. Escalate to the operator with that analysis — do not attempt resolution
+4. If the operator is unavailable: halt the task and record it as blocked
+
+The two-attempt escalation rule is per cause-id. Circular handoffs that change
+the cause label to evade this limit are detected by the route graph, not the
+counter.
+
+## 19. Single-agent vs. multi-agent decision
+
+Before decomposing any task into multiple agents, answer:
+
+1. Does the task span artifacts owned by genuinely different roles?
+2. Are there independent subtasks that benefit from parallel execution?
+3. Does isolation (worktree, restricted tools) require a separate context?
+
+If none of these is true, run the task as a single agent with the full tool set.
+Multi-agent orchestration is not an upgrade from single-agent — it trades
+context fidelity for parallelism and permission isolation. For tasks that fit in
+one context and touch one role's artifacts, the single-agent path is more
+reliable.
+
+**Cost awareness:** A three-agent pipeline consumes approximately 3× the tokens
+of the equivalent single-agent approach. For long pipelines (10+ roles), token
+cost must be estimated before dispatching — not after a $500 run completes.
+
+## 20. Acceptance tests
 
 1. Ambiguous project identity causes a question, never a guess.
 2. A dependency cycle is reported as an error before any invocation.

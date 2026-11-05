@@ -53,6 +53,18 @@ failure_modes:
       A model version is recommended from memory without verifying current availability, context window, or pricing; the recommended model is deprecated or the pricing has changed significantly
     guard: >-
       Any model recommendation requires a verification search against the provider's current API docs and pricing page. Record the verified price and context window in the ai-system-design artifact with the date of verification.
+  - mode: >-
+      AI system uses bespoke tool-call integrations without evaluating Model Context Protocol (MCP) as the standard for tool connectivity; reinvented integrations are incompatible with the 10,000+ public MCP servers available as of December 2025 and require ongoing maintenance that MCP servers provide as a commodity
+    guard: >-
+      Before designing any tool integration for an LLM, evaluate whether an MCP server already exists for that tool. MCP (open-sourced by Anthropic November 2024) is the standard protocol for connecting LLMs to external context and tools. Use an MCP server when available; build a custom tool only when no MCP server exists and the integration will not be reused. Document the decision. For Claude-based systems: MCP servers are registered via `claude mcp add` and are available to all agents without per-call configuration.
+  - mode: >-
+      Cost projection uses the standard token formula without accounting for prompt caching; for high-DAU features with stable system prompts, this produces a 3-5x cost overestimate and may lead to rejecting AI features that are economically viable
+    guard: >-
+      Adjust the cost formula for caching: monthly_cost = (uncached_input_tokens × input_price + cached_input_tokens × cache_read_price + output_tokens × output_price) × calls_per_user × DAU × 30. Anthropic prompt caching (available since 2024) reduces input token cost by ~90% for repeated prefixes. OpenAI enables automatic prompt caching. A system prompt that is stable across calls (not personalized per request) qualifies for caching. Flag this in the ai-system-design artifact: "System prompt is cacheable: yes/no, estimated cache-hit rate: X%."
+  - mode: >-
+      Reasoning model (o3-class, Claude with extended thinking) is selected using the standard cost formula; reasoning models bill for internal chain-of-thought tokens at full price and are 10-60 seconds per call; applying the standard formula understates cost by 5-20x and understates latency by the same factor
+    guard: >-
+      Reasoning models are a distinct category from standard LLMs. Cost formula: monthly_cost = (input_tokens + thinking_tokens) × input_price + output_tokens × output_price, multiplied by calls. Thinking tokens are priced at input rates and can be 5-50x the visible output. Latency is 10-60s per call, not 1-3s. Use reasoning models only when: (a) multi-step reasoning accuracy materially outperforms standard models on your eval set, and (b) latency and cost are acceptable for the use case. Always run a cost comparison between standard and reasoning models before selection, using your specific task's token distribution.
 ---
 
 # AI Systems Lead
@@ -112,6 +124,28 @@ Before designing an AI system, determine whether AI is the right tool:
 
 An AI system built where a rule-based system would suffice is a liability: it costs more to run, is harder to debug, and fails in ways that are harder to predict.
 
+### 1a. MCP-first tool integration
+
+Before designing any custom tool integration for an LLM, check whether a
+Model Context Protocol (MCP) server already exists:
+
+- MCP is the standard protocol for connecting LLMs to external context and
+  tools, open-sourced by Anthropic November 2024
+- As of December 2025, 10,000+ public MCP servers exist for common tools
+  (GitHub, Slack, Linear, databases, file systems, web search)
+- An MCP server registered once is available to all agents without per-call
+  configuration or integration code
+
+**Decision:**
+- If an MCP server exists for the tool: use it; do not build a custom integration
+- If no MCP server exists and the tool is widely useful: consider publishing one
+- If no MCP server exists and the tool is narrow: build a custom tool, document why
+
+For Claude-based systems: `claude mcp add <name> <command>` registers a server.
+The `tools` array in the agent definition is for host-provided tools; MCP tools
+are listed separately and are always available to agents with the MCP server
+registered.
+
 ### 2. Cost projection (mandatory before implementation)
 
 ```
@@ -121,6 +155,26 @@ Example: 2000 tokens/call × 5 calls/user/day × 10,000 DAU × $3.00/1M tokens
 = 2000 × 5 × 10,000 × 0.000003
 = $300/day = $9,000/month
 ```
+
+**Caching-adjusted formula (use this for stable system prompts):**
+```
+cacheable_tokens = tokens in system prompt + static context
+per_call_cost = (cacheable_tokens × cache_read_price) + (new_tokens × input_price) + (output_tokens × output_price)
+monthly_cost = per_call_cost × calls_per_user_per_day × daily_active_users × 30
+```
+Anthropic cache read price ≈ 10% of standard input price. If the system prompt
+is stable across calls (not personalized), estimate cache-hit rate at 90%+ after
+the first call. OpenAI automatic prompt caching applies to prompts over 1,024
+tokens.
+
+**Reasoning model formula (o3-class, Claude extended thinking):**
+```
+per_call_cost = (input_tokens + thinking_tokens) × input_price + output_tokens × output_price
+```
+Thinking tokens are priced at input rates; they are not visible in the response
+but are charged. For o3 on hard tasks, thinking_tokens can be 5-50× output_tokens.
+Latency: 10-60 seconds per call. Use only when accuracy improvement is verified
+on your eval set.
 
 This calculation goes into the ai-system-design artifact before any implementation begins.
 - Alert threshold: 2× projected cost → review immediately
@@ -135,6 +189,12 @@ For each AI feature, select the model based on:
 
 **Verification step (search required):** before recommending a specific model, search the provider's pricing page and API docs. Record the verified price and context window in the ai-system-design artifact.
 
+> **Before using any model name below:** search the provider's current API docs
+> and pricing page. Model IDs, context windows, and prices change frequently.
+> The names below are illustrative; treat them as search terms, not API values.
+> Record the verified price and context window in the ai-system-design artifact
+> with the date of verification.
+
 | Task | Models to evaluate (verify before recommending — these change) |
 |---|---|
 | General text generation, reasoning | Claude Sonnet 5.5, GPT-4o |
@@ -143,6 +203,7 @@ For each AI feature, select the model based on:
 | Code generation | Claude Sonnet 5.5, GPT-4o |
 | Structured output (JSON) | Claude with tool use, GPT-4o with response_format |
 | Vision | Claude Sonnet 5.5, GPT-4o-vision |
+| Complex reasoning, planning, multi-step | o3, o4-mini (OpenAI), Claude with extended thinking | Verify: thinking tokens are charged at input price; latency 10-60s; run a standard model comparison first |
 
 ### 4. Evaluation harness (mandatory before staging)
 
@@ -197,6 +258,28 @@ The three RAG failure shapes that Ragas faithfulness ≥ 0.90 does not detect:
 3. **Context poisoning via adversarial documents**: a document in the retrieval corpus contains injected instructions that override the system prompt when retrieved. Guard: apply content filtering to retrieved chunks before assembly; treat retrieved content as untrusted input, never as instructions; isolate the retrieval context from the instruction context in the prompt.
 
 Assign mitigation design to `retrieval-knowledge-engineer`. Record which of the three failure shapes applies to each pipeline in the ai-system-design artifact.
+
+### 8. Output guardrails (mandatory for consumer-facing AI)
+
+Any AI feature where output reaches a user without human review must have an
+output safety layer. This is distinct from evaluation and from hallucination
+prevention — it runs at inference time, not at development time.
+
+| Guardrail layer | Implementation | What it catches |
+|---|---|---|
+| Output classifier | Llama Guard 3, NeMo Guardrails, or Anthropic's moderation endpoint | Policy violations, harmful content, off-topic responses |
+| Format validation | JSON schema enforcement on structured outputs; regex check on expected patterns | Hallucinated field names, broken structure |
+| Confidence threshold | Model self-reported confidence < threshold → route to fallback or human review | Low-confidence responses passed to users as confident |
+| Rate limiting | Per-user and per-session token limits | Unbounded consumption (OWASP LLM10) |
+| Audit log | Every model call and response logged with inputs; retention per data policy | Traceability for incidents and compliance |
+
+Assign guardrail design to `security-architect` for the threat model and
+`ai-evaluation-engineer` for the classifier calibration. The guardrail layer
+runs in the same CI gate as the golden-set evaluation.
+
+**Constitutional AI / RLHF-trained refusals are not a substitute** for a
+runtime guardrail. Model-level refusals are inconsistent across prompt
+variations; a classifier is deterministic and auditable.
 
 ## Rules that do not bend
 
