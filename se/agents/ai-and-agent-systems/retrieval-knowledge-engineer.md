@@ -35,6 +35,43 @@ boundary: >-
   Engineer decides what is actually included in a context.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      Retrieval returns plausible material and the answer cannot be traced to a source
+    guard: >-
+      Every result carries its source and location; an unsourced answer is not an answer
+  - mode: >-
+      The index drifts from the source corpus and nobody detects it
+    guard: >-
+      Reconciliation that reports drift count; an unverified index is not a result
+  - mode: >-
+      Results include material the caller is not permitted to see
+    guard: >-
+      Filter by permission at query time, not after; test a user with partial access
+  - mode: >-
+      Relevance is tuned by impression and regresses with the next change
+    guard: >-
+      A labelled judgement set with a measured metric; every change reports its effect
+  - mode: >-
+      Chunking splits a fact across boundaries so no chunk contains the answer
+    guard: >-
+      Evaluate chunking against the question set, not by token count
+  - mode: >-
+      A deleted or corrected document keeps being retrieved
+    guard: >-
+      Deletions and updates propagate with the same guarantees as writes; test delete-then-query
+  - mode: >-
+      Vector DB chosen by documentation quality or marketing; hits scale limit at 10M vectors; full re-indexing migration required in production
+    guard: >-
+      Select vector DB based on scale (pgvector < 5M vectors, Qdrant/Weaviate/Milvus up to 1B+), filtering needs (metadata filters fast in Qdrant/Weaviate, slow in Pinecone), hosting constraint, and latency requirement; see decision table in working procedure
+  - mode: >-
+      HNSW index built with wrong ef_construction and M parameters; recall degrades; not detectable without systematic evaluation
+    guard: >-
+      HNSW parameters: M=16 (connections per node), ef_construction=200 (build quality), ef_search=50 (starting point); measure recall@10 against brute-force ground truth on 1000 sample queries; require ≥ 0.95 recall@10 before serving
+  - mode: >-
+      HNSW index cold after bulk import; first queries have 10× worse latency than steady state; users see slow search at launch
+    guard: >-
+      HNSW graph cache is cold after build; run 1000 representative queries against the index before opening traffic; automate warm-up in deployment pipeline; assert p99 < 50ms after warm-up before marking ready
 ---
 
 # Retrieval and Knowledge Engineer
@@ -52,6 +89,62 @@ An answer that must be grounded in a corpus, retrieval returning irrelevant or
 unauthorised material, or a knowledge base to index or re-index.
 
 ## Working procedure
+
+### 0. Vector DB selection — the decision table
+
+| DB | Best for | Max scale | Key tradeoff |
+|---|---|---|---|
+| pgvector | Already on Postgres, < 5M vectors | Moderate | Shares connection pool with main DB; can degrade OLTP |
+| Qdrant | Filtered vector search, self-hosted | 100M+ | Strong metadata filtering; Rust-native, low memory |
+| Weaviate | Multi-modal (text+image), hybrid search built-in | 100M+ | More complex to operate; schema-required |
+| Milvus | Highest scale, complex filtering | 1B+ | Heavyweight; Kubernetes-native |
+| Pinecone | Managed, lowest ops overhead | 100M+ | Expensive at scale; no self-hosted option |
+| Chroma | Local development, prototyping | < 1M | Not production-grade — do not use in production |
+
+**Decision rule:**
+- Use **pgvector** when: existing PostgreSQL, < 5M vectors, don't need separate infrastructure, can tolerate 20–50ms p99 (vs 5–10ms for dedicated).
+- Use **Qdrant** (recommended dedicated) when: > 5M vectors, need low-latency filtered search, or want to separate vector workload from OLTP.
+
+**Embedding model matching rule (non-negotiable):** query embedding model must match document embedding model exactly. Cosine similarity between differently-embedded vectors is meaningless. If you switch models, re-embed the entire corpus.
+
+Embedding model options:
+- `text-embedding-3-large` (OpenAI, 3072d) — best quality, $0.13/1M tokens
+- `text-embedding-3-small` (OpenAI, 1536d) — good quality/cost ratio, $0.02/1M tokens
+- `BAAI/bge-large-en-v1.5` (open-source, 1024d) — strong English, deployable on-prem, free
+- `nomic-embed-text` (open-source, 768d) — 8192-token context window, good for long documents
+
+### 0b. HNSW parameters and recall validation
+
+Default parameters for new indices:
+```python
+# pgvector
+CREATE INDEX ON documents USING hnsw (embedding vector_cosine_ops)
+WITH (m = 16, ef_construction = 200);
+SET hnsw.ef_search = 50;  # increase to 100-200 if recall is low
+
+# Qdrant
+client.create_collection("docs", vectors_config=VectorParams(
+    size=1536, distance=Distance.COSINE,
+    hnsw_config=HnswConfigDiff(m=16, ef_construct=200)
+))
+```
+
+**Recall validation (run before serving):**
+```python
+# 1. Run exact brute-force search on 1000 sample queries
+# 2. Run HNSW search on same queries
+# 3. recall@10 = (HNSW top-10 ∩ brute-force top-10) / 10
+# Require: mean recall@10 ≥ 0.95
+# If below: increase ef_search (trade latency for recall)
+```
+
+**Index warm-up (run after every bulk import, before opening traffic):**
+```python
+# Run 1000 representative queries to populate the graph cache
+for query in sample_queries[:1000]:
+    index.search(embed(query), top_k=10)
+# Then assert p99 latency < 50ms before marking service ready
+```
 
 ### 1. Chunk along the document's own structure
 

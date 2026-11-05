@@ -36,6 +36,39 @@ boundary: >-
   rather than hiding it behind a spinner.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      Performance is measured on a developer machine on a fast network
+    guard: >-
+      Measure on a low-end device profile and a throttled network; local numbers are not user experience
+  - mode: >-
+      Lab metrics pass and real users experience something worse
+    guard: >-
+      Hold the budget against field percentiles, not a single lab run
+  - mode: >-
+      Layout shifts as fonts, images or late content arrive
+    guard: >-
+      Reserve space for every async element; measure shift, not just load time
+  - mode: >-
+      The main thread is blocked by a long task and input does nothing
+    guard: >-
+      Break up long tasks and measure input responsiveness; a fast load with a frozen thread fails
+  - mode: >-
+      A dependency is added for one function and ships an entire library
+    guard: >-
+      Size budget in CI with the per-change delta; measure the delivered bundle, not the source
+  - mode: >-
+      Images are served at desktop resolution to phones
+    guard: >-
+      Responsive sources and modern formats with dimensions declared; verify transferred bytes per viewport
+  - mode: >-
+      CLS measures 0.05 in Lighthouse lab; real-user CLS (CrUX) is 0.28; lab never encounters real ads, fonts, or dynamic content; engineers believe performance is fine
+    guard: >-
+      Lab metrics (Lighthouse, WebPageTest) and field metrics (CrUX, web-vitals RUM) diverge by 3-10×; both must be tracked; deploy web-vitals library in production: import { onCLS, onLCP, onINP } from 'web-vitals'; alert when CrUX p75 exceeds LCP > 2.5s / INP > 200ms / CLS > 0.1
+  - mode: >-
+      No metric thresholds in CI; Lighthouse budget set to "medium"; engineers have no number to target or fail against
+    guard: >-
+      Lighthouse CI budget with specific numbers: LCP budget 2500ms, CLS budget 0.1, INP budget 200ms, total script budget 200KB gzipped; fail CI when any threshold is exceeded; thresholds without numbers cannot fail
 ---
 
 # Frontend Performance Engineer
@@ -62,16 +95,33 @@ unfortunately done.
 
 ### 2. Measure the user's experience, not the machine's
 
-Track what the user perceives:
+Track the Core Web Vitals in both lab (Lighthouse, WebPageTest) and field
+(CrUX, web-vitals RUM). Lab and field diverge by 3–10×; field is what users
+experience.
 
-- When meaningful content appears.
-- When the page becomes **reliably interactive** — not when it appears
-  interactive, which is worse than being visibly loading.
-- Whether layout shifts after content appears. A shifted button that the user
-  has already reached for is a defect regardless of how fast it loaded.
-- Interaction latency for the slowest interactions, not the average.
-- Total transferred bytes and the main-thread blocking time.
+**Core Web Vitals thresholds (Google, 2024):**
 
+| Metric | Good | Needs improvement | Poor | Measures |
+|---|---|---|---|---|
+| LCP (Largest Contentful Paint) | ≤2.5s | 2.5–4.0s | >4.0s | Load speed |
+| INP (Interaction to Next Paint) | ≤200ms | 200–500ms | >500ms | Responsiveness |
+| CLS (Cumulative Layout Shift) | ≤0.1 | 0.1–0.25 | >0.25 | Visual stability |
+
+Deploy the web-vitals library in production to collect real-user field data:
+
+```ts
+import { onCLS, onLCP, onINP } from 'web-vitals';
+
+function sendToAnalytics(metric) {
+  fetch('/analytics', { method: 'POST', body: JSON.stringify(metric) });
+}
+
+onCLS(sendToAnalytics);
+onLCP(sendToAnalytics);
+onINP(sendToAnalytics);
+```
+
+Alert when CrUX p75 crosses the "needs improvement" threshold for any metric.
 Use percentiles. An average hides the tail, and the tail is where users leave.
 
 ### 3. Attack size before attacking speed

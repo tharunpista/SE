@@ -34,6 +34,39 @@ boundary: >-
   no shared transaction exists.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      Two updates read the same value and the second silently discards the first
+    guard: >-
+      Version column or conditional update; the lost-update case has a test that runs both writes concurrently
+  - mode: >-
+      The isolation level is assumed rather than named and the invariant does not hold
+    guard: >-
+      State the invariant, the isolation level it needs, and the test that breaks without it
+  - mode: >-
+      A check-then-act gap lets a duplicate through under load
+    guard: >-
+      Enforce with a unique constraint rather than a prior read; test concurrent inserts of the same key
+  - mode: >-
+      A retry on serialisation failure re-applies a side effect outside the transaction
+    guard: >-
+      Side effects are idempotent or inside the transaction; test a forced retry
+  - mode: >-
+      Locks are taken in different orders on two paths and deadlock appears only in production
+    guard: >-
+      One documented lock order; test the conflicting paths concurrently
+  - mode: >-
+      A distributed operation assumes atomicity across two systems
+    guard: >-
+      Name the failure window and reconcile explicitly; test the crash between the two writes
+  - mode: >-
+      Two concurrent requests both read balance=100, both deduct 50, both write balance=50; user has taken 100 instead of 50 (lost update)
+    guard: >-
+      Prevention options: (a) SELECT FOR UPDATE to lock the row before reading; (b) compare-and-swap — `UPDATE accounts SET balance = balance - 50 WHERE id = ? AND balance >= 50`, check rows_affected = 1; (c) database CHECK constraint `CHECK (balance >= 0)`; the compare-and-swap WHERE clause is lock-free and preferred for simple decrements; test with two concurrent goroutines/threads hitting the same row
+  - mode: >-
+      SERIALIZABLE isolation applied everywhere for safety; deadlock rate under load causes 15% transaction failure rate
+    guard: >-
+      Isolation level selection: READ COMMITTED (default) for most reads; REPEATABLE READ for read-then-conditionally-write; SERIALIZABLE only for INSERT-if-not-exists or multi-row invariants (total balance across accounts); SERIALIZABLE forces serialization_failure (SQLSTATE 40001) — implement exponential backoff retry for this error specifically
 ---
 
 # Concurrency and Transaction Engineer
@@ -81,6 +114,35 @@ unhandled serialisation failure surfaces to a user as a 500 that looks random.
 
 A single documented acquisition order prevents most deadlocks. No external
 call, no user interaction and no long computation inside a transaction.
+
+### 3b. Isolation level and locking reference
+
+| Level | Prevents | Use when |
+|---|---|---|
+| READ COMMITTED | Dirty reads | Default for most operations |
+| REPEATABLE READ | Dirty reads + non-repeatable reads | Read a value twice expecting the same result |
+| SERIALIZABLE | All anomalies including phantoms | INSERT-if-not-exists, multi-row invariants, financial double-spend |
+
+**Locking patterns:**
+```sql
+-- Pessimistic: SELECT FOR UPDATE (exclusive row lock)
+BEGIN;
+SELECT balance FROM accounts WHERE id = $1 FOR UPDATE;
+UPDATE accounts SET balance = balance - $2 WHERE id = $1;
+COMMIT;
+
+-- Optimistic: compare-and-swap (no lock)
+UPDATE accounts SET balance = balance - $2
+WHERE id = $1 AND balance >= $2;
+-- rows_affected = 0 → lost race, retry with backoff
+
+-- Job queue: SKIP LOCKED (non-blocking, skips rows held by other workers)
+SELECT id, payload FROM jobs
+WHERE status = 'pending' ORDER BY created_at LIMIT 1
+FOR UPDATE SKIP LOCKED;
+```
+
+`FOR SHARE` (shared lock, blocks writes but not reads) is correct for read-verify-then-conditionally-write patterns where you don't need to block other readers.
 
 ### 6. Prove it with a test that actually races
 

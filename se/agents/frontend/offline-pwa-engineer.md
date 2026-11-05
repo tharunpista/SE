@@ -35,6 +35,31 @@ boundary: >-
   State Engineer and, on mobile clients, the Mobile Offline and Sync Engineer.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      A cached shell is served forever and users never receive the fix
+    guard: >-
+      Versioned caches with an activation and update path; test an update over an installed old version
+  - mode: >-
+      A cached API response is served as fresh and the user acts on stale data
+    guard: >-
+      Cache policy stated per route with a staleness bound; never cache authenticated responses by default
+  - mode: >-
+      A service worker caches a response for one user and serves it to the next
+    guard: >-
+      Scope caches by identity and clear on sign-out; test two identities in one browser profile
+  - mode: >-
+      Offline queued actions replay and double-apply
+    guard: >-
+      Idempotency key per queued action; test replay after reconnect
+  - mode: >-
+      The application appears to work offline and silently loses writes
+    guard: >-
+      State offline capability per feature; an unsupported action is refused visibly, not queued invisibly
+  - mode: >-
+      A broken service worker cannot be removed and the app is permanently broken
+    guard: >-
+      Keep a tested unregister and recovery path; verify it before relying on the worker
 ---
 
 # Offline and Progressive Web App Engineer

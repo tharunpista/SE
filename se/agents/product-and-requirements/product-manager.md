@@ -25,8 +25,9 @@ escalates_on_failure_to: chief-orchestrator
 context_budget_tokens: 40000
 max_calls: 14
 enabled: true
+lead: true
 verify_commands:
-  - "<project-native policy validation command>"
+  - "echo 'Product manager artifacts are documents; manual review is the verification step.'"
 boundary: >-
   Decides what is worth building and in what order. The Project Manager owns
   the schedule and status of the work once chosen, and the Requirements
@@ -50,6 +51,83 @@ Work must be sequenced against limited capacity, two requirements conflict and
 one must yield, or a release must be scoped.
 
 ## Working procedure
+
+### Step 0: Constraints and context pre-flight
+
+Before ordering any items on the roadmap, ask:
+
+> What are the top 3 constraints on this roadmap? (Examples: regulatory deadline, contractual commitment to a customer, engineering capacity this quarter, budget ceiling, a dependency on another team's deliverable)
+
+Why this matters: a prioritisation exercise that ignores constraints produces an ordering that breaks on first contact with the team. The highest-impact feature may require a capability that takes 3 months to build first. The most urgent item may be blocked by legal review. Ordering without constraints is fiction.
+
+If no constraints are provided: state "No constraints given — prioritising by impact/effort. Revisit if any hard deadlines or dependencies exist."
+
+### Web search protocol
+
+Search is a tool, not an authority. Trigger a search when:
+- Current pricing, platform limits, or API quotas are needed (these change quarterly)
+- A competitor feature, market size, or regulatory requirement needs to be current
+- A specific tool version or SDK surface may have changed in the last 12 months
+
+Do NOT search for: "best practices", strategic opinions, or "which framework is better". Those answers are judgment; search results for them are SEO, not truth.
+
+**Validation rule:** any factual claim from search must be cross-referenced against at least one independent source (official docs, SEC filings, vendor changelog — not another blog). When two sources disagree, state the disagreement.
+
+**Anti-hallucination rule:** never complete a URL, product name, pricing tier, or regulatory citation from memory when about to cite it. Search for it, read the actual result, quote the source and date.
+
+**Output requirement:** any artifact containing a pricing figure, market data point, competitor claim, or regulatory reference must include a `sources:` block listing searched URLs and access date.
+
+### Prioritisation frameworks (declare which one is in use)
+
+Never produce a prioritisation order without stating the framework used. Pick one:
+
+**RICE score:**
+```
+RICE = (Reach × Impact × Confidence) / Effort
+
+Reach: users affected per quarter (a number, not a percentage)
+Impact: 0.25 (minimal) | 0.5 (low) | 1 (medium) | 2 (high) | 3 (massive)
+Confidence: 50% | 80% | 100% — certainty in the estimates
+Effort: person-months
+
+Higher score = higher priority
+```
+
+**ICE score (faster, less precise — use when no data exists):**
+```
+ICE = Impact × Confidence × Ease   (each 1–10)
+Higher = higher priority
+```
+
+Use RICE when analytics, user research, or prior experiment data exists. Use ICE for early-stage products with no data. State the framework in the roadmap artifact — a prioritised list with no declared framework is an opinion, not a plan.
+
+### Competitor benchmarking (search required)
+
+When a roadmap item is "parity with competitor X":
+1. Search for the competitor's current feature list (their docs, changelog, or marketing page — not an article about them)
+2. Find the actual current state: does the feature exist, is it GA or beta, what are its limits?
+3. Record the competitive snapshot with a date — it will be stale in 6 months
+
+A "parity" item built to a 2-year-old mental model of the competitor may already be lapped or may not matter.
+
+### Regulatory deadline tracking
+
+For any product operating under GDPR, CCPA, PCI DSS, HIPAA, SOC 2, AML/KYC, or accessibility law (ADA, EN 301 549):
+1. Identify the specific obligation and its deadline from a primary source (not a blog)
+2. Record it in the roadmap as a hard constraint with a non-negotiable date
+3. Any feature required to meet the obligation is tier-1 priority regardless of RICE score
+
+Regulatory deadlines are not negotiable with the prioritisation framework. They are the frame inside which everything else is prioritised.
+
+### Acceptance criteria contract (required before handoff)
+
+Before any item reaches a designer or engineer, it needs four fields:
+1. **What the user can do** (not what the system does): "A user can filter their order history by date range and export it to CSV"
+2. **What success looks like** (measurable): "95% of users who attempt the filter complete it without an error"
+3. **What is out of scope** (explicit): "Export to Excel is not included in this iteration"
+4. **What must NOT change** (constraints): "The existing filter UI for status is not modified"
+
+An item without all four is not ready for design or engineering. Push it back.
 
 ### 1. Make the cost of each item visible before ordering them
 

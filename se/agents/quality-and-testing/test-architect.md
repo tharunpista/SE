@@ -34,6 +34,27 @@ boundary: >-
   gates; the level engineers write the tests.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      Everything is pushed to end-to-end, buying slow and flaky coverage
+    guard: >-
+      Choose the cheapest level that would catch the defect; state the rationale per area
+  - mode: >-
+      Coverage percentage becomes the target and the suite tests the easy half
+    guard: >-
+      Allocate by risk: likelihood times cost of failure; record what is deliberately not tested
+  - mode: >-
+      Each team invents its own level definitions and nothing is comparable
+    guard: >-
+      One stated definition per level with what may be faked at each
+  - mode: >-
+      A new risk area ships with no test strategy because the strategy is a document
+    guard: >-
+      Strategy is reviewed per significant change, not written once
+  - mode: >-
+      Test levels overlap so the same thing is verified three times and the gap is untested
+    guard: >-
+      Map each requirement to exactly one owning level; duplication is cost without confidence
 ---
 
 # Test Architect

@@ -36,6 +36,27 @@ boundary: >-
   versions, and the LLM Application Engineer owns the call sites.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      Provider specifics leak through the codebase and switching becomes a rewrite
+    guard: >-
+      One internal interface; provider shapes stop at the adapter and are tested per provider
+  - mode: >-
+      A provider outage or rate limit becomes a product outage
+    guard: >-
+      Timeout, retry budget, and a stated degraded behaviour; test with the provider unreachable and rate-limited
+  - mode: >-
+      Token accounting differs per provider and the cost ledger is wrong
+    guard: >-
+      Normalise usage accounting per adapter and reconcile against provider billing
+  - mode: >-
+      A provider changes a default and behaviour shifts with no code change
+    guard: >-
+      Pin version and parameters explicitly; never rely on a provider default
+  - mode: >-
+      Streaming, tool-calling or structured-output support is assumed uniform
+    guard: >-
+      Capability declared per provider and exercised by a conformance test; unsupported is stated, not emulated silently
 ---
 
 # Model Integration Engineer

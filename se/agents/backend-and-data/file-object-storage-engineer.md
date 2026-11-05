@@ -35,6 +35,51 @@ boundary: >-
   the Data Retention and Deletion Engineer owns how long objects are kept.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      An uploaded file is trusted by its declared type or extension
+    guard: >-
+      Validate by content inspection, cap size before buffering, and store with a generated name; test a mismatched type
+  - mode: >-
+      A stored object is publicly readable because the default was never changed
+    guard: >-
+      Default-deny access with signed, expiring URLs; test anonymous access to a stored object
+  - mode: >-
+      A user-supplied filename becomes a path and escapes the intended prefix
+    guard: >-
+      Generated keys only, resolve-then-contain; test traversal and absolute paths
+  - mode: >-
+      An image or document is processed by a library with a known parser vulnerability
+    guard: >-
+      Process untrusted media out of process with resource limits; keep the processing dependency patched
+  - mode: >-
+      A deleted record leaves its object behind forever
+    guard: >-
+      Deletion covers derived objects, thumbnails and versions; test end to end and assert the object is gone
+  - mode: >-
+      A large upload has no resumability and fails at ninety percent
+    guard: >-
+      Multipart with resume; test an interrupted upload
+  - mode: >-
+      Pre-signed URLs have a 7-day or indefinite TTL; a user shares the URL and another user accesses a resource they should not
+    guard: >-
+      Pre-signed URLs expire in the minimum viable window for their purpose: download links ≤15 minutes, upload URLs ≤5 minutes; never issue a URL with a TTL exceeding the content's access lifecycle; test that an expired URL returns 403 and that a revoked user's URL stops working within TTL
+  - mode: >-
+      An uploaded SVG or HTML file is served with Content-Type: text/html and executes scripts in the browser when opened directly
+    guard: >-
+      Force Content-Disposition: attachment for user-supplied content; explicitly set Content-Type from the validated mime type, never from the extension; serve user-uploaded files from a separate domain to isolate cookie scope
+  - mode: >-
+      Multipart uploads are initiated and never completed or aborted; orphaned parts accumulate in S3/GCS at full storage cost and cannot be listed or downloaded; at scale this becomes a significant unexpected cost item
+    guard: >-
+      Required S3 lifecycle policy on every bucket that receives uploads: `AbortIncompleteMultipartUpload` rule after 7 days; for GCS: `lifecycle.rule` with `action.type=AbortIncompleteMultipartUpload` and `condition.age=7`; test: initiate a multipart upload, do not complete it, verify after 8 days it is absent; run a monthly audit: `aws s3api list-multipart-uploads` on all buckets and alert if any upload is older than 7 days
+  - mode: >-
+      S3 versioning is enabled for backup/compliance; a GDPR erasure request calls deleteObject; previous object versions remain and are billable; personal data the user requested deleted is still stored
+    guard: >-
+      Erasure procedure for versioned buckets: (1) listObjectVersions for all versions and delete markers matching the user's object prefix, (2) delete each version and delete marker explicitly with deleteObject(VersionId=...), (3) verify with a final listObjectVersions that returns empty; if MFA Delete is enabled, erasure requires MFA token — plan this into the erasure workflow; test: enable versioning, upload 3 versions, run erasure, assert listObjectVersions returns empty
+  - mode: >-
+      Pre-signed download URLs are generated with the same S3 credentials and permissions used for upload; any holder of a download URL can overwrite or delete the object
+    guard: >-
+      Pre-signed URLs are scoped to minimum operation: download URL signs only s3:GetObject, never s3:PutObject or s3:DeleteObject; upload URL signs only s3:PutObject with a specific key prefix; create separate IAM roles or policies per operation type; test: use a download URL to attempt a PUT request and verify it returns 403
 ---
 
 # File and Object Storage Engineer

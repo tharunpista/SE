@@ -339,6 +339,56 @@ export interface IntegrityReport {
   readonly diagnostics: Diagnostics;
 }
 
+/**
+ * Exactly one accountable head per department.
+ *
+ * A head is the routing destination for work that spans several of a
+ * department's roles. Two heads means a request has two places to land and
+ * neither is accountable; none means such work has nowhere to go and the
+ * caller must either guess a worker or escalate out of the department
+ * entirely. Three departments shipped with no head at all, which is why this
+ * is checked rather than assumed.
+ */
+function checkDepartmentLeads(registry: Registry, diags: Diagnostics): void {
+  const byDept = new Map<string, string[]>();
+  const leadsByDept = new Map<string, string[]>();
+  for (const role of registry.all) {
+    if (!role.enabled || role.status !== "active") continue;
+    const all = byDept.get(role.department) ?? [];
+    all.push(role.id);
+    byDept.set(role.department, all);
+    if (role.lead) {
+      const leads = leadsByDept.get(role.department) ?? [];
+      leads.push(role.id);
+      leadsByDept.set(role.department, leads);
+    }
+  }
+  for (const [dept, ids] of byDept) {
+    const leads = (leadsByDept.get(dept) ?? []).sort();
+    if (leads.length > 1) {
+      diags.error({
+        code: "catalogue/multiple-department-leads",
+        key: dept,
+        message: `Department "${dept}" declares ${leads.length} leads: ${leads.join(", ")}.`,
+        hint: "Exactly one role per department carries `lead: true`. Two destinations for the same work means neither is accountable.",
+      });
+    } else if (leads.length === 0 && ids.length > 1) {
+      /*
+       * A single-role department needs no declared head: that role is the only
+       * possible destination, so the declaration would carry no information.
+       * The warning exists for departments where work could land in more than
+       * one place and nobody is accountable for choosing.
+       */
+      diags.warn({
+        code: "catalogue/no-department-lead",
+        key: dept,
+        message: `Department "${dept}" has ${ids.length} role(s) and no declared lead.`,
+        hint: "Set `lead: true` on the role accountable for this department. Without one, work spanning several of its roles has no routing destination.",
+      });
+    }
+  }
+}
+
 export function checkIntegrity(registry: Registry): IntegrityReport {
   const diags = new Diagnostics();
   const ownership = buildOwnershipMatrix(registry, diags);
@@ -346,6 +396,7 @@ export function checkIntegrity(registry: Registry): IntegrityReport {
   checkReferences(registry, diags);
   checkEscalationChains(registry, diags);
   checkDepartmentCounts(registry, diags);
+  checkDepartmentLeads(registry, diags);
   checkSpecOwnership(registry, diags);
   return { ownership, interfaces, diagnostics: diags };
 }

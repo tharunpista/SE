@@ -34,6 +34,39 @@ boundary: >-
   Engineer owns tenant scoping as an isolation guarantee.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      Authentication is checked and ownership is not, so changing an id reaches another tenant record
+    guard: >-
+      Authorise the object in the same statement that selects it; test two tenants with a valid session for the wrong one
+  - mode: >-
+      Enforcement is scattered across handlers and one path is missed
+    guard: >-
+      Single default-deny enforcement point; a new route is denied until explicitly permitted
+  - mode: >-
+      A role check protects the UI and the API is left open
+    guard: >-
+      Server-side enforcement is the only enforcement; test the endpoint directly with the UI bypassed
+  - mode: >-
+      Privilege escalation through a nested or batch operation nobody modelled
+    guard: >-
+      Authorise every element of a batch independently; test a batch mixing permitted and forbidden items
+  - mode: >-
+      A permission grant has no expiry and outlives the reason it was given
+    guard: >-
+      Grants carry an expiry or a review owner; test that an expired grant denies
+  - mode: >-
+      Deny decisions are not logged, so an attack looks identical to normal traffic
+    guard: >-
+      Record denials with the subject and resource; assert the audit entry in a test
+  - mode: >-
+      Bulk export or search endpoint returns all matching rows; a tenant-scoped filter is applied in application code and forgotten on a new query path; cross-tenant data leaks at scale
+    guard: >-
+      Tenant scope is enforced at the query level, not in a post-query filter; every query generating a list result is reviewed for missing tenant_id WHERE clause; run a cross-tenant probe in every integration test: tenant A's session cannot retrieve tenant B's ids even via bulk or aggregate endpoints
+  - mode: >-
+      Role inheritance or hierarchy creates unintended permission escalation paths nobody reviewed
+    guard: >-
+      Enumerate all role inheritance paths in the decision matrix; test that a user with role X cannot perform actions reserved for role Y via any composition of permitted actions
 ---
 
 # Authorization Model Engineer

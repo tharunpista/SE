@@ -35,6 +35,27 @@ boundary: >-
   negotiable on schedule grounds.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      Schedule pressure is converted into silently lowered quality
+    guard: >-
+      Scope, date and quality are stated as a choice for the decision-maker; a quality cut is a recorded decision
+  - mode: >-
+      Status is reported as a percentage and the blocked critical path is invisible
+    guard: >-
+      Report the critical path and its blockers; a percentage hides the only thing that matters
+  - mode: >-
+      Scope grows through a series of small additions nobody priced
+    guard: >-
+      Every addition is priced against the date and accepted explicitly
+  - mode: >-
+      A dependency on another team is assumed rather than confirmed
+    guard: >-
+      Cross-team commitments are confirmed by the owner with a date, or treated as a risk
+  - mode: >-
+      Risks are listed and never owned or reviewed
+    guard: >-
+      Each risk has an owner, a trigger and a review date; an unowned risk is decoration
 ---
 
 # Project Manager

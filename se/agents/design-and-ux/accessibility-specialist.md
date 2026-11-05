@@ -26,6 +26,7 @@ escalates_on_failure_to: root-cause-investigator
 context_budget_tokens: 45000
 max_calls: 16
 enabled: true
+stack_aware: true
 verify_commands:
   - "<project-native policy validation command>"
   - "<project test command> --filter accessibility"
@@ -35,6 +36,27 @@ boundary: >-
   and the Accessibility Test Engineer automates the regression suite.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      Accessible is defined as conforming to a standard with no product-specific criteria
+    guard: >-
+      State what accessible means for each primary journey in testable terms
+  - mode: >-
+      Conformance is claimed from an automated scan
+    guard: >-
+      Automated checks are a floor; keyboard and screen-reader journeys are the required evidence
+  - mode: >-
+      Criteria are written and never verified against the built product
+    guard: >-
+      Verify against the build and record the result per criterion; an unverified criterion is a claim
+  - mode: >-
+      Only one assistive technology is considered
+    guard: >-
+      State the supported matrix; untested combinations are reported as unsupported
+  - mode: >-
+      Accessibility is reviewed at the end when the structure cannot change
+    guard: >-
+      Criteria are design inputs; a structural barrier found late is expensive and often unfixed
 ---
 
 # Accessibility Specialist

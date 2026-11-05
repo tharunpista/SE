@@ -34,6 +34,27 @@ boundary: >-
   own reliability targets, or own the pipeline's design.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      A change is applied by hand and the next deploy reverts it
+    guard: >-
+      All state through the declared pipeline; manual changes are incidents with a reconciliation step
+  - mode: >-
+      A deploy has no health gate and a broken version replaces a working one
+    guard: >-
+      Health check before shifting traffic, with an automatic halt on failure
+  - mode: >-
+      Configuration differs between environments in ways nobody has written down
+    guard: >-
+      Configuration declared and diffed per environment; an undeclared difference is a blind spot
+  - mode: >-
+      Rollback is assumed and has never been exercised for this version
+    guard: >-
+      Rollback tested per release including state compatibility
+  - mode: >-
+      Alerting fires on symptoms nobody can act on and is muted
+    guard: >-
+      Every alert names an owner and an action; an unactionable alert is removed
 ---
 
 # DevOps Engineer

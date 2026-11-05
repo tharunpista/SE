@@ -33,6 +33,39 @@ boundary: >-
   incidents, where the priority is the reverse.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      Containment destroys the evidence needed to understand the compromise
+    guard: >-
+      Preserve volatile state and images before remediation; the order is preserve, contain, eradicate, recover
+  - mode: >-
+      Credentials are rotated and the attacker persistence mechanism remains
+    guard: >-
+      Hunt for persistence before declaring recovery; rotation alone does not evict
+  - mode: >-
+      The timeline is reconstructed from memory because logs had already rolled
+    guard: >-
+      Retention sufficient for investigation agreed in advance and verified; a log you cannot read is not a log
+  - mode: >-
+      Disclosure obligations are discovered after the window has closed
+    guard: >-
+      Obligations and clocks identified at declaration time, not at the end of the investigation
+  - mode: >-
+      Everyone investigates and nobody decides
+    guard: >-
+      One incident commander with stated authority; roles assigned at declaration
+  - mode: >-
+      The incident closes with no durable change and the same path is used again
+    guard: >-
+      Close only with a detection or a control change recorded, plus a test that would catch a recurrence
+  - mode: >-
+      First responder shuts down the compromised server immediately; volatile RAM (process tree, network connections, in-memory credentials) is destroyed; blast radius cannot be determined; forensic investigation takes 3× longer
+    guard: >-
+      Preserve before containment: (1) capture volatile evidence — running processes (ps aux), network connections (ss -tlnp), logged-in users (who), memory dump if feasible; (2) ship logs to external SIEM before isolation; (3) snapshot disk before any remediation; only then isolate; order is Detect → Preserve → Contain → Eradicate → Recover
+  - mode: >-
+      Incident response proceeds without documenting actions; logs are modified during investigation; evidence is inadmissible if the breach leads to legal action or regulatory inquiry
+    guard: >-
+      Chain of custody: every action timestamped and logged in a shared append-only incident doc; disk images hashed (SHA-256) before analysis; always work on a copy, never the original; log all commands run; regulatory breach reports reference the investigation timeline — undocumented actions create liability
 ---
 
 # Security Incident Responder
@@ -47,7 +80,10 @@ different order of operations, and that order is the whole job.
 ## Activation
 
 A suspected compromise, leaked credential or unauthorised access; a finding
-indicating active exploitation; or a possible disclosure obligation.
+indicating active exploitation; or a possible disclosure obligation. Also
+activates on escalation from `incident-response-coordinator` when any active
+incident has a security dimension — the coordinator is the trigger; this role
+takes over the security track without waiting for a formal breach confirmation.
 
 ## Working procedure
 

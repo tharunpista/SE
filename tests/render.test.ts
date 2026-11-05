@@ -42,6 +42,7 @@ function synthesiseRole(overrides: Partial<Role> & { id: string }): Role {
     escalates_on_failure_to: null,
     blocked_on: [],
     stack_aware: false,
+    failure_modes: [],
     body: `# ${overrides.id}\n\n## Mission\n\nSynthetic.`,
     file: `synthetic/${overrides.id}.md`,
     provenance: {},
@@ -68,9 +69,9 @@ describe("shared role execution and handoff contract", () => {
         const rendered = adapter.render([role], repo.root);
         expect(rendered.files.length).toBeGreaterThan(0);
         for (const file of rendered.files) {
-          expect(file.contents).toContain("Mandatory execution and handoff contract");
-          expect(file.contents).toContain("delivery alone is not acceptance");
-          expect(file.contents).toContain("Never invent a package, command, or tool result");
+          expect(file.contents).toContain("Execution contract");
+          expect(file.contents).toContain("Delivery is not acceptance");
+          expect(file.contents).toContain("Never invent a package, command or tool result");
         }
       }
     } finally {
@@ -244,7 +245,7 @@ describe("frontmatter safety", () => {
     const repo = tempRepo();
     try {
       repo.builtin("orchestration/a.md", roleFile("a", { requires_evidence: true }));
-      expect(render(repo).files[0]!.contents).toContain("Your confidence is not");
+      expect(render(repo).files[0]!.contents).toContain("Confidence is not evidence");
     } finally {
       repo.dispose();
     }

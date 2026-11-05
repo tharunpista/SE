@@ -34,6 +34,31 @@ boundary: >-
   or previewed correctly.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      Content is rendered only on the client and crawlers see an empty page
+    guard: >-
+      Verify the server-delivered HTML contains the content; inspect the response, not the rendered DOM
+  - mode: >-
+      A private or staging page is indexed
+    guard: >-
+      Robots and noindex verified per environment; test the deployed staging response
+  - mode: >-
+      Duplicate URLs compete and neither ranks
+    guard: >-
+      Canonical URLs declared and consistent; test parameterised and trailing-slash variants
+  - mode: >-
+      Social preview metadata is absent or points at a missing image
+    guard: >-
+      Validate preview tags and fetch the referenced image in CI
+  - mode: >-
+      Structured data claims something the page does not show
+    guard: >-
+      Structured data generated from the same source as the rendered content; validate against the schema
+  - mode: >-
+      A redirect chain or a changed URL loses accumulated ranking silently
+    guard: >-
+      Permanent redirects mapped on every URL change and tested as single hops
 ---
 
 # SEO and Web Metadata Engineer

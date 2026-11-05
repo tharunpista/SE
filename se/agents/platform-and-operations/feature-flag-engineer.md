@@ -32,6 +32,39 @@ stack_aware: true
 escalates_on_failure_to: root-cause-investigator
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      Flags accumulate and the number of live code paths exceeds what is tested
+    guard: >-
+      Every flag has an owner and a removal date; an expired flag fails a check
+  - mode: >-
+      A flag defaults to on when the flag service is unreachable
+    guard: >-
+      Fail to the safe default and test the service being down
+  - mode: >-
+      A kill switch has never been exercised and does not work when needed
+    guard: >-
+      Exercise the disable path in a real environment before relying on it
+  - mode: >-
+      Flag state is evaluated inconsistently and one user sees both variants
+    guard: >-
+      Stable bucketing on a persistent identifier; test consistency across sessions and devices
+  - mode: >-
+      A flag controls a schema or data-shape change and cannot simply be turned off
+    guard: >-
+      Flags gate behaviour, not data migrations; a flag with a data side effect needs a reversal plan
+  - mode: >-
+      Flag evaluation adds 20–50ms to every request; every endpoint that checks a flag compounds this latency; at p99 this is the difference between meeting and missing a budget
+    guard: >-
+      Flag SDK must cache locally with async background refresh; synchronous flag API calls per-request are banned; test flag evaluation latency at zero and at high load; measure per-request flag overhead separately in benchmarks
+  - mode: >-
+      Bucket assignment uses hash(user_id) mod 100; users assigned to treatment for flag A are systematically the same users assigned to treatment for flag B; all concurrent experiments are correlated and statistically invalid
+    guard: >-
+      Correct bucketing algorithm: hash(user_id + flag_key + salt) mod 100 — the flag key and salt decorrelate assignments across flags; stable across evaluations for the same user; test that two flags with the same percentage rollout produce ~0% overlap in their treatment populations; this is the difference between valid and invalid A/B experiments
+  - mode: >-
+      Kill switch is propagated to central flag store but edge/CDN nodes have a 10–30 second stale cache; a safety-critical flag disable takes 30 seconds to reach all users
+    guard: >-
+      Document the propagation delay SLA for every deployment environment; for safety-critical kill switches (feature causing data corruption, security incident), use a secondary fast-path: CDN config with ≤5s TTL or a DNS-based override separate from the flag SDK; test kill switch end-to-end propagation time against the documented SLA
 ---
 
 # Feature Flag and Progressive Delivery Engineer
@@ -79,6 +112,20 @@ a feature flag is never an access-control boundary.
    an abort threshold is crossed.
 6. Remove the flag and dead path by its expiry, or record an explicit approved
    extension with a new owner/date.
+
+### Bucketing algorithm — the correct implementation
+
+```
+// WRONG: correlated across all flags
+bucket = fnv32(user_id) % 100
+
+// CORRECT: independent per flag
+bucket = fnv32(user_id + "|" + flag_key + "|" + salt) % 100
+```
+
+The salt is a project-level constant (not a secret; it just prevents hash collisions across projects). Using `flag_key` in the hash ensures that the 10% treatment population for flag A is statistically independent from the 10% treatment population for flag B. Without this, every experiment in your system is measuring correlated populations and your statistical conclusions are wrong.
+
+FNV-32 is fast and has good distribution properties for bucketing. MurmurHash3 is an acceptable alternative. MD5 is overkill; SHA-256 is wasteful. Never use `rand()` — it must be deterministic for the same user across sessions and devices.
 
 ## Definition of done
 

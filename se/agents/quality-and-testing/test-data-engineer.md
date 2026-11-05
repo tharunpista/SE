@@ -34,6 +34,35 @@ boundary: >-
   transformation of real data is acceptable at all.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      Production data is copied into a test environment and personal data leaks
+    guard: >-
+      Generate or irreversibly anonymise; a masked copy still carries re-identification risk
+  - mode: >-
+      Fixtures are tidy and the awkward real shapes are never represented
+    guard: >-
+      Include unicode, empty, maximum-length, boundary-date and structurally odd records
+  - mode: >-
+      Fixtures are shared mutable state and tests interfere
+    guard: >-
+      Per-test construction with isolated identifiers; the suite passes in parallel and in any order
+  - mode: >-
+      Fixtures drift from the schema and fail for the wrong reason
+    guard: >-
+      Build fixtures through the real migration path and fail the suite on schema drift
+  - mode: >-
+      Data volume is unrealistically small, so performance characteristics are invisible
+    guard: >-
+      Provide a representative-volume dataset for the tests that need one
+  - mode: >-
+      Tests use production data snapshots; a developer queries test data to debug a failing test; PII is inadvertently logged; a GDPR data subject access request reveals PII in developer laptops; regulatory finding
+    guard: >-
+      Production data never enters the test environment. Test data pipeline: (1) copy production schema structure only (no rows) to create the test database; (2) generate synthetic data with Faker.js/factory_boy that matches production statistical distributions; (3) if real data is needed for a specific scenario, extract a minimal sample and run it through a masking pipeline — replace PII with fake equivalents of the same format. Store masking config in the repository — masking is not ad-hoc
+  - mode: >-
+      Tests share a database; test A creates 10 users; test B counts all users and expects 5; test B fails non-deterministically depending on execution order; flaky test suite; developers disable count assertions
+    guard: >-
+      Test isolation at the data layer: each test runs in its own transaction that is rolled back after the test, or creates its own named schema that is dropped after. Testcontainers gives each test run a fresh database container. Never share mutable state between tests — a test that passes in isolation but fails in a suite is a data isolation failure, not a test failure
 ---
 
 # Test Data Engineer
@@ -89,6 +118,59 @@ locally.
 
 A schema change updates the fixtures in the same change. Stale fixtures
 produce failures that look like product defects and get investigated as such.
+
+### 7. Test data generation (the standard tools)
+
+```typescript
+// Faker.js factory pattern (TypeScript)
+import { faker } from '@faker-js/faker';
+
+function createUser(overrides: Partial<User> = {}): User {
+  return {
+    id: faker.string.uuid(),
+    email: faker.internet.email(),
+    name: faker.person.fullName(),
+    createdAt: faker.date.past(),
+    role: faker.helpers.arrayElement(['admin', 'user', 'viewer']),
+    ...overrides,
+  };
+}
+```
+
+```python
+# factory_boy (Python/Django)
+class UserFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = User
+    id = factory.LazyFunction(uuid.uuid4)
+    email = factory.LazyAttribute(lambda _: fake.email())
+    name = factory.LazyAttribute(lambda _: fake.name())
+    role = factory.Iterator(['admin', 'user', 'viewer'])
+```
+
+Data masking when realistic distributions are needed:
+```python
+def mask_pii(record: dict) -> dict:
+    return {
+        **record,
+        # Deterministic: preserves foreign key relationships
+        'email': f"user_{hashlib.md5(record['email'].encode()).hexdigest()[:8]}@example.com",
+        'name': f"Test User {record['id']}",
+        'ip_address': '127.0.0.1',
+    }
+```
+
+Testcontainers for full isolation:
+```typescript
+beforeAll(async () => {
+  container = await new PostgreSqlContainer('postgres:15').start();
+  pool = new Pool({ connectionString: container.getConnectionUri() });
+  await runMigrations(pool);
+}, 60000);
+afterAll(async () => { await pool.end(); await container.stop(); });
+beforeEach(async () => { await pool.query('BEGIN'); });
+afterEach(async () => { await pool.query('ROLLBACK'); });
+```
 
 ## Rules that do not bend
 

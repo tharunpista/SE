@@ -22,6 +22,7 @@ escalates_to: solution-architect
 context_budget_tokens: 30000
 max_calls: 12
 enabled: true
+stack_aware: true
 status: active
 boundary: >-
   Owns the local store, the mutation queue and the conflict rule on the device.
@@ -36,6 +37,35 @@ verify_commands:
 escalates_on_failure_to: root-cause-investigator
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      A queued mutation replays after reconnect and applies twice
+    guard: >-
+      Client-generated idempotency key per mutation, persisted with it; test replay after a forced reconnect
+  - mode: >-
+      An optimistic update is never rolled back when the server rejects it
+    guard: >-
+      Every optimistic write has a rollback path; test the rejection explicitly, not only the success path
+  - mode: >-
+      Two devices edit the same record and the later write silently destroys the earlier
+    guard: >-
+      Declared conflict policy with a version or vector per record; test concurrent edits from two clients
+  - mode: >-
+      The local schema changes and an upgrade over an existing install loses data
+    guard: >-
+      Forward migrations tested from every shipped schema version, over a real installed database, not a fresh one
+  - mode: >-
+      Reinstall leaves server state the client no longer knows about
+    guard: >-
+      Reconciliation on first run after reinstall; test install over a populated account
+  - mode: >-
+      The queue grows unbounded while offline and the app is terminated for storage
+    guard: >-
+      Bound the queue and define the drop or coalesce policy; test an extended offline period
+  - mode: >-
+      A partially applied sync leaves the local store internally inconsistent
+    guard: >-
+      Apply sync batches transactionally; kill the process mid-sync and assert a consistent store
 ---
 
 # Mobile Offline and Sync Engineer

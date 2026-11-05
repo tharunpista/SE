@@ -15,6 +15,9 @@ import { checkIntegrity } from "./roles/integrity.ts";
 import type { OwnershipRow } from "./roles/integrity.ts";
 import type { Registry } from "./roles/resolve.ts";
 import { Diagnostics } from "./util/diagnostics.ts";
+import { renderFactsBlock, resolveProjectFacts } from "./project-facts.ts";
+import { formatRoute, route } from "./roles/route.ts";
+import { hireOne } from "./render/hire.ts";
 import { DEPARTMENTS, DEPARTMENT_EXPECTED_COUNTS, EXPECTED_ROLE_TOTAL, departmentLabel } from "./roles/vocabulary.ts";
 import type { Role } from "./roles/types.ts";
 import { ADAPTERS, findAdapter } from "./render/claude-code.ts";
@@ -65,6 +68,9 @@ commands:
                             --project <dir> the directory the host has open
                             --out <dir>  --dry-run  --all  --force  --merge
                             --merge updates selected files without removing other generated roles.
+  skills [--compare <task>] List Claude Code skills with estimated token cost.
+                            --compare <task>  Show whether a skill or agent is cheaper for <task>.
+                            --json            Machine-readable output.
   agents enable             Install a roster globally in every supported client.
                             Omit --host to install for all of them at once.
                             --host <id>  --topic <id>  --dept <name>
@@ -772,6 +778,18 @@ known: ${ADAPTERS.map((a) => a.id).join(", ")}`);
     return 2;
   }
 
+  // Project-level render defaults from se.project.json. Explicit flags win.
+  const projectConfigPath = join(root, "se.project.json");
+  if (existsSync(projectConfigPath)) {
+    try {
+      const cfg = JSON.parse(readFileSync(projectConfigPath, "utf8")) as Record<string, unknown>;
+      const renderCfg = cfg["render"] as Record<string, unknown> | undefined;
+      const mFlags = flags as Map<string, string | true>;
+      if (renderCfg?.["all"] === true && !flags.has("all")) mFlags.set("all", true);
+      if (renderCfg?.["merge"] === true && !flags.has("merge")) mFlags.set("merge", true);
+    } catch { /* malformed config — ignore, proceed with explicit flags */ }
+  }
+
   const { registry, diags } = loadCatalogue(root);
 
   // Rendering a catalogue with per-file errors would emit broken agent
@@ -1148,6 +1166,125 @@ function cmdSetup(root: string, args: Args): number {
   return cmdAgents(root, { ...args, positional: ["enable"] });
 }
 
+/**
+ * `se facts` -- the constants a role should never spend a tool call to find.
+ *
+ * Printed for an operator by default, JSON for a renderer or a hire payload.
+ * Facts that could not be resolved are reported as warnings rather than
+ * invented, because a wrong command is a check an agent will claim to have run.
+ */
+function cmdFacts(root: string, flags: Args["flags"]): number {
+  const facts = resolveProjectFacts(root);
+  if (flags.has("json")) {
+    console.log(JSON.stringify({ schema_version: 1, ...facts }, null, 2));
+    return 0;
+  }
+  if (facts.facts.length === 0) console.log("No project facts resolved.");
+  else for (const f of facts.facts) console.log(`${f.key.padEnd(18)} ${f.value.padEnd(24)} ${f.source}`);
+  for (const w of facts.warnings) console.error(`warning: ${w}`);
+  return 0;
+}
+
+/**
+ * `se route "<task>"` -- which role owns this, decided in code.
+ *
+ * The point is that no model tokens are spent choosing. The operator (or an
+ * orchestrator skill) runs this, gets role ids back, and loads exactly one.
+ */
+function cmdRoute(root: string, args: Args): number {
+  const query = args.positional.join(" ").trim();
+  if (query.length === 0) {
+    console.error('error: se route needs a task description, e.g. se route "the login page rejects valid passwords"');
+    return 2;
+  }
+  const registry = resolveRoles(root);
+  const result = route(query, registry.byId);
+  if (args.flags.has("json")) {
+    console.log(JSON.stringify({
+      schema_version: 1,
+      query: result.query,
+      confidence: result.confidence,
+      owners: result.owners,
+      departments: result.departments,
+      question: result.question,
+      hits: result.hits.map((h) => ({ topic: h.topic.id, label: h.topic.label, matched: h.matched, score: h.score })),
+      fallback: result.fallback,
+      warnings: result.warnings,
+    }, null, 2));
+    return 0;
+  }
+  console.log(formatRoute(result));
+  return 0;
+}
+
+/**
+ * `se hire <id>` -- print one specialist's full instructions, or `--json` for a
+ * caller that will spawn it.
+ *
+ * There is no matching `se fire`. A spawned subagent's context is its own and
+ * ends with its report, so the cost of a hire stops when the task does.
+ */
+function cmdHire(root: string, args: Args): number {
+  const id = args.positional[0];
+  if (!id) {
+    console.error('error: se hire <role-id>   (find one with: se route "<task>")');
+    return 2;
+  }
+  const { registry } = loadCatalogue(root);
+  const role = registry.byId.get(id);
+  if (!role) {
+    console.error(`error: no role "${id}". Find one with: se route "<task>"`);
+    return 2;
+  }
+  if (!role.enabled || role.status !== "active") {
+    console.error(`error: role "${id}" is ${role.status}/disabled and must not be hired.`);
+    return 2;
+  }
+  const payload = hireOne(role, root, findProjectRoot());
+  if (args.flags.has("json")) {
+    console.log(JSON.stringify({ schema_version: 1, ...payload }, null, 2));
+    return 0;
+  }
+  console.log(payload.prompt);
+  if (payload.unmapped.length > 0) console.error(`warning: capabilities this host cannot grant: ${payload.unmapped.join(", ")}`);
+  return 0;
+}
+
+/**
+ * `se heads` -- the department -> accountable head map.
+ *
+ * This is the whole of what Atina needs to know about the org: 15 lines, about
+ * 120 tokens, instead of 191 role descriptions at 16,730. A head is hired when
+ * a task spans several of its department's roles; when routing already names
+ * one worker, that worker is hired directly. Two spawns for complex work, one
+ * for simple -- never the three a fixed CEO/head/worker chain would cost.
+ */
+function cmdHeads(root: string, args: Args): number {
+  const { registry } = loadCatalogue(root);
+  const active = registry.all.filter((r) => r.enabled && r.status === "active");
+  const byDept = new Map<string, { head: string | null; count: number }>();
+  for (const role of active) {
+    const entry = byDept.get(role.department) ?? { head: null, count: 0 };
+    entry.count += 1;
+    if (role.lead) entry.head = role.id;
+    byDept.set(role.department, entry);
+  }
+  const rows = [...byDept.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+  if (args.flags.has("json")) {
+    console.log(JSON.stringify({
+      schema_version: 1,
+      departments: rows.map(([dept, v]) => ({ department: dept, label: departmentLabel(dept), head: v.head, role_count: v.count })),
+    }, null, 2));
+    return 0;
+  }
+  for (const [dept, v] of rows) {
+    console.log(`${dept.padEnd(34)}${(v.head ?? "-- none --").padEnd(36)}${v.count} roles`);
+  }
+  const headless = rows.filter(([, v]) => v.head === null);
+  if (headless.length > 0) console.error(`warning: ${headless.length} department(s) have no head; work spanning their roles has no destination.`);
+  return 0;
+}
+
 function main(argv: readonly string[]): number {
   const args = parseArgs(argv);
   switch (args.command) {
@@ -1158,6 +1295,11 @@ function main(argv: readonly string[]): number {
     case "departments": return cmdDepartments(requireRoot(), args.flags);
     case "topics":      return cmdTopics(requireRoot(), args.flags);
     case "doctor":      return cmdDoctor(requireRoot(), args.flags);
+    case "facts":       return cmdFacts(findProjectRoot(), args.flags);
+    case "route":       return cmdRoute(requireRoot(), args);
+    case "hire":        return cmdHire(requireRoot(), args);
+    case "heads":       return cmdHeads(requireRoot(), args);
+    case "skills":      return cmdSkills(args.flags);
     case "memory":      return cmdMemory(findProjectRoot(), args.positional, args.flags);
     case "install":     return cmdInstall(args.flags);
     case "link":        return cmdLink(args.flags);
@@ -1174,6 +1316,120 @@ function main(argv: readonly string[]): number {
       console.error(`error: unknown command "${args.command}"\n\n${USAGE}`);
       return 2;
   }
+}
+
+/**
+ * `se skills` — discover Claude Code skills and compare cost vs agent dispatch.
+ *
+ * Skills run in the current context (tens of tokens, seconds).
+ * Agents run cold (thousands of tokens, minutes).
+ * This command makes the trade-off visible so the operator can decide.
+ */
+function cmdSkills(flags: Args["flags"]): number {
+  const projectSkillsDir = join(findProjectRoot(), ".claude", "skills");
+  const userSkillsDir = join(homedir(), ".claude", "skills");
+  const json = flags.has("json");
+  const compareTask = flags.get("compare");
+
+  interface SkillEntry {
+    name: string;
+    source: "project" | "user";
+    path: string;
+    description: string;
+    estimatedTokens: number;
+  }
+
+  const skills: SkillEntry[] = [];
+
+  function scanDir(dir: string, source: "project" | "user"): void {
+    if (!existsSync(dir)) return;
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      if (!entry.isFile()) continue;
+      const name = entry.name.replace(/\.(md|txt)$/, "");
+      const path = join(dir, entry.name);
+      let description = "";
+      let estimatedTokens = 0;
+      try {
+        const content = readFileSync(path, "utf8");
+        // Extract first non-empty line after any frontmatter as description
+        const lines = content.split("\n");
+        let inFrontmatter = lines[0]?.trim() === "---";
+        let pastFrontmatter = !inFrontmatter;
+        for (const line of lines) {
+          if (inFrontmatter && line.trim() === "---" && description === "") {
+            inFrontmatter = false;
+            pastFrontmatter = true;
+            continue;
+          }
+          if (pastFrontmatter && line.trim().length > 0 && !line.startsWith("#")) {
+            description = line.trim().slice(0, 120);
+            break;
+          }
+          if (pastFrontmatter && line.startsWith("# ")) {
+            description = line.slice(2).trim();
+            break;
+          }
+        }
+        // shortcut: rough token estimate from file size; 1 token ≈ 4 chars
+        estimatedTokens = Math.ceil(content.length / 4);
+      } catch {
+        // unreadable skill; still list it
+      }
+      skills.push({ name, source, path, description, estimatedTokens });
+    }
+  }
+
+  scanDir(projectSkillsDir, "project");
+  scanDir(userSkillsDir, "user");
+
+  if (json) {
+    console.log(JSON.stringify({ skills }, null, 2));
+    return 0;
+  }
+
+  if (skills.length === 0) {
+    console.log("No skills found.");
+    console.log(`  Project skills: ${projectSkillsDir}`);
+    console.log(`  User skills:    ${userSkillsDir}`);
+    console.log("\nAdd a .md file to either directory to create a skill.");
+    return 0;
+  }
+
+  // shortcut: agent token estimate is a fixed heuristic (~2000 tokens cold context overhead)
+  const AGENT_OVERHEAD_TOKENS = 2000;
+
+  console.log(`\nClaude Code skills  (${skills.length} found)\n`);
+  console.log(`${"Name".padEnd(32)} ${"Source".padEnd(8)} ${"Est. tokens".padEnd(12)} Description`);
+  console.log("─".repeat(100));
+  for (const s of skills) {
+    const cheaper = s.estimatedTokens < AGENT_OVERHEAD_TOKENS ? "✓" : " ";
+    console.log(
+      `${cheaper} ${s.name.padEnd(30)} ${s.source.padEnd(8)} ${String(s.estimatedTokens).padEnd(12)} ${s.description}`
+    );
+  }
+  console.log(`\n✓ = likely cheaper than dispatching a specialist agent (< ${AGENT_OVERHEAD_TOKENS} tokens)`);
+
+  if (typeof compareTask === "string" && compareTask.length > 0) {
+    console.log(`\n── Comparing for task: "${compareTask}" ──\n`);
+    const matches = skills.filter(
+      (s) =>
+        s.name.toLowerCase().includes(compareTask.toLowerCase()) ||
+        s.description.toLowerCase().includes(compareTask.toLowerCase())
+    );
+    if (matches.length === 0) {
+      console.log("  No skills match this task. Recommend: dispatch a specialist agent.");
+    } else {
+      console.log("  Matching skills:");
+      for (const m of matches) {
+        const rec = m.estimatedTokens < AGENT_OVERHEAD_TOKENS
+          ? "PREFER SKILL  (saves ~" + (AGENT_OVERHEAD_TOKENS - m.estimatedTokens) + " tokens vs agent)"
+          : "PREFER AGENT  (skill is large; agent context overhead similar)";
+        console.log(`  · ${m.name}  [${m.estimatedTokens} tokens]  → ${rec}`);
+      }
+    }
+  }
+
+  return 0;
 }
 
 process.exit(main(process.argv.slice(2)));

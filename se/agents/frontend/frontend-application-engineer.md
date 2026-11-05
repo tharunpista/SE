@@ -36,6 +36,31 @@ boundary: >-
   built faithfully rather than approximating it.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      Only the happy path is implemented, so loading, empty, partial and error states appear as a blank screen
+    guard: >-
+      Every reachable state implemented deliberately; test each by forcing the condition, not by reasoning
+  - mode: >-
+      A failed request leaves a spinner forever
+    guard: >-
+      Every async path has a terminal state and a retry affordance; test with the request failing and timing out
+  - mode: >-
+      A rapid double-click submits twice
+    guard: >-
+      Disable on submit and make the request idempotent; test a double submit
+  - mode: >-
+      A stale response from a cancelled request overwrites newer data
+    guard: >-
+      Cancel or version in-flight requests and ignore late responses; test out-of-order resolution
+  - mode: >-
+      An unmounted component writes state and throws or leaks
+    guard: >-
+      Clean up subscriptions and aborts on unmount; test rapid mount and unmount
+  - mode: >-
+      Content longer than the mock breaks the layout
+    guard: >-
+      Test with long strings, missing images and empty collections, not with designed fixtures
 ---
 
 # Frontend Application Engineer

@@ -18,7 +18,11 @@
     "typecheck": "tsc --noEmit",
     "check": "bun run typecheck && bun run validate && bun test && bun run memory:doctor",
     "memory:doctor": "bun run src/cli.ts memory doctor",
-    "gen": "bun run src/cli.ts roles --markdown > se/agents/role-inventory.md && bun run src/cli.ts ownership --markdown > se/agents/ownership-matrix.md"
+    "render": "bun run src/cli.ts render --host claude-code --all --merge",
+    "gen": "bun run src/cli.ts roles --markdown > se/agents/role-inventory.md && bun run src/cli.ts ownership --markdown > se/agents/ownership-matrix.md",
+    "bench": "bun run scripts/bench/routing.ts && bun run scripts/bench/paraphrase.ts",
+    "bench:routing": "bun run scripts/bench/routing.ts",
+    "bench:paraphrase": "bun run scripts/bench/paraphrase.ts"
   },
   "keywords": [
     "ai-agents",

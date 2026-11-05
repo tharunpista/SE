@@ -35,6 +35,39 @@ boundary: >-
   between provider versions.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      A feature is judged by demonstration on examples chosen after the fact
+    guard: >-
+      A held-out set defined before the change, with criteria stated in advance
+  - mode: >-
+      The evaluation set leaks into the prompt or the training data
+    guard: >-
+      Keep the held-out set separate and detect contamination; a leaked set measures nothing
+  - mode: >-
+      A single aggregate score hides a failing segment
+    guard: >-
+      Report per-segment results; an aggregate pass with a failing slice is a failing feature
+  - mode: >-
+      Only capability is measured and harm is not
+    guard: >-
+      Separate capability metrics from harm and refusal metrics; both gate release
+  - mode: >-
+      A model-graded evaluation is trusted without checking the grader
+    guard: >-
+      Validate the grader against human labels and report its agreement
+  - mode: >-
+      Evaluation runs once at launch and never again as the model drifts
+    guard: >-
+      Scheduled re-evaluation with the result compared against the recorded baseline
+  - mode: >-
+      BLEU or ROUGE used to evaluate open-ended generation (chatbot, summarization, Q&A); a correct paraphrase scores 0 because it shares no n-grams with the reference; team reports 0.42 BLEU and declares quality acceptable
+    guard: >-
+      BLEU and ROUGE are only valid for closed-form tasks with exact references (machine translation with professional translations, code generation). For open-ended generation: use BERTScore (semantic similarity via contextual embeddings) or LLM-as-judge with a calibrated rubric. Never use BLEU for chatbot or summarization evaluation.
+  - mode: >-
+      LLM-as-judge gives inconsistent ratings across runs; different prompt phrasings produce different scores; grader is not calibrated against human raters; team trusts the number
+    guard: >-
+      Before using LLM-as-judge in CI: (1) human-rate 50 examples; (2) run LLM judge on the same examples; (3) compute Cohen's kappa; require kappa ≥ 0.80 (substantial agreement); if kappa < 0.80, the rubric is ambiguous — fix it before using in CI; re-calibrate monthly when model versions change
 ---
 
 # AI Evaluation Engineer
@@ -52,6 +85,56 @@ Quality to establish before release, a prompt, model or retrieval change to
 measure, or a suspected output-quality regression.
 
 ## Working procedure
+
+### 0. Metric selection — the actual tools, not "appropriate metrics"
+
+**For RAG pipelines — use Ragas:**
+```python
+from ragas import evaluate
+from ragas.metrics import faithfulness, answer_relevancy, context_recall, context_precision
+from datasets import Dataset
+
+results = evaluate(
+    Dataset.from_dict({
+        "question": [...],
+        "answer": [...],           # model's answer
+        "contexts": [[...]],       # retrieved chunks used
+        "ground_truth": [...],     # reference answer
+    }),
+    metrics=[faithfulness, answer_relevancy, context_recall, context_precision]
+)
+# Thresholds: faithfulness > 0.90, answer_relevancy > 0.80, context_recall > 0.70
+# faithfulness < 0.90 means the model is hallucinating facts not in the retrieved context
+```
+
+**For open-ended generation (chatbot, summarization):**
+- Use **LLM-as-judge** with a written rubric (1–5 scale with explicit criteria per score)
+- Calibrate judge against human ratings before use (Cohen's kappa ≥ 0.80 required)
+- Use **BERTScore** for semantic similarity when a reference answer exists
+- Never use BLEU or ROUGE for open-ended tasks
+
+**For regression testing in CI — use promptfoo:**
+```yaml
+# promptfooconfig.yaml
+providers:
+  - openai:gpt-4o
+prompts:
+  - file://prompts/support_agent.txt
+tests:
+  - vars:
+      question: "How do I cancel my subscription?"
+    assert:
+      - type: contains
+        value: "cancel"
+      - type: llm-rubric
+        value: "Response explains the cancellation process and provides clear next steps"
+```
+Run in CI: `npx promptfoo eval --no-cache`. Fail build if any assertion fails.
+
+**For structured output validation:**
+- Schema validation: Pydantic, Zod, JSON Schema
+- Exact match for deterministic outputs (SQL, code)
+- Semantic match (BERTScore ≥ 0.90) for paraphrased correct answers
 
 ### 1. Build the set from real inputs, including the ugly ones
 

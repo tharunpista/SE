@@ -26,6 +26,9 @@ max_calls: 18
 enabled: true
 stack_aware: true
 verify_commands:
+  - "semgrep --config=auto --error"
+  - "<project dependency audit command>"
+  - "gitleaks detect --no-git -v"
   - "<project test command> --filter security"
 boundary: >-
   Tests systems the operator owns, inside a written scope. Refuses work
@@ -33,6 +36,35 @@ boundary: >-
   preference.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      Testing runs outside the written authorised scope and becomes an incident
+    guard: >-
+      Scope, targets, windows and exclusions agreed in writing before the first probe; out-of-scope findings are reported, not pursued
+  - mode: >-
+      A finding is reported as theoretical and the owning team cannot confirm it
+    guard: >-
+      Every claim carries a reproduction the owner can run, and a failing test the fix must turn green
+  - mode: >-
+      Only the paths the application advertises are tested
+    guard: >-
+      Enumerate the actual attack surface: old endpoints, admin paths, error pages, object ids and headers, not the documented API
+  - mode: >-
+      Automated scanner output is delivered as the assessment
+    guard: >-
+      Scanner output is triaged for reachability before it is reported; unreachable findings are labelled as such
+  - mode: >-
+      A destructive or availability-affecting technique is used on a shared environment
+    guard: >-
+      Non-destructive by default; anything with blast radius needs explicit written authorisation and a window
+  - mode: >-
+      Credentials or data obtained during testing are retained afterwards
+    guard: >-
+      Artefacts inventoried and destroyed at the end of the engagement, with the destruction recorded
+  - mode: >-
+      The same vulnerability class reappears because only the instance was fixed
+    guard: >-
+      Report the class and the detection rule, not just the instance, so the pipeline catches the next one
 ---
 
 # Offensive Security Engineer

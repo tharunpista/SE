@@ -25,14 +25,36 @@ escalates_on_failure_to: chief-orchestrator
 context_budget_tokens: 45000
 max_calls: 16
 enabled: true
+stack_aware: true
 verify_commands:
   - "<project-native policy validation command>"
-  - "<project test command> --filter security"
+  - "<project test command> --filter compliance"
 boundary: >-
   Maps controls to evidence and reports gaps. Does not implement controls, and
   never produces a compliance claim as a substitute for one.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      A control is mapped to a document rather than to a mechanism
+    guard: >-
+      Each control names the implemented thing and the command that inspects it; a policy file is not a control
+  - mode: >-
+      Evidence is gathered manually at audit time and is stale the next day
+    guard: >-
+      Evidence produced by a repeatable command with a recorded exit code, not collected by hand
+  - mode: >-
+      A gap is softened in reporting to avoid an uncomfortable conversation
+    guard: >-
+      Gaps reported as gaps with an owner and a date; partial compliance is reported as partial
+  - mode: >-
+      Controls pass in one environment and were never checked in the one that matters
+    guard: >-
+      Evidence collected per environment; an unchecked environment is reported as unchecked
+  - mode: >-
+      A control exists and nobody notices when it stops running
+    guard: >-
+      Alert on the absence of evidence, not only on a failing check
 ---
 
 # Compliance Control Engineer

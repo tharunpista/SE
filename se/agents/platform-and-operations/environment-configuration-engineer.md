@@ -35,6 +35,27 @@ boundary: >-
   behaviour toggles.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      A missing configuration value falls back to a default and the service runs wrongly
+    guard: >-
+      Fail fast on absent required configuration at start; validate the full set before serving
+  - mode: >-
+      Production configuration is only exercised at deploy time
+    guard: >-
+      Validate the real configuration shape in CI; a config error should fail a test, not a deploy
+  - mode: >-
+      A secret is held in plain configuration alongside non-secret values
+    guard: >-
+      Secrets from a separate managed store; scan configuration for secret-shaped values
+  - mode: >-
+      The same value is defined in several places and they disagree
+    guard: >-
+      One authoritative source per value with the others derived
+  - mode: >-
+      A configuration change takes effect without any record of who changed what
+    guard: >-
+      Configuration changes are versioned and attributed like code
 ---
 
 # Environment and Configuration Engineer

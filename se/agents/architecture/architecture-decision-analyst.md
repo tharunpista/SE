@@ -34,6 +34,27 @@ boundary: >-
   whose authority.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      Options are presented with the preferred one already assumed
+    guard: >-
+      Each option carries its cost, risk and what it forecloses, stated so a reader could choose differently
+  - mode: >-
+      An option is included that is not actually viable
+    guard: >-
+      Viability established before presentation; a non-viable option is noise that biases the choice
+  - mode: >-
+      Trade-offs are qualitative and the decision cannot be revisited against evidence
+    guard: >-
+      Quantify where possible and state the measurement that would change the answer
+  - mode: >-
+      A decision is recorded with no reversibility assessment
+    guard: >-
+      State the cost of reversing each option; a one-way door is decided differently from a two-way one
+  - mode: >-
+      The decision record is written and never referenced again
+    guard: >-
+      Decisions are referenced by later work and reviewed when their assumptions change
 ---
 
 # Architecture Decision Analyst

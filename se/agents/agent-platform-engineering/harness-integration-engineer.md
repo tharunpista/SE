@@ -21,6 +21,7 @@ escalates_to: chief-orchestrator
 context_budget_tokens: 30000
 max_calls: 12
 enabled: true
+stack_aware: true
 status: active
 boundary: >-
   Owns the adapter between a role definition and a specific host, including
@@ -29,10 +30,35 @@ boundary: >-
   of the support tier, and never compensates for a missing host capability by
   claiming it.
 verify_commands:
-  - "bun test"
+  - "<project test command>"
 escalates_on_failure_to: root-cause-investigator
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      Two render paths for one role diverge, and one ships without a section the other has
+    guard: >-
+      Single shared builder for the instruction body; a test asserts byte-equality between every path that emits it
+  - mode: >-
+      A host capability is assumed rather than detected, so a role reports checks it could not run
+    guard: >-
+      Probe or declare per host; unmapped capabilities are stated in the rendered prompt
+  - mode: >-
+      The support tier claims more than the conformance tests actually cover
+    guard: >-
+      Tier derived from passing conformance tests, not from intent; an untested host is listed as untested
+  - mode: >-
+      A generated client file is hand-edited and the next render destroys the fix
+    guard: >-
+      Regenerate-and-diff in CI; generated files carry a do-not-edit header and stay git-ignored
+  - mode: >-
+      The always-loaded metadata budget is estimated by a character heuristic and is wrong by a multiple
+    guard: >-
+      Calibrate against the host real tokenizer by differencing total context with and without the roster
+  - mode: >-
+      The same roster is loaded from several directories at once and charged more than once
+    guard: >-
+      Audit every path the host reads for one session; emit one authoritative source per host
 ---
 
 # Harness Integration Engineer

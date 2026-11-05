@@ -32,6 +32,27 @@ boundary: >-
   role that owns the code, and sequencing by the Project Manager.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      Debt is a feeling rather than a register, so nothing is prioritised
+    guard: >-
+      Each item records what was left undone, the interest it charges, and who feels it
+  - mode: >-
+      All shortcuts are called debt, including things that are simply defects
+    guard: >-
+      Debt is a deliberate choice with a reason; an accident is a defect and goes to the owner
+  - mode: >-
+      Debt is recorded and never paid because it never competes with features
+    guard: >-
+      Interest expressed in the same terms as delivery cost so the comparison is possible
+  - mode: >-
+      An item sits in the register until its context is gone and nobody understands it
+    guard: >-
+      Each item carries its original reason and a review trigger
+  - mode: >-
+      Paying debt is done without a test and reintroduces the original behaviour
+    guard: >-
+      Characterise current behaviour with tests before refactoring
 ---
 
 # Technical Debt Analyst

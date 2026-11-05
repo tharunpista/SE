@@ -33,6 +33,35 @@ boundary: >-
   Engineer owns backup and restore.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      Reliability is stated for the system rather than per user-visible capability
+    guard: >-
+      Objectives per capability from the consumer perspective, including client errors and timeouts
+  - mode: >-
+      A dependency with no stated availability is assumed to be perfect
+    guard: >-
+      Every critical dependency carries an assumed availability and a tested failure behaviour
+  - mode: >-
+      Failure behaviour is undefined, so each component invents its own
+    guard: >-
+      State the intended degradation per capability before implementation, and hand it to testing
+  - mode: >-
+      Redundancy is added without identifying the shared failure domain
+    guard: >-
+      Name the failure domain each redundancy protects against and test the loss of one
+  - mode: >-
+      An objective is set with no error budget, so missing it changes nothing
+    guard: >-
+      Objectives carry a budget that gates feature work when exhausted
+  - mode: >-
+      SLO set to 99.99% uptime for a startup MVP; 52 minutes of allowed downtime per year; engineering team spends more time on reliability than features; product dies before reliability matters
+    guard: >-
+      Match SLO to business impact: consumer app = 99.9% (8.7 hours/year); B2B SaaS = 99.95% (4.4 hours/year); financial/healthcare = 99.99% (52 min/year). Set the SLO at the point where it costs more to improve reliability than to compensate customers for downtime. Never set an SLO tighter than you can measure.
+  - mode: >-
+      Error budget burns at 2x the monthly rate in the first week; team keeps shipping features; SLO is missed; customers breach contract
+    guard: >-
+      Error budget burn rate alert: burn_rate = (1 - current_success_rate) / (1 - SLO_target). Burn rate > 1 means you will exhaust the budget before the window closes. Alert at: burn_rate > 14.4 over 1 hour (exhausts 30-day budget in 2 hours) = page on-call; burn_rate > 6 over 6 hours = ticket. When budget is exhausted: freeze all feature releases; reliability work only.
 ---
 
 # Reliability Architect
@@ -144,3 +173,26 @@ Every capability has client-side availability and durability targets, failure
 modes are enumerated with explicit survive, degrade or accept decisions,
 correlated dependencies are named, and every reliability claim has an
 experiment or a drill behind it.
+
+## SLO/SLI/SLA — the actual formulas
+
+**Definitions:**
+- **SLI**: the measurement. `SLI = (good_requests / total_requests) × 100`
+- **SLO**: the target. `SLO: SLI ≥ 99.9% over 30 days`
+- **SLA**: contractual SLO with a consequence. `SLA: 99.95% monthly uptime; customer gets 10% credit per 0.1% below target`
+- **Error budget**: `error_budget_minutes = (1 - SLO_decimal) × window_minutes`. At 99.9% over 30 days: `error_budget = 0.001 × 43200 = 43.2 minutes`
+
+**Error budget burn rate (Google SRE formula):**
+```
+burn_rate = error_rate / (1 - SLO_target)
+
+Example: SLO = 99.9%, current error_rate = 1%
+burn_rate = 0.01 / 0.001 = 10
+# Burning budget 10× faster than steady state; 30-day budget exhausted in 3 days.
+```
+
+**Multi-window alerting:**
+- Fast burn (page): `burn_rate > 14.4` over last 1 hour AND last 5 minutes
+- Slow burn (ticket): `burn_rate > 1` over last 3 days AND last 6 hours
+
+**Toil:** work that is manual, repetitive, automatable, scales with service size, and tactical. Track `toil_hours / sprint` per engineer. If > 50% of time is toil, freeze feature work.

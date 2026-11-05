@@ -42,6 +42,39 @@ boundary: >-
   restore.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      A resource is created in the console and exists nowhere in code
+    guard: >-
+      Everything through declared infrastructure; drift detection reports untracked resources
+  - mode: >-
+      A permissive access policy is applied because the narrow one was harder
+    guard: >-
+      Least privilege with a recorded justification for each broad grant; test an unauthorised access
+  - mode: >-
+      Storage or a database is publicly reachable because the default was never changed
+    guard: >-
+      Default deny at the network boundary; test reachability from outside the intended perimeter
+  - mode: >-
+      Cost grows from resources nobody owns
+    guard: >-
+      Every resource carries an owner tag; untagged resources are reported and reclaimed
+  - mode: >-
+      A single-zone deployment is treated as highly available
+    guard: >-
+      State the failure domain the design survives and test the loss of one
+  - mode: >-
+      Credentials are long-lived keys rather than short-lived identities
+    guard: >-
+      Workload identity with short-lived credentials; a static key carries a recorded justification
+  - mode: >-
+      Engineer creates an RDS instance in the AWS console; it is not in Terraform; the next terraform apply has no knowledge of it; costs accrue unmonitored; a future plan may attempt to delete it
+    guard: >-
+      Infrastructure drift: use terraform plan as a CI gate on every PR — drift means plan shows changes even with no Terraform code changes. Import all manually-created resources: terraform import aws_db_instance.main <arn>. Enable AWS Config with drift detection rules; alert when any resource exists that is not tagged as Terraform-managed.
+  - mode: >-
+      IAM role uses Action:'*' and Resource:'*'; a compromised service has full AWS account access; blast radius of a credential leak is the entire infrastructure
+    guard: >-
+      Least-privilege IAM: every role lists only the specific actions it needs (e.g. s3:GetObject, s3:PutObject on a specific bucket ARN, never s3:* or *). IaC security scanning: Checkov (checkov -d .) runs in CI and fails on critical findings. Key rules: CKV_AWS_40 (no wildcard IAM actions), CKV_AWS_49 (no public S3 buckets), CKV_AWS_57 (S3 bucket not publicly accessible).
 ---
 
 # Cloud Infrastructure Engineer
@@ -304,3 +337,40 @@ protection, a lifecycle guard and a performed restore; encryption and audit
 logging predate the resources; costs are stated at expected and maximum usage
 with a bounded autoscaler; and any regional failover claim is labelled tested
 or untested.
+
+## IaC tooling selection
+
+| Tool | Language | Use when |
+|---|---|---|
+| Terraform | HCL | Multi-cloud, largest ecosystem, most community modules |
+| Pulumi | TypeScript/Python/Go | Prefer real programming languages, complex logic |
+| AWS CDK | TypeScript/Python | AWS-only, strong typing, L3 constructs |
+| Bicep | Bicep DSL | Azure-only, cleaner than ARM templates |
+
+## Cost anomaly detection
+
+```hcl
+# AWS Cost Anomaly Detection (Terraform)
+resource "aws_ce_anomaly_monitor" "total" {
+  name              = "total-cost-monitor"
+  monitor_type      = "DIMENSIONAL"
+  monitor_dimension = "SERVICE"
+}
+
+resource "aws_ce_anomaly_subscription" "alerts" {
+  name      = "cost-alerts"
+  threshold_expression {
+    dimension {
+      key           = "ANOMALY_TOTAL_IMPACT_PERCENTAGE"
+      values        = ["20"]  # alert if cost is 20% above expected
+      match_options = ["GREATER_THAN_OR_EQUAL"]
+    }
+  }
+  frequency        = "DAILY"
+  monitor_arn_list = [aws_ce_anomaly_monitor.total.arn]
+  subscriber {
+    address = "oncall@company.com"
+    type    = "EMAIL"
+  }
+}
+```

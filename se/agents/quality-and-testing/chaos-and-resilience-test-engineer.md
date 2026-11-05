@@ -34,6 +34,39 @@ boundary: >-
   owns backup and restore drills.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      A resilience claim is asserted in a design document and never exercised
+    guard: >-
+      Inject the named failure and assert the stated behaviour; an untested claim is an assumption
+  - mode: >-
+      Failures are injected in a toy environment where nothing real depends on them
+    guard: >-
+      Exercise against a production-shaped system with the real dependencies and timeouts
+  - mode: >-
+      Only clean failures are tested, never slow or partial ones
+    guard: >-
+      Inject latency, partial responses and half-open connections; a slow dependency is worse than a dead one
+  - mode: >-
+      Crash-consistency is never tested, so a kill mid-write corrupts state
+    guard: >-
+      Kill the process at many points under concurrency and assert a consistent state; repeat the run many times
+  - mode: >-
+      An experiment has no abort criteria and becomes an incident
+    guard: >-
+      Stated hypothesis, blast radius and abort condition before injection
+  - mode: >-
+      Recovery is assumed because the failure was survived
+    guard: >-
+      Assert full recovery to the pre-failure state, including queues drained and caches warmed
+  - mode: >-
+      Chaos testing means killing a pod in staging once a month; actual failure modes (slow dependency causing connection pool exhaustion, disk full, network partition) are never exercised
+    guard: >-
+      Chaos testing must be hypothesis-driven: (1) state steady-state hypothesis (error rate < 0.1% and p99 < 500ms); (2) define specific failure to inject; (3) run chaos; (4) measure against hypothesis; (5) return to steady state; the hypothesis defines pass/fail not "we survived"
+  - mode: >-
+      Chaos experiment runs in production without blast radius limit; pod kill cascades; experiment affecting 1 service takes down 3
+    guard: >-
+      Define blast radius before every experiment: which services, which percentage of instances, rollback mechanism; use Chaos Mesh or Litmus with namespace selector; never run on 100% of instances; start with 1 instance, verify hypothesis, then expand; tooling: Toxiproxy (network conditions in CI), Chaos Mesh (Kubernetes), Litmus (CNCF), Gremlin (commercial), AWS FIS (managed)
 ---
 
 # Chaos and Resilience Test Engineer
@@ -94,6 +127,31 @@ degraded path does not work at all.
 
 Automated, scheduled where safe, and re-run after changes to the paths
 involved. A one-off experiment documents a system that no longer exists.
+
+### 7. Tooling reference and hypothesis template
+
+**Hypothesis template** (required before any experiment):
+```
+Steady-state: error rate < 0.1% AND p99 < 500ms (measure for 2 min before injection)
+Failure to inject: [specific failure, e.g. "add 500ms latency to payment-service → DB connection"]
+Blast radius: [1 replica of payment-service, namespace: payments-staging]
+Abort condition: error rate > 5% OR any alert fires
+Expected outcome: circuit breaker opens within 10s, fallback serves cached price, error rate stays < 0.5%
+```
+
+**Toxiproxy** (network conditions in CI/local):
+```bash
+toxiproxy-cli toxic add payments-db --type latency --attribute latency=500 --attribute jitter=100
+toxiproxy-cli toxic add payments-db --type timeout --attribute timeout=1000
+toxiproxy-cli toxic remove payments-db --toxicName latency_downstream
+```
+
+**Chaos Mesh** (Kubernetes): `PodChaos` for pod kill, `NetworkChaos` for latency/partition, `StressChaos` for CPU/memory pressure. Always use `selector.namespaces` to scope to staging. Never set `mode: all` without explicit operator sign-off.
+
+**Tooling by environment**:
+- Local / CI: Toxiproxy (network faults), tc/netem (Linux kernel network emulation)
+- Kubernetes staging: Chaos Mesh (CNCF), Litmus (CNCF)
+- Kubernetes production (gated): Gremlin (commercial, fine-grained blast radius), AWS FIS (native, IAM-gated)
 
 ## Rules that do not bend
 

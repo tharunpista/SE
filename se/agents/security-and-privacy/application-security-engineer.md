@@ -28,14 +28,44 @@ max_calls: 18
 enabled: true
 stack_aware: true
 verify_commands:
+  - "semgrep --config=auto --error"
+  - "<project dependency audit command>"
   - "<project test command> --filter security"
-  - "<project lint command>"
 boundary: >-
   Reviews implementation against the requirements the Security Architect set.
   Does not define the threat model, and does not test running systems
   adversarially.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      User input reaches a query or command interpreter as concatenated text
+    guard: >-
+      Parameterised queries and argument arrays only; semgrep rules for string-built SQL and shell, failing the build
+  - mode: >-
+      A state-changing request succeeds without proof the caller intended it
+    guard: >-
+      Anti-forgery token or same-site enforcement on every mutation; test a cross-origin submit
+  - mode: >-
+      Untrusted content is rendered into HTML and executes
+    guard: >-
+      Context-correct escaping with a strict content-security policy; test a script payload in every reflected field
+  - mode: >-
+      Deserialisation of untrusted data instantiates arbitrary types
+    guard: >-
+      Schema-validated parsing into known shapes; never a general object deserialiser on external input
+  - mode: >-
+      A redirect or file path is built from a request parameter
+    guard: >-
+      Allowlist targets and resolve-then-contain every path; test traversal and absolute-path payloads
+  - mode: >-
+      A finding is reported without a reproduction and is closed as not-reproducible
+    guard: >-
+      Every finding carries a failing request or test that demonstrates it, and a regression test on fix
+  - mode: >-
+      Dependencies are audited once at review and drift immediately after
+    guard: >-
+      Audit in CI on every change, not at review time
 ---
 
 # Application Security Engineer

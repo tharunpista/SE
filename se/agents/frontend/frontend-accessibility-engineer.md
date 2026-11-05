@@ -37,6 +37,39 @@ boundary: >-
   correct and keeps it correct.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      The interface is usable by mouse and unreachable by keyboard
+    guard: >-
+      Complete the primary journeys with keyboard only; an unreachable control is a blocker
+  - mode: >-
+      A custom control looks like a native one and exposes no role or state
+    guard: >-
+      Native elements first; a custom control carries role, state and keyboard behaviour and is tested with a screen reader
+  - mode: >-
+      Focus is lost or trapped when a dialog opens or closes
+    guard: >-
+      Move focus in, trap within, restore on close; test with keyboard and a screen reader
+  - mode: >-
+      An automated checker passes and the screen is still unusable
+    guard: >-
+      Automated checks catch a minority; manual keyboard and screen-reader passes are required evidence
+  - mode: >-
+      Colour alone conveys meaning and contrast fails at normal and large text sizes
+    guard: >-
+      Measure contrast against the standard and pair colour with text or shape
+  - mode: >-
+      Dynamic updates are silent, so a screen-reader user never learns the result
+    guard: >-
+      Status messages announced politely; test an async success and failure
+  - mode: >-
+      axe-core automated scan passes; developer marks accessibility as done; real users with screen readers cannot navigate the page because automated tools only catch ~30% of WCAG issues; focus management is broken, skip-nav is missing, complex widgets are unusable
+    guard: >-
+      Automated scan catches ~30% of WCAG 2.1 issues — the structurally detectable ones. The other 70% requires manual testing. Required manual checks: (1) tab order — tab through the entire page, verify logical order; (2) keyboard operability — every interactive element reachable and operable with keyboard only; (3) screen reader — test on NVDA+Chrome, JAWS+Edge, VoiceOver+Safari; (4) zoom — page functional at 200% zoom without horizontal scroll; (5) color — verify all text meets contrast requirements, not just the design tokens
+  - mode: >-
+      Skip navigation link exists but is visually hidden with display none; keyboard users tab through 50-item navigation on every page; usability is worse than no accessibility work at all
+    guard: >-
+      Skip navigation must be (1) the first focusable element in the page; (2) visible on focus — not display-none or visibility-hidden; (3) targeting #main-content; (4) the target has tabindex=-1 to accept focus. Use position absolute left -9999px and position static on :focus to hide visually but show on keyboard focus. Test by pressing Tab on page load — skip nav must appear
 ---
 
 # Frontend Accessibility Engineer
@@ -120,6 +153,58 @@ below and the specialist audit.
 Unplug the mouse. Complete the flow. Note every point where you cannot reach a
 control, cannot tell where you are, or get stuck. This takes minutes and finds
 what automation cannot.
+
+### 8. axe-core integration (the minimum)
+
+```typescript
+// Playwright + axe-core
+import { test, expect } from '@playwright/test';
+import AxeBuilder from '@axe-core/playwright';
+
+test('homepage accessibility', async ({ page }) => {
+  await page.goto('/');
+  const results = await new AxeBuilder({ page })
+    .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+    .analyze();
+  expect(results.violations).toEqual([]);
+});
+
+// jest-axe for component tests
+import { axe, toHaveNoViolations } from 'jest-axe';
+expect.extend(toHaveNoViolations);
+
+test('Button is accessible', async () => {
+  const { container } = render(<Button onClick={fn}>Submit</Button>);
+  expect(await axe(container)).toHaveNoViolations();
+});
+```
+
+### Screen reader test matrix
+
+| Screen reader | Browser | Priority | What to test |
+|---|---|---|---|
+| NVDA (free) | Chrome | P0 | Windows desktop; most common assistive tech |
+| JAWS | Edge | P0 | Enterprise, healthcare, government users |
+| VoiceOver | Safari (macOS/iOS) | P0 | All Apple users |
+| TalkBack | Chrome (Android) | P1 | Mobile Android users |
+| Narrator | Edge (Windows) | P2 | Windows built-in; less common |
+
+Minimum screen reader test script per major release: (1) page title announces correctly; (2) each interactive element announces its role and label; (3) form validation errors announce; (4) modal traps focus and returns it on close; (5) table row/column headers announce.
+
+### WCAG 2.1 AA required checks
+
+| Criterion | Level | Check |
+|---|---|---|
+| 1.1.1 Non-text content | A | Every `<img>` has descriptive `alt` (empty for decorative) |
+| 1.3.1 Info & relationships | A | Headings in logical order (h1→h2→h3, never skip) |
+| 1.4.3 Contrast (minimum) | AA | 4.5:1 normal text, 3:1 large text (18px bold or 24px) |
+| 1.4.4 Resize text | AA | Functional at 200% browser zoom |
+| 2.1.1 Keyboard | A | All functionality accessible via keyboard |
+| 2.4.1 Bypass blocks | A | Skip navigation link present and functional |
+| 2.4.3 Focus order | A | Logical tab order (follows visual/reading order) |
+| 2.4.7 Focus visible | AA | Focus indicator visible on all interactive elements |
+| 3.3.1 Error identification | A | Errors identified and described in text (not color only) |
+| 4.1.2 Name, role, value | A | Custom widgets have ARIA roles/labels |
 
 ## Rules that do not bend
 

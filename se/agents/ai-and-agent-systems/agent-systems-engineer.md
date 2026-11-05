@@ -36,6 +36,31 @@ boundary: >-
   the Agent Safety and Guardrails Engineer owns the containment policy.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      A loop has no termination condition and runs until something external kills it
+    guard: >-
+      Explicit step, time and cost caps with a stated outcome on exhaustion; test the cap being hit
+  - mode: >-
+      The agent retries the same failing action indefinitely
+    guard: >-
+      Detect repeated identical failure and stop; two failed attempts at one cause means the model of the problem is wrong
+  - mode: >-
+      The agent acts outside its granted authority because authority is only described in the prompt
+    guard: >-
+      Authority enforced by the tools actually granted, not by instruction; test an attempt beyond it
+  - mode: >-
+      Tool output is treated as instruction and redirects the agent
+    guard: >-
+      Data-not-instruction boundary at the tool result; test an imperative payload in returned content
+  - mode: >-
+      A run leaves no record, so a wrong outcome cannot be explained
+    guard: >-
+      Append-only record of inputs, tool calls and outcomes per run, with a stable run id
+  - mode: >-
+      An irreversible action is taken without authorisation
+    guard: >-
+      Irreversible actions require explicit approval and a capable tool; test the refusal path
 ---
 
 # Agent Systems Engineer

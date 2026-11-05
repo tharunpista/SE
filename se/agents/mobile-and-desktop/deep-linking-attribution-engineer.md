@@ -22,6 +22,7 @@ escalates_to: solution-architect
 context_budget_tokens: 30000
 max_calls: 12
 enabled: true
+stack_aware: true
 status: active
 boundary: >-
   Owns the link-to-destination map, domain verification, and routing from a
@@ -37,6 +38,31 @@ verify_commands:
 escalates_on_failure_to: root-cause-investigator
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      A link works warm and drops the user on the home screen from cold start
+    guard: >-
+      Route from the launch intent or activation payload before the first screen renders; test from a fully terminated app
+  - mode: >-
+      Platform link verification silently fails and every link opens the browser
+    guard: >-
+      Verify the association file is served with the right content type and is reachable unauthenticated; assert verification on a clean device
+  - mode: >-
+      A deferred deep link is lost through the install, so the user lands nowhere
+    guard: >-
+      Persist the deferred payload and consume it on first run; test the real install flow from the store, not a sideload
+  - mode: >-
+      A link resumes into a second instance instead of the running one
+    guard: >-
+      Single-instance launch semantics with the new-intent path handled; test opening a link while the app is foregrounded
+  - mode: >-
+      An unvalidated link parameter drives navigation and becomes an open redirect
+    guard: >-
+      Validate and allowlist link parameters before routing; test a hostile payload
+  - mode: >-
+      Attribution double-counts an install because the event fires on every launch
+    guard: >-
+      Install events are idempotent on a persisted first-run marker; test relaunch and reinstall separately
 ---
 
 # Deep Linking and Attribution Engineer

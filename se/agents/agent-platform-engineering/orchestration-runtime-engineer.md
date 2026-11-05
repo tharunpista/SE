@@ -21,6 +21,7 @@ escalates_to: chief-orchestrator
 context_budget_tokens: 30000
 max_calls: 12
 enabled: true
+stack_aware: true
 status: active
 boundary: >-
   Owns the machinery that runs a task graph: scheduling, failure propagation,
@@ -28,10 +29,35 @@ boundary: >-
   what the tasks are and who owns them; this role makes the execution of that
   decision resumable and auditable, and does not reassign work.
 verify_commands:
-  - "bun test"
+  - "<project test command>"
 escalates_on_failure_to: root-cause-investigator
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      A cycle in the task graph hangs the run with no output
+    guard: >-
+      Detect before scheduling and refuse with the cycle named; a test asserts the refusal rather than a timeout
+  - mode: >-
+      Replay after a crash double-applies an effect
+    guard: >-
+      Idempotency key per task recorded with the effect; a replay test asserts exactly one effect
+  - mode: >-
+      A failed dependency is skipped instead of blocking, and downstream work proceeds on nothing
+    guard: >-
+      Explicit failure propagation with stop-the-line; assert dependents are blocked, not skipped
+  - mode: >-
+      The journal is written after the effect, so a crash between them is unrecoverable
+    guard: >-
+      Write intent before the effect and outcome after; recovery reads intent-without-outcome as needing replay
+  - mode: >-
+      A resumed run redoes completed work
+    guard: >-
+      Consult the journal before scheduling; completed tasks are not re-entered
+  - mode: >-
+      Unbounded fan-out exhausts the host and the run dies with partial state
+    guard: >-
+      Cap concurrency and delegation depth; refuse past the cap rather than degrading
 ---
 
 # Orchestration Runtime Engineer

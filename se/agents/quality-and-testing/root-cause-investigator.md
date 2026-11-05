@@ -36,6 +36,27 @@ boundary: >-
   role has deliberately no write access to source.
 requires_evidence: true
 writes_files: false
+failure_modes:
+  - mode: >-
+      A plausible cause is accepted because the symptom disappeared
+    guard: >-
+      State the cause so it can be falsified, then demonstrate it by reproducing and removing it
+  - mode: >-
+      The investigation changes several things at once and nothing is learned
+    guard: >-
+      One variable at a time with the observation recorded after each
+  - mode: >-
+      The reported symptom is investigated and the real trigger is elsewhere
+    guard: >-
+      Establish the last known working state and bisect toward the change that broke it
+  - mode: >-
+      A diagnosis is handed back without evidence and the owner has to redo it
+    guard: >-
+      Hand back the failing command, full output, what was tried, what was observed and the falsifiable cause
+  - mode: >-
+      The fix is implemented by the investigator and the owning role never learns the cause
+    guard: >-
+      Diagnose and hand back; the owner fixes and keeps the knowledge
 ---
 
 # Root Cause Investigator

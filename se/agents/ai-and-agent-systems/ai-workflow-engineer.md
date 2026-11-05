@@ -37,6 +37,31 @@ boundary: >-
   own task graph.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      A multi-step workflow fails at step four and restarts from step one
+    guard: >-
+      Checkpoint per step with resumability; test a resume from each step
+  - mode: >-
+      One step output is fed to the next without validation and the error compounds
+    guard: >-
+      Validate at every step boundary and stop on invalid; compounding is the default failure
+  - mode: >-
+      A workflow has no total budget and the cost is only visible afterwards
+    guard: >-
+      Budget the whole workflow, not each step; stop when exhausted with a stated outcome
+  - mode: >-
+      A retried workflow re-executes a step with a side effect
+    guard: >-
+      Idempotency per step with completion recorded; test a resume after a side-effecting step
+  - mode: >-
+      A workflow cannot be inspected, so a wrong result cannot be explained
+    guard: >-
+      Record inputs, outputs and decisions per step with a stable identifier
+  - mode: >-
+      A loop between steps has no bound and the workflow never terminates
+    guard: >-
+      Bound every cycle explicitly; test the bound being reached
 ---
 
 # AI Workflow Engineer

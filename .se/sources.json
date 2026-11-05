@@ -70,6 +70,125 @@
       "path": "src/memory/namespace.ts",
       "purpose": "Detect whether separate checkouts are claiming the same project memory namespace.",
       "authority": "authoritative"
+    },
+    {
+      "id": "cli-entry",
+      "kind": "file",
+      "path": "src/cli.ts",
+      "purpose": "Command routing, flag parsing, render/agents selection, and the metadata-token budget gate.",
+      "authority": "authoritative"
+    },
+    {
+      "id": "render-host-contract",
+      "kind": "file",
+      "path": "src/render/host.ts",
+      "purpose": "HostAdapter contract: render output shape, metadata token estimation, routing descriptions, and role instruction rendering shared by every client renderer.",
+      "authority": "authoritative"
+    },
+    {
+      "id": "render-claude-code",
+      "kind": "file",
+      "path": "src/render/claude-code.ts",
+      "purpose": "Claude Code subagent renderer: frontmatter, tool mapping, worktree isolation, and the always-loaded metadata budget for .claude/agents/.",
+      "authority": "authoritative"
+    },
+    {
+      "id": "render-agent-skills",
+      "kind": "file",
+      "path": "src/render/agent-skills.ts",
+      "purpose": "Agent Skills renderer for .claude/skills/ and .agents/skills/: lazy-loaded role instructions whose bodies load only on invocation.",
+      "authority": "authoritative"
+    },
+    {
+      "id": "render-router",
+      "kind": "file",
+      "path": "src/render/router.ts",
+      "purpose": "Request classification: se-route and the per-topic routing skills that pick an owner before anything executes.",
+      "authority": "authoritative"
+    },
+    {
+      "id": "render-agents-md",
+      "kind": "file",
+      "path": "src/render/agents-md.ts",
+      "purpose": "AGENTS.md renderer: the single-file roster table consumed by hosts without native agent support.",
+      "authority": "authoritative"
+    },
+    {
+      "id": "roles-resolve",
+      "kind": "file",
+      "path": "src/roles/resolve.ts",
+      "purpose": "Role loading and layer merge with per-key provenance; where a role's effective definition comes from.",
+      "authority": "authoritative"
+    },
+    {
+      "id": "roles-roster",
+      "kind": "file",
+      "path": "src/roles/roster.ts",
+      "purpose": "Roster closure: which escalation targets a selection pulls in so stuck work has a receiver.",
+      "authority": "authoritative"
+    },
+    {
+      "id": "roles-topics",
+      "kind": "file",
+      "path": "src/roles/topics.ts",
+      "purpose": "Topic resolution: keyword-to-role groups spanning departments, the selection axis used by --topic.",
+      "authority": "authoritative"
+    },
+    {
+      "id": "roles-validate",
+      "kind": "file",
+      "path": "src/roles/validate.ts",
+      "purpose": "Role schema validation and the fail-closed unknown-key check; every constraint a role definition must satisfy.",
+      "authority": "authoritative"
+    },
+    {
+      "id": "roles-frontmatter",
+      "kind": "file",
+      "path": "src/roles/frontmatter.ts",
+      "purpose": "Role file parsing: frontmatter and markdown body split for files in se/agents/.",
+      "authority": "authoritative"
+    },
+    {
+      "id": "roles-vocabulary",
+      "kind": "file",
+      "path": "src/roles/vocabulary.ts",
+      "purpose": "Closed vocabularies: departments, artifact kinds, capabilities, memory scopes, and CLI commands roles may reference.",
+      "authority": "authoritative"
+    },
+    {
+      "id": "role-schema",
+      "kind": "file",
+      "path": "schemas/role.schema.json",
+      "purpose": "Machine-readable role contract: required keys and permitted values for se/agents/ definitions.",
+      "authority": "authoritative"
+    },
+    {
+      "id": "topics-catalogue",
+      "kind": "file",
+      "path": "schemas/topics.json",
+      "purpose": "Topic definitions: id, label, purpose, trigger keywords, and member roles for each of the 18 topics.",
+      "authority": "authoritative"
+    },
+    {
+      "id": "cli-install",
+      "kind": "file",
+      "path": "src/install.ts",
+      "purpose": "User-level CLI installation, PATH registration, and catalogue linking behaviour.",
+      "authority": "authoritative"
+    },
+    {
+      "id": "paths-resolution",
+      "kind": "file",
+      "path": "src/util/paths.ts",
+      "purpose": "Catalogue and project root discovery, global config location, and se home resolution.",
+      "authority": "authoritative"
+    },
+    {
+      "id": "agent-roster-doc",
+      "kind": "file",
+      "path": "AGENTS.md",
+      "purpose": "Generated roster summary: the installed roles, their departments and missions, and the handoff rules hosts read.",
+      "authority": "reference"
     }
   ]
 }

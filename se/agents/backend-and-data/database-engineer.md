@@ -36,6 +36,51 @@ boundary: >-
   Migration Engineer.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      A query is fast on development data and table-scans in production
+    guard: >-
+      Read the actual execution plan at representative volume; a plan nobody looked at is an assumption
+  - mode: >-
+      An index is added and the write path slows with nobody accountable
+    guard: >-
+      Every index names its query and its write cost; unused indexes are removed on evidence
+  - mode: >-
+      A composite index exists and the query cannot use it because of column order
+    guard: >-
+      Verify index use in the plan, not from the index list; order follows equality then range
+  - mode: >-
+      Two statements take locks in different orders and deadlock under concurrency
+    guard: >-
+      Consistent lock ordering stated per transaction; test concurrent conflicting writes
+  - mode: >-
+      A long-running transaction blocks writers and inflates table bloat
+    guard: >-
+      Keep transactions short with a stated maximum; never hold one across a network call or user think time
+  - mode: >-
+      A query behaves differently in production because statistics or collation differ
+    guard: >-
+      Match collation, encoding and extensions between environments; declare them in the schema
+  - mode: >-
+      An ALTER TABLE takes an ACCESS EXCLUSIVE lock and blocks all reads and writes for minutes on a large table
+    guard: >-
+      Use online DDL (pg_rewrite, pt-online-schema-change, gh-ost, or native CONCURRENTLY for indexes); never bare ALTER on a live table over ~1M rows
+  - mode: >-
+      A read replica is seconds behind primary; queries routed to it return stale data as if it were current
+    guard: >-
+      Route reads that must be fresh to the primary; track replication_lag_seconds as a metric; alert when it exceeds the application's stated staleness budget
+  - mode: >-
+      Autoscaling multiplies per-instance pool size past the database's max_connections ceiling
+    guard: >-
+      Compute pool_size × max_instances at design time; must be ≤ db_max_connections × 0.8; use a pooler (PgBouncer/PgCat) before this becomes a constraint; alert on pool saturation, not database CPU
+  - mode: >-
+      A query plan changes silently after a statistics update or vacuuming, regression goes undetected
+    guard: >-
+      Pin critical query plans in CI using EXPLAIN output snapshots; alert on plan_type changes in production via pg_stat_statements or slow query log
+  - mode: >-
+      Soft deletes accumulate indefinitely; queries that filter deleted rows table-scan the full history
+    guard: >-
+      Partial index on is_deleted=false for every table with soft deletes; retention policy with hard deletes after stated window, tested at representative volume
 ---
 
 # Database Engineer

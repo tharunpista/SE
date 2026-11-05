@@ -33,6 +33,31 @@ boundary: >-
   Infrastructure Engineer decides what the resources and policies should be.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      A plan is approved without being read and destroys a stateful resource
+    guard: >-
+      Plan reviewed with destroy and replace actions called out explicitly before apply
+  - mode: >-
+      State is stored locally or unlocked and two applies corrupt it
+    guard: >-
+      Remote state with locking; test a concurrent apply
+  - mode: >-
+      A module change is applied to production first because it was urgent
+    guard: >-
+      Promote through environments in order; an out-of-order apply is an incident
+  - mode: >-
+      Secrets are committed into variable files
+    guard: >-
+      Secrets from a managed store at apply time; scan the repository and history
+  - mode: >-
+      Drift accumulates until the code no longer describes reality
+    guard: >-
+      Scheduled drift detection that reports differences as failures
+  - mode: >-
+      A resource is renamed and silently recreated, losing data
+    guard: >-
+      Treat identity changes as migrations with an explicit move or import, tested on a copy
 ---
 
 # Infrastructure-as-Code Engineer

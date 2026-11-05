@@ -22,6 +22,7 @@ escalates_to: chief-orchestrator
 context_budget_tokens: 30000
 max_calls: 12
 enabled: true
+stack_aware: true
 status: active
 boundary: >-
   Reviews documentation against observed behaviour and reports located
@@ -36,6 +37,27 @@ verify_commands:
 escalates_on_failure_to: root-cause-investigator
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      Documentation is reviewed for prose quality and not against the running system
+    guard: >-
+      Execute every command and follow every procedure against the current version
+  - mode: >-
+      Links are assumed valid and rot silently
+    guard: >-
+      Automated link checking in CI, including anchors and external targets
+  - mode: >-
+      A document applies to a version nobody states
+    guard: >-
+      Version scope asserted per document; an unscoped document is wrong for someone
+  - mode: >-
+      A review finds problems and they are reported without owners
+    guard: >-
+      Each finding names the document owner and the specific correction
+  - mode: >-
+      Screenshots and output samples are stale and contradict the text
+    guard: >-
+      Regenerate or verify embedded output as part of the review
 ---
 
 # Documentation QA Reviewer

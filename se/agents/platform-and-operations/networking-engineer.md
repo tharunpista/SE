@@ -34,6 +34,31 @@ boundary: >-
   Engineer owns the certificate material and its rotation policy.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      A service is reachable from a network nobody intended
+    guard: >-
+      Default-deny between segments with explicit allows; test reachability from outside each boundary
+  - mode: >-
+      Timeouts are not aligned, so an upstream gives up while downstream work continues
+    guard: >-
+      Budget timeouts from the user inward; each hop shorter than its caller
+  - mode: >-
+      Retries at several layers multiply into a storm
+    guard: >-
+      Retry at one layer with a budget; test the amplification factor
+  - mode: >-
+      A certificate expires and the outage is total and surprising
+    guard: >-
+      Automated renewal with expiry alerting and lead time; verify renewal actually rotates
+  - mode: >-
+      DNS or load-balancer changes propagate slower than the deploy assumes
+    guard: >-
+      Account for propagation and connection draining; test a change under live traffic
+  - mode: >-
+      Health checks test the process and not the dependency it needs
+    guard: >-
+      Readiness reflects the ability to serve, including critical dependencies
 ---
 
 # Networking Engineer

@@ -33,6 +33,27 @@ boundary: >-
   bidirectional layout, and the Mobile Lead owns native client architecture.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      Behaviour is specified at three widths and is undefined between them
+    guard: >-
+      State behaviour continuously across the range with named reflow points, not device sizes
+  - mode: >-
+      Touch and pointer are assumed to be interchangeable
+    guard: >-
+      State minimum target sizes and hover-free alternatives; verify with touch only
+  - mode: >-
+      A layout works in portrait and is unusable in landscape on a short viewport
+    guard: >-
+      Verify both orientations and a short viewport with the keyboard open
+  - mode: >-
+      Content is hidden on small screens and the task becomes impossible
+    guard: >-
+      State what is prioritised rather than removed; a hidden primary action is a blocked task
+  - mode: >-
+      Large font scale is treated as a separate concern from responsive layout
+    guard: >-
+      Verify the largest supported text scale at the smallest supported width together
 ---
 
 # Responsive Design Specialist

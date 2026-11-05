@@ -35,6 +35,27 @@ boundary: >-
   what happens between processes.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      Dependency direction is violated and the domain imports the framework
+    guard: >-
+      Direction enforced by an import check that fails the build, not by convention
+  - mode: >-
+      Layers exist in folder names and logic lives wherever it was convenient
+    guard: >-
+      Each layer has a stated responsibility and a test that can run without the layers above it
+  - mode: >-
+      A cross-layer shortcut is taken for performance and becomes the pattern
+    guard: >-
+      Shortcuts are recorded exceptions with an owner, or they are the new rule
+  - mode: >-
+      Extension points are designed for imagined future needs and complicate the present
+    guard: >-
+      Extension points exist for a named current consumer
+  - mode: >-
+      Shared utility modules accumulate unrelated code and couple everything
+    guard: >-
+      Shared code is grouped by reason to change; a grab-bag module is a coupling defect
 ---
 
 # Application Architect

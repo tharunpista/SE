@@ -36,6 +36,27 @@ boundary: >-
   the Test Infrastructure Engineer owns the test runners themselves.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      The integration environment drifts from production and hides defects
+    guard: >-
+      Declared differences with justification; an undeclared difference is a blind spot
+  - mode: >-
+      Shared environment state means tests interfere and failures are not reproducible
+    guard: >-
+      Isolated data per run with teardown; a failure must be reproducible in isolation
+  - mode: >-
+      Third-party sandboxes behave differently and the gap is found at launch
+    guard: >-
+      Record known sandbox differences and verify the critical path against production constraints
+  - mode: >-
+      The environment is broken and nobody owns restoring it
+    guard: >-
+      An owner and a rebuild path that is exercised; a hand-maintained environment decays
+  - mode: >-
+      Personal data from production is used to make the environment realistic
+    guard: >-
+      Generated or anonymised data only; a masked copy still carries re-identification risk
 ---
 
 # Integration Environment Engineer

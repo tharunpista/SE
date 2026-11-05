@@ -21,6 +21,7 @@ escalates_to: chief-orchestrator
 context_budget_tokens: 30000
 max_calls: 12
 enabled: true
+stack_aware: true
 status: active
 boundary: >-
   Owns the limits -- context budgets, call caps, delegation depth -- and the
@@ -28,10 +29,39 @@ boundary: >-
   budget; this role sets and enforces the budget's size, and does not choose
   what gets dropped when it binds.
 verify_commands:
-  - "bun test"
+  - "<project test command>"
 escalates_on_failure_to: root-cause-investigator
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      A per-role context budget is validated at load and enforced nowhere
+    guard: >-
+      Enforce before invocation and refuse over budget; a field no runtime consumes is documentation, not a control
+  - mode: >-
+      Cost is estimated with a characters-per-token heuristic and is wrong by a multiple
+    guard: >-
+      Calibrate against the host real tokenizer; identifier-dense text runs near 2.8 chars per token, not 4
+  - mode: >-
+      The same roster is resident from several sources at once and charged several times per turn
+    guard: >-
+      Audit every directory and instruction file the host loads for one session; measure the total, not one source
+  - mode: >-
+      Resident cost is treated as one-time when it is charged on every turn
+    guard: >-
+      Account as context times turns; cache reads dominate the bill and scale with session length
+  - mode: >-
+      Delegation depth is unbounded, so each hop pays a fresh cold context
+    guard: >-
+      Cap depth and prefer one capable specialist over a chain; every hop is a new system prompt
+  - mode: >-
+      A session total hides which task was expensive
+    guard: >-
+      Account per task id so an expensive task is attributable, not averaged away
+  - mode: >-
+      A tool returns a large payload straight into context and it is re-read on every turn thereafter
+    guard: >-
+      Cap injected tool output and spill the remainder to a file the agent can query
 ---
 
 # Token and Cost Governance Engineer

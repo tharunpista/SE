@@ -35,6 +35,31 @@ boundary: >-
   role makes violating it impossible.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      An invalid state is representable and reached by a path nobody considered
+    guard: >-
+      Make the type refuse it rather than validating at call sites; test the construction of the invalid value
+  - mode: >-
+      The same rule is implemented in two places and they diverge
+    guard: >-
+      One owner per rule with a single implementation; a second copy is a defect even when it agrees today
+  - mode: >-
+      A rule lives in a handler or a query and cannot be tested without the transport
+    guard: >-
+      Rules testable without the framework; a rule needing HTTP to test is in the wrong layer
+  - mode: >-
+      Money or quantity arithmetic uses floating point
+    guard: >-
+      Integer minor units or a decimal type; test rounding at the boundary the business specified
+  - mode: >-
+      A rule change silently alters historical records
+    guard: >-
+      Rules are versioned where history matters; test that a past record keeps its original outcome
+  - mode: >-
+      An edge case is handled by returning a default that looks like success
+    guard: >-
+      Unrepresentable or unknown inputs return an explicit error, never a plausible default
 ---
 
 # Domain Logic Engineer

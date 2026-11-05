@@ -22,6 +22,7 @@ escalates_to: solution-architect
 context_budget_tokens: 30000
 max_calls: 12
 enabled: true
+stack_aware: true
 status: active
 boundary: >-
   Owns the device side of push: token lifecycle, payload contract, permission
@@ -37,6 +38,35 @@ verify_commands:
 escalates_on_failure_to: root-cause-investigator
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      A stale device token keeps receiving nothing and nobody notices
+    guard: >-
+      Refresh the token on every launch and on rotation, and prune on the provider unregistered response
+  - mode: >-
+      Notification permission is requested on first launch, denied, and the channel is lost permanently
+    guard: >-
+      Request in context after showing value, with a path for denial and permanent denial that routes to settings
+  - mode: >-
+      The payload exceeds the provider size limit and the notification silently never arrives
+    guard: >-
+      Assert payload size against the provider limit in tests; carry an id and fetch detail on open
+  - mode: >-
+      A tap opens the app but discards the payload, so the user lands on the wrong screen
+    guard: >-
+      Routing driven by the payload on cold, warm and foreground paths; test all three
+  - mode: >-
+      Notifications arrive during quiet hours because the schedule uses server time
+    guard: >-
+      Schedule in the user time zone with a stored preference; test across a time-zone change
+  - mode: >-
+      A retried send duplicates a notification on the device
+    guard: >-
+      Collapse or thread identifier per logical event; test a duplicate send
+  - mode: >-
+      Silent or background pushes are assumed to be delivered and drive critical state
+    guard: >-
+      Treat delivery as best-effort; the app reconciles state on launch rather than depending on a push
 ---
 
 # Push Notification and Messaging Engineer

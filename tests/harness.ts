@@ -122,6 +122,10 @@ const CATALOGUE_SIZE_CODES = new Set([
   "catalogue/total-count",
   "catalogue/department-count",
   "catalogue/department-deferred",
+  // A two-role synthetic department is not expected to declare an accountable
+  // head; the rule exists for the real catalogue, where `se validate` still
+  // reports it because it does not filter diagnostics.
+  "catalogue/no-department-lead",
 ]);
 
 export function relevant(diagnostics: readonly Diagnostic[]): Diagnostic[] {

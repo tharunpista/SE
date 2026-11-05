@@ -36,6 +36,31 @@ boundary: >-
   happen.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      A deletion removes the row and leaves copies in logs, backups, caches, search and analytics
+    guard: >-
+      Enumerate every destination before implementing; test one request end to end and assert each copy
+  - mode: >-
+      Retention is a policy with no mechanism
+    guard: >-
+      Enforced by a scheduled job with recorded execution; an unenforced period is not a period
+  - mode: >-
+      A backup restore resurrects deleted records
+    guard: >-
+      Deletion log replayed after restore; test a restore and assert the deletions stay applied
+  - mode: >-
+      A deletion cascades further than intended and removes another user data
+    guard: >-
+      Scope deletion by owner and test the boundary with a shared record
+  - mode: >-
+      Deletion cannot be proven after the fact
+    guard: >-
+      Tombstone or audit record per request with timestamps; proof is a query, not an assurance
+  - mode: >-
+      A legal hold is overridden by the retention job
+    guard: >-
+      Holds checked before deletion and tested; a hold that the job ignores is not a hold
 ---
 
 # Data Retention and Deletion Engineer

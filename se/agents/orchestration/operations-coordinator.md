@@ -35,6 +35,27 @@ boundary: >-
   and scope. This role owns the queue, not its contents.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      An escalation sits in the queue because nobody owns the queue itself
+    guard: >-
+      The queue has an owner and a stated response time per severity
+  - mode: >-
+      A decision is requested and the requester never learns the outcome
+    guard: >-
+      Every escalation closes with a recorded decision communicated to the requester
+  - mode: >-
+      Open commitments accumulate with no owner and quietly expire
+    guard: >-
+      Each commitment names an owner and a date and is reviewed on a cadence
+  - mode: >-
+      The same escalation is raised repeatedly because the cause is never addressed
+    guard: >-
+      Recurring escalations are reported as a systemic finding, not re-decided each time
+  - mode: >-
+      Urgency is decided by who asks loudest
+    guard: >-
+      Stated severity definitions applied consistently, with the ordering visible
 ---
 
 # Operations Coordinator

@@ -35,6 +35,27 @@ boundary: >-
   tiers, and the Performance and Load Test Engineer owns the load suite.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      A budget is set after the system is built and cannot be met without a rewrite
+    guard: >-
+      Budget per user-visible operation stated before implementation and allocated across hops
+  - mode: >-
+      A budget is expressed as an average and the tail is never bounded
+    guard: >-
+      State p95 and p99 per operation; an average budget permits an unusable tail
+  - mode: >-
+      Each service meets its budget and the end-to-end journey does not
+    guard: >-
+      Allocate the end-to-end budget across hops and verify the total
+  - mode: >-
+      Performance is bought with unbounded memory, cost or staleness
+    guard: >-
+      Every optimisation states what it spends; an unstated trade-off is deferred failure
+  - mode: >-
+      Budgets exist and nothing measures them continuously
+    guard: >-
+      Budgets enforced by a measurement that can fail; an unmeasured budget is an aspiration
 ---
 
 # Performance Architect

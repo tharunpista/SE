@@ -35,6 +35,27 @@ verify_commands:
 escalates_on_failure_to: root-cause-investigator
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      Structure is reorganised and every existing link breaks
+    guard: >-
+      Moves leave redirects; a broken inbound link loses the knowledge, not just the path
+  - mode: >-
+      A derived summary replaces the source record and the evidence is lost
+    guard: >-
+      Source records preserved immutably; summaries reference them rather than replacing them
+  - mode: >-
+      A summary is trusted after its source has changed
+    guard: >-
+      Summaries carry the source version and are flagged when it moves
+  - mode: >-
+      Knowledge accumulates with no retirement and search returns the oldest answer first
+    guard: >-
+      Retirement is part of the lifecycle, with superseded records marked and excluded
+  - mode: >-
+      Promotion beyond the project carries one project assumptions as general truth
+    guard: >-
+      Promotion requires the context be stated or removed; an unqualified generalisation misleads
 ---
 
 # Knowledge Engineer

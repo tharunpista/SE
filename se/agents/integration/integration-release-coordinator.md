@@ -34,6 +34,27 @@ boundary: >-
   owns cross-component dependencies and checkpoints overall.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      Two services release in an order that breaks the contract between them
+    guard: >-
+      Stated deploy order with compatibility windows; test the intermediate state where one is new
+  - mode: >-
+      A coordinated release has no rollback order
+    guard: >-
+      Rollback order recorded and tested, not inferred from the deploy order
+  - mode: >-
+      A release goes ahead while a dependency is unverified
+    guard: >-
+      Gate on each participant evidence with exit codes; unverified blocks
+  - mode: >-
+      Nobody knows which versions are deployed together
+    guard: >-
+      Record the deployed version set per environment; an unknown combination cannot be supported
+  - mode: >-
+      A long-lived feature branch integrates once at the end and breaks everything
+    guard: >-
+      Integrate continuously behind a flag; a late first integration is a scheduled failure
 ---
 
 # Integration Release Coordinator

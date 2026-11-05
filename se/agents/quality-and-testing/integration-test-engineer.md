@@ -34,6 +34,39 @@ boundary: >-
   a producer and consumer belongs to the Contract Test Engineer.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      The database is faked, so schema and query errors reach production
+    guard: >-
+      Run against the real engine and the real schema; an in-memory substitute is a different database
+  - mode: >-
+      Tests share one database and interfere when run in parallel
+    guard: >-
+      Isolated schema or container per worker; assert the suite passes in parallel
+  - mode: >-
+      Fixtures are built by calling production code, so a bug makes the test agree with it
+    guard: >-
+      Construct fixtures independently of the code under test
+  - mode: >-
+      Only the wire-format success path is covered
+    guard: >-
+      Test malformed bodies, wrong content types, timeouts and partial writes
+  - mode: >-
+      Migrations are not applied the way production applies them
+    guard: >-
+      Apply the real migration path from empty; a hand-built schema hides migration defects
+  - mode: >-
+      Tests leave state behind and the next run passes for the wrong reason
+    guard: >-
+      Transactional rollback or full teardown; run the suite twice and assert identical results
+  - mode: >-
+      Integration tests mock the database with an in-memory substitute; SQL dialect errors, missing indexes, constraint violations reach production; tests pass, production breaks
+    guard: >-
+      Use testcontainers to run real database instances: @testcontainers/postgresql (Node.js), testcontainers (Python/Java/Go); starts actual Postgres/MySQL/Redis image, runs migrations, seeds data, cleans up; never mock the database in integration tests
+  - mode: >-
+      Service B renames user.email to user.email_address; no contract test; production breaks when B deploys; consumer A never knew
+    guard: >-
+      Consumer-driven contract testing with Pact: consumer writes contract (what it expects), provider verifies it can fulfill before deploying; add can-i-deploy check to provider CI; install @pact-foundation/pact
 ---
 
 # Integration Test Engineer
@@ -88,6 +121,37 @@ cases go to the Contract Test Engineer rather than being duplicated here.
 Parallel-safe, no fixed sleeps, bounded waits with a clear timeout. An
 integration suite nobody runs locally becomes a CI-only gate and then a
 bypassed one.
+
+### 7. Testcontainers and Pact reference patterns
+
+**Testcontainers** (spin up real database in CI — no mocks):
+```typescript
+// Node.js — @testcontainers/postgresql
+import { PostgreSqlContainer } from '@testcontainers/postgresql';
+let container: StartedPostgreSqlContainer;
+beforeAll(async () => {
+  container = await new PostgreSqlContainer('postgres:16').start();
+  await runMigrations(container.getConnectionUri());
+});
+afterAll(() => container.stop());
+// Python: testcontainers.postgres.PostgresContainer
+// Java: new PostgreSQLContainer<>("postgres:16").start()
+// Go: testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{...})
+```
+
+**Available containers**: PostgreSQL, MySQL, Redis, Kafka, Elasticsearch, LocalStack (AWS), MongoDB. Always pin the Docker image tag to match production major version.
+
+**Pact consumer-driven contracts**:
+```typescript
+// Consumer side — defines what it expects
+const provider = new PactV3({ consumer: 'OrderService', provider: 'UserService' });
+await provider.addInteraction({ uponReceiving: 'a request for user', withRequest: { method: 'GET', path: '/users/1' },
+  willRespondWith: { status: 200, body: { id: 1, email: like('user@example.com') } } });
+// Provider side CI — verifies it can fulfill before deploy
+// Add to provider CI: pact-broker can-i-deploy --pacticipant UserService --broker-base-url $BROKER
+```
+
+**Pact workflow**: consumer writes contract → publishes to Pact Broker → provider verifies on PR → `can-i-deploy` check gates provider deploy. Install: `@pact-foundation/pact` (Node), `au.com.dius.pact` (Java).
 
 ## Rules that do not bend
 

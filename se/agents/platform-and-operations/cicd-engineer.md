@@ -35,6 +35,39 @@ boundary: >-
   Engineer owns the deployment decision.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      A pipeline passes because a step silently did not run
+    guard: >-
+      Fail closed on a skipped or missing step; assert the step executed, not that the job is green
+  - mode: >-
+      Build artefacts are not reproducible, so a reported failure cannot be traced to inputs
+    guard: >-
+      Install frozen and record commit and toolchain with the artefact; verify the link before publishing
+  - mode: >-
+      Secrets are exposed in build logs through an echoed variable
+    guard: >-
+      Mask in the runner and assert masking with a canary value in a pipeline test
+  - mode: >-
+      A long pipeline is bypassed under pressure and an unverified change ships
+    guard: >-
+      Bypass requires a recorded authorisation; an undocumented override is the failure
+  - mode: >-
+      Caching returns a stale artefact and a fix appears not to work
+    guard: >-
+      Cache keys cover every input; run a periodic cold build
+  - mode: >-
+      A pipeline has write access to production by default
+    guard: >-
+      Least privilege per stage with deployment credentials scoped and short-lived
+  - mode: >-
+      Every deploy replaces all pods simultaneously; a bad release causes 100% traffic outage instead of a partial rollback from 1%
+    guard: >-
+      Implement progressive delivery: canary deployment at 1% → 5% → 20% → 100% with an error rate gate at each step (auto-advance if error_rate < 0.01, auto-rollback if > 0.05); tools: Argo Rollouts, Flagger; never big-bang deploy to 100% simultaneously on user-facing services
+  - mode: >-
+      No DORA metrics tracked; engineering managers report subjective "deployment confidence"; regressions in deployment speed are invisible
+    guard: >-
+      Track the 4 DORA metrics: (1) Deployment Frequency; (2) Lead Time for Changes (commit → production); (3) Change Failure Rate (% of deploys causing incidents); (4) MTTR; elite targets: daily deploys, < 1h lead time, < 5% change failure rate, < 1h MTTR; report these monthly
 ---
 
 # CI/CD Engineer
@@ -85,6 +118,40 @@ privileged automation in the project.
 
 Measure it, publish it, and fix it rather than adding a retry. A pipeline
 people re-run by habit has stopped being a gate.
+
+### 7. Progressive delivery — canary before 100%
+
+Never push all traffic at once to user-facing services. Minimum progression:
+1% → 5% → 20% → 100%. Auto-advance when `error_rate < 1%` for 5 minutes;
+auto-rollback when `error_rate > 5%`. Implement with **Argo Rollouts** (Kubernetes)
+or **Flagger** (service mesh). A big-bang deploy that hits one bad pod at 100%
+traffic is fully preventable.
+
+```yaml
+# Argo Rollouts canary example
+spec:
+  strategy:
+    canary:
+      steps:
+      - setWeight: 1
+      - pause: {duration: 5m}
+      - setWeight: 5
+      - pause: {duration: 5m}
+      - setWeight: 20
+      - pause: {duration: 10m}
+      analysis:
+        templates: [{templateName: success-rate}]
+        args: [{name: service-name, value: my-service}]
+```
+
+### 8. Track DORA metrics; treat regression as a defect
+
+Four metrics, measured continuously: (1) **Deployment Frequency** — how often
+you deploy to production; (2) **Lead Time for Changes** — commit timestamp to
+production deploy; (3) **Change Failure Rate** — % of deploys that cause an
+incident or rollback; (4) **MTTR** — time from incident detected to production
+restored. Elite targets: daily deploys, <1h lead time, <5% failure rate, <1h
+MTTR. If none of these are tracked, the team is flying blind.
 
 ## Rules that do not bend
 

@@ -35,6 +35,27 @@ verify_commands:
 escalates_on_failure_to: root-cause-investigator
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      Notes are generated from commit messages and describe internals rather than user-visible change
+    guard: >-
+      Write from the user-visible effect; a changelog of refactors tells the reader nothing
+  - mode: >-
+      A breaking change is listed without the migration action
+    guard: >-
+      Every breaking change states exactly what the reader must do
+  - mode: >-
+      Known limitations are omitted and users discover them as defects
+    guard: >-
+      State known limitations and workarounds explicitly in the release
+  - mode: >-
+      Compatibility effects on other components are unstated
+    guard: >-
+      State the version pairs this release is compatible with
+  - mode: >-
+      Notes are written after the release and nobody reads them in time
+    guard: >-
+      Notes are a release gate, produced before shipping
 ---
 
 # Release Notes Engineer

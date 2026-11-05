@@ -34,6 +34,27 @@ boundary: >-
   interaction works for a user rather than whether it can be built.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      A spike answers that it works and the throwaway code ships
+    guard: >-
+      Spikes are explicitly throwaway with the finding as the deliverable; shipping a spike ships unowned code
+  - mode: >-
+      Feasibility is answered without the constraint that actually matters
+    guard: >-
+      State the binding constraint first: latency, cost, data, licence or platform limit
+  - mode: >-
+      The spike proves the happy path and the hard part is left unexamined
+    guard: >-
+      Target the riskiest assumption first; a spike that avoids the risk answers nothing
+  - mode: >-
+      A spike has no time box and becomes a project
+    guard: >-
+      Time box stated up front with a decision point; an overrun is reported as an unanswered question
+  - mode: >-
+      Yes is reported without the cost that makes it a different answer
+    guard: >-
+      Report feasibility with its cost and operational burden; can-be-done is not should-be-done
 ---
 
 # Technical Feasibility and Spike Engineer

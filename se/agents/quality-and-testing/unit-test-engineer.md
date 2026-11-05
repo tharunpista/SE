@@ -33,6 +33,39 @@ boundary: >-
   another process belongs to the Integration Test Engineer.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      Tests exercise the implementation and break on every refactor
+    guard: >-
+      Assert behaviour through the public surface; a test that forbids refactoring is a liability
+  - mode: >-
+      Only the happy path is covered
+    guard: >-
+      Boundaries, empty, zero, negative, maximum and malformed inputs for every rule
+  - mode: >-
+      Heavy mocking makes the test pass while the unit is wrong
+    guard: >-
+      Mock only what crosses a boundary; a test with more mocks than assertions proves little
+  - mode: >-
+      A shared fixture couples tests so one failure cascades
+    guard: >-
+      Independent setup per test; tests pass in any order and in parallel
+  - mode: >-
+      Tests assert that a function was called rather than what it produced
+    guard: >-
+      Assert outcomes, not interactions, unless the interaction is the contract
+  - mode: >-
+      Non-determinism from time, randomness or locale makes the suite flaky
+    guard: >-
+      Inject clock, randomness and locale; a flaky test is a defect with an owner
+  - mode: >-
+      Team reports 85% line coverage; mutation score is 12%; critical bug in a comparator (> vs >=) is undetected; coverage measures lines executed, not bugs detected
+    guard: >-
+      Line coverage measures code visited, not tested; mutation score measures whether tests detect changes; minimum target 70% mutation score; tools: Stryker (JS/TS/Java), PiTest (Java), mutmut (Python), go-mutesting (Go); run on core business logic only as a CI gate
+  - mode: >-
+      Manual test design misses edge cases that property-based generators find: null bytes, Integer.MAX_VALUE, empty collections where none expected
+    guard: >-
+      Add property-based testing for mathematical operations, string manipulation, collections/sorting, parsing; tools: fast-check (TS/JS), Hypothesis (Python), QuickCheck (Haskell), gopter (Go); start with 1-2 properties per module
 ---
 
 # Unit Test Engineer
@@ -85,6 +118,28 @@ integration level.
 
 Every bug fix starts with a failing test that captures the reported behaviour.
 That test is the evidence the fix worked and the guard against its return.
+
+### 7. Mutation testing and test naming convention
+
+**Mutation testing** verifies assertions are meaningful, not just that lines are covered. After achieving line coverage, run mutation testing on core business logic:
+- JavaScript/TypeScript: Stryker Mutator (`npx stryker run`); config in `stryker.config.mjs`; target mutation score > 70% on core modules
+- Java: PiTest (`mvn org.pitest:pitest-maven:mutationCoverage`); include only `src/main/java` package patterns
+- Python: mutmut (`mutmut run --paths-to-mutate src/`); check with `mutmut results`
+
+**Stryker config example**:
+```js
+// stryker.config.mjs
+export default {
+  mutate: ['src/domain/**/*.ts', '!src/domain/**/*.spec.ts'],
+  thresholds: { high: 80, low: 70, break: 60 },
+  reporters: ['html', 'progress'],
+  testRunner: 'jest',
+};
+```
+
+**Standard mutation operators** (what Stryker/PiTest inject): arithmetic replacement (`+` → `-`), logical connector replacement (`&&` → `||`), boundary shift (`>` → `>=`), return value replacement, conditional expression negation. A surviving mutant means no test caught that change — write a test for that case.
+
+**Test naming convention**: `<unit>_<scenario>_<expected>` or BDD `should_<expected>_when_<scenario>`. Examples: `calculateTax_negativeIncome_throwsValidationError`, `order_duplicateSubmit_idempotent`. Never `test1`, `happyPath`, `test_handler_2`.
 
 ## Rules that do not bend
 

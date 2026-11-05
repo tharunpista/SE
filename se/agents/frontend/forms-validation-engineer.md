@@ -38,6 +38,39 @@ boundary: >-
   as a substitute.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      A navigation or reload loses everything the user typed
+    guard: >-
+      Persist in-progress input and restore it; test a reload and a back navigation mid-form
+  - mode: >-
+      Validation runs only on the client and the server accepts anything
+    guard: >-
+      Server-side validation is the real validation; test the endpoint directly with the form bypassed
+  - mode: >-
+      Errors appear on first keystroke and the form fights the user
+    guard: >-
+      Validate on blur or submit, clear on correction; test the typing sequence, not the final value
+  - mode: >-
+      A double submit creates two records
+    guard: >-
+      Disable on submit plus an idempotency key; test a double submit and a slow network
+  - mode: >-
+      Error messages are announced visually only and a screen-reader user never learns why submit failed
+    guard: >-
+      Errors associated with their field and announced; verify with a screen reader
+  - mode: >-
+      A multi-step form loses earlier steps when a later one fails
+    guard: >-
+      State persists across steps independent of submission; test failure on the final step
+  - mode: >-
+      Form validates on every keystroke; user sees 'invalid email' error after typing 'j'; user abandons form at 2× the rate of validate-on-blur
+    guard: >-
+      Validation timing: validate on blur after the first time the field is touched; validate on change after the first failed submit (user is already in correction mode). Never validate on first keystroke. React Hook Form default (mode:'onBlur', reValidateMode:'onChange') is correct. Formik requires explicit validateOnChange: false configuration.
+  - mode: >-
+      Form submission error announced by updating text in the DOM; screen reader users are not notified because focus is still on the submit button; they don't know the form failed
+    guard: >-
+      Accessible error announcement: use role='alert' on the error summary container (auto-announced by screen readers); use aria-invalid='true' on each invalid field; use aria-describedby to link the field to its error message. Test: submit the form with a screen reader running; verify the error is announced without moving focus manually.
 ---
 
 # Forms and Validation Engineer
@@ -169,3 +202,39 @@ field, is announced, and states the fix; focus moves to the first invalid
 field; one action cannot produce two writes; drafts survive refresh for long
 forms; partial failures state precisely what was saved; and form, typecheck
 and accessibility tests pass with recorded exit codes.
+
+## React Hook Form + Zod (the standard)
+
+```typescript
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+
+const schema = z.object({
+  email: z.string().email('Enter a valid email address'),
+  password: z.string().min(8, 'Password must be at least 8 characters'),
+});
+type FormData = z.infer<typeof schema>;
+
+function LoginForm() {
+  const { register, handleSubmit, formState: { errors } } = useForm<FormData>({
+    resolver: zodResolver(schema),
+    mode: 'onBlur',          // validate on blur (not on change)
+    reValidateMode: 'onChange', // re-validate on change after first error
+  });
+  return (
+    <form onSubmit={handleSubmit(onSubmit)}>
+      <label htmlFor="email">Email</label>
+      <input
+        id="email"
+        {...register('email')}
+        aria-invalid={!!errors.email}
+        aria-describedby={errors.email ? 'email-error' : undefined}
+      />
+      {errors.email && (
+        <span id="email-error" role="alert">{errors.email.message}</span>
+      )}
+    </form>
+  );
+}
+```

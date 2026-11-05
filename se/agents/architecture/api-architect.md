@@ -34,6 +34,39 @@ boundary: >-
   as breaking; this role owns the rules that classification appeals to.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      Each team invents its own error model and consumers handle three conventions
+    guard: >-
+      One error model across the surface: stable codes, safe messages, and a stated retry signal
+  - mode: >-
+      Versioning policy is decided per endpoint when the first break happens
+    guard: >-
+      Versioning and compatibility rules stated before the first consumer; a breaking change is defined in advance
+  - mode: >-
+      Pagination, filtering and sorting differ per endpoint
+    guard: >-
+      One stated convention with maximum page size, stable sort and cursor semantics
+  - mode: >-
+      Authentication and authorisation are described per endpoint rather than as a scheme
+    guard: >-
+      One scheme with scopes stated at the surface level; per-endpoint exceptions are recorded
+  - mode: >-
+      Deprecation is announced and the old version is never removed
+    guard: >-
+      Deprecation carries a date, usage measurement, and an executed removal
+  - mode: >-
+      The interface mirrors the database schema and locks the internals in place
+    guard: >-
+      Shape the interface around consumer use cases; schema leakage becomes a permanent constraint
+  - mode: >-
+      API designed as REST; frontend needs flexible queries with many optional fields and multiple related resources; every screen requires 5-7 API calls; mobile users on slow connections have poor performance
+    guard: >-
+      API style selection: REST = broad client compatibility, cacheable, standard tooling, correct for most APIs. GraphQL = frontend needs flexible queries, multiple related resources in one call, type-safe schema; overhead: N+1 problem, complex caching, query depth limiting required. gRPC = service-to-service, binary protocol (10x throughput vs JSON/HTTP), streaming, requires HTTP/2; not for public APIs or browser clients without gRPC-web. Never use GraphQL to solve what pagination and sparse fieldsets can fix in REST.
+  - mode: >-
+      API ships without machine-readable contract; consumer teams build against documentation that drifts; breaking changes undiscovered until runtime
+    guard: >-
+      Machine-readable contract required before first consumer: REST = OpenAPI 3.1 spec in the repository, generated from code annotations (not hand-written). gRPC = .proto files in a shared repository with breaking change detection (buf lint, buf breaking). GraphQL = schema-first (.graphql files) with graphql-inspector for breaking change detection. Consumer-driven contract tests (Pact) verify the contract is fulfilled before each deploy.
 ---
 
 # API Architect
@@ -142,3 +175,24 @@ Each surface has one style with a recorded reason, the cross-cutting shapes
 and error model are defined once, the additive-versus-breaking rules and the
 versioning retirement path are published, and a build check enforces the
 conventions.
+
+## REST vs GraphQL vs gRPC — the actual decision
+
+| Criterion | REST | GraphQL | gRPC |
+|---|---|---|---|
+| Client type | Any (browser, mobile, CLI) | Frontend-heavy (web/mobile) | Service-to-service |
+| Protocol | HTTP/1.1+ | HTTP/1.1+ | HTTP/2 (required) |
+| Payload | JSON | JSON | Protobuf (binary) |
+| Throughput | Baseline | Same as REST | 5-10× higher |
+| Caching | Native (HTTP cache headers) | Complex (requires Apollo/Relay) | No standard |
+| Type safety | Via OpenAPI codegen | Native (schema types) | Native (protobuf types) |
+| Breaking changes | Versioning (`/v2/`) | Schema evolution rules | Proto backward compat |
+| Use when | Default for external APIs | Frontend dictates data shape | Internal microservices |
+
+**OpenAPI spec requirement:** every REST API has an OpenAPI 3.1 spec generated from code:
+- FastAPI: auto-generated from function signatures
+- NestJS: `@nestjs/swagger` decorators
+- Spring Boot: `springdoc-openapi`
+- Express: `tsoa` or `express-openapi-validator`
+
+Publish at `/openapi.json`. Run `openapi-diff` in CI to detect breaking changes before merge.

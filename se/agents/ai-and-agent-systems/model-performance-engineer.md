@@ -34,6 +34,27 @@ boundary: >-
   AI Evaluation Engineer owns whether quality was preserved.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      Latency is reduced by shortening context and quality silently drops
+    guard: >-
+      Any performance change reports its effect on the evaluation set; speed bought with quality is a trade, not a win
+  - mode: >-
+      Cost is measured per call and the per-task cost is never known
+    guard: >-
+      Account per task including retries and failed attempts
+  - mode: >-
+      Caching is added where the input varies and the hit rate is near zero
+    guard: >-
+      Measure hit rate before and after; an ineffective cache is complexity with no return
+  - mode: >-
+      Batching improves throughput and breaks the latency budget for interactive use
+    guard: >-
+      State the budget per path; interactive and batch paths are measured separately
+  - mode: >-
+      A smaller model is adopted on aggregate score and fails on the hard segment
+    guard: >-
+      Compare per segment; an aggregate improvement can hide a critical regression
 ---
 
 # Model Performance Engineer

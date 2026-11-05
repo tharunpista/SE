@@ -36,6 +36,31 @@ boundary: >-
   system.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      The application enforces an invariant the database permits
+    guard: >-
+      Constraints, foreign keys and uniqueness in the schema; test by attempting the invalid insert directly
+  - mode: >-
+      Nullable columns accumulate and nobody knows which mean unknown and which mean absent
+    guard: >-
+      Nullability is a decision with a stated meaning; prefer not-null with a default
+  - mode: >-
+      A natural key changes and every reference has to change with it
+    guard: >-
+      Stable surrogate keys for references with natural keys as unique constraints
+  - mode: >-
+      Timestamps are stored without a zone and compared across regions
+    guard: >-
+      Store instants in UTC with an explicit type; local time only at presentation
+  - mode: >-
+      An enumerated set is free text and accumulates variants
+    guard: >-
+      Constrain to the declared set in the schema; test a value outside it
+  - mode: >-
+      Soft deletes are added and every query forgets to filter them
+    guard: >-
+      A single access path applies the filter; test that a deleted row is unreachable from each path
 ---
 
 # Data Modeling Engineer

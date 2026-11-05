@@ -36,6 +36,39 @@ boundary: >-
   owns the server-side event contracts that feed it.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      A client drops for twenty seconds and reconnects missing the events in between
+    guard: >-
+      Resume from a client-held cursor and replay the gap; test a forced disconnect under load
+  - mode: >-
+      Reconnect storms after a deploy take down the service
+    guard: >-
+      Backoff with jitter on the client and connection admission control on the server; test mass reconnect
+  - mode: >-
+      A dead connection is held open because nothing detects it
+    guard: >-
+      Heartbeat with a timeout on both sides; test a silently dropped network
+  - mode: >-
+      A slow consumer backs up and the server buffers until it runs out of memory
+    guard: >-
+      Bounded per-connection buffers with a stated drop or disconnect policy; test a deliberately slow client
+  - mode: >-
+      Authorisation is checked at connect and never again as the session lives on
+    guard: >-
+      Re-authorise on subscription and on privilege change; test revocation mid-session
+  - mode: >-
+      Fan-out is O(connections) per event and collapses at scale
+    guard: >-
+      Measure fan-out cost per event at target connection count before shipping
+  - mode: >-
+      WebSocket connections behind round-robin load balancer; client connects to node A, next message routes to node B which has no connection state; message lost
+    guard: >-
+      WebSocket requires sticky sessions (session affinity): Nginx → `ip_hash` or `hash $cookie_session`; AWS ALB → stickiness cookie matching WebSocket session lifetime; HAProxy → `balance source`; alternative: Redis Pub/Sub broker so any node can reach any connection — eliminates sticky session requirement entirely
+  - mode: >-
+      Fan-out to 100K connected users; single broadcaster loops all connections synchronously; event loop blocks; all other events queue up
+    guard: >-
+      Fan-out must be async and batched via a message broker (Redis Pub/Sub, Kafka); each server subscribes to relevant channels and fans out only to its own connected clients; test: 10K connections per server instance with a fan-out event, measure event loop lag <100ms
 ---
 
 # Realtime Systems Engineer
@@ -53,6 +86,32 @@ Clients needing push updates, presence or live collaboration; updates lost or
 duplicated after reconnect; or connection scaling limits being approached.
 
 ## Working procedure
+
+### 0. Transport selection — WebSocket vs SSE vs Long-polling
+
+| Protocol | Direction | Reconnect | Proxy support | Use when |
+|---|---|---|---|---|
+| WebSocket | Bidirectional | Manual (need library) | Requires HTTP upgrade | Chat, collaborative editing, multiplayer |
+| SSE | Server → Client | Automatic (browser `EventSource`) | Works over HTTP/1.1 | Notifications, live feeds, one-way push |
+| Long-polling | Server → Client | Automatic | Works everywhere | Last resort: restrictive proxies, legacy clients |
+
+**SSE is simpler than WebSocket for server-push** — use it unless you need bidirectional messages:
+```typescript
+app.get('/events', (req, res) => {
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  const send = (data: object) => res.write(`data: ${JSON.stringify(data)}\n\n`);
+  const unsub = eventBus.subscribe(`user:${req.userId}`, send);
+  req.on('close', unsub);
+});
+```
+SSE auto-reconnects in browser, needs no sticky sessions (stateless from server side), works through HTTP/1.1 proxies.
+
+**WebSocket library selection:**
+- Socket.IO: reconnection, rooms, namespaces, long-polling fallback; overhead ~5KB. Use for most apps.
+- Raw WebSocket: lower overhead, manual reconnect logic required.
+- Phoenix Channels (Elixir): 2M connections per server documented; best-in-class for high concurrency.
+- Managed (Ably, Pusher): eliminate WebSocket infrastructure entirely; use below ~$3K/month at scale.
 
 ### 1. Design resumption before the happy path
 

@@ -34,6 +34,39 @@ boundary: >-
   optimisation this role measures.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      Load is generated from one machine and the generator is the bottleneck
+    guard: >-
+      Verify generator headroom; report saturation of the system, not of the harness
+  - mode: >-
+      The test uses uniform traffic and the real pattern is bursty and skewed
+    guard: >-
+      Model arrival pattern and key skew from production; a uniform test finds nothing about hot keys
+  - mode: >-
+      Results are reported as averages and hide the failing tail
+    guard: >-
+      Report p95 and p99 and the point at which the budget is first missed
+  - mode: >-
+      The test runs against a small dataset and caches everything
+    guard: >-
+      Representative data volume with a cold cache; otherwise the result measures the cache
+  - mode: >-
+      Breaking point is never found because the test stops at the target
+    guard: >-
+      Push past the budget to locate the knee and the degradation mode; a pass at target is not a capacity statement
+  - mode: >-
+      Load testing touches a shared environment and affects real users
+    guard: >-
+      Isolated environment or a written window with a kill switch
+  - mode: >-
+      Load test reports average response time (180ms acceptable); p99 is 4200ms; 1% of real users experience 4-second responses; nobody knows
+    guard: >-
+      Average is statistically meaningless for latency SLOs; always report p50, p95, p99, p999; default SLO starting points: API endpoints p99 < 500ms, cached reads p99 < 100ms, full page loads p99 < 2000ms, background jobs p99 < 30s; use k6 `http_req_duration{p(99)}` or Gatling `percentile3`
+  - mode: >-
+      Coordinated omission: load generator queues unsent requests and measures short times for them; test reports 50ms average while real clients waited 10 seconds
+    guard: >-
+      k6 uses open-model load generation (corrects for coordinated omission by default); Gatling `constantUsersPerSec` is correct; avoid JMeter default thread model for latency measurement; verify: under 100% load, reported latency must increase (correct) not stay flat (coordinated omission)
 ---
 
 # Performance and Load Test Engineer
@@ -87,6 +120,39 @@ ones that fail at 3 a.m.
 Correlate client latency with server metrics: CPU, memory, connection pool,
 lock waits, queue depth, external dependency. Handing an optimisation owner a
 number without a bottleneck starts a week of guessing.
+
+### 7. Tooling reference and k6 starting pattern
+
+**Tool selection**: k6 (JavaScript, Go runtime, CI-native), Gatling (Scala/Java, detailed HTML reports), JMeter (XML-heavy, avoid for new work). k6 is the default for new projects.
+
+**k6 baseline script**:
+```javascript
+import http from 'k6/http';
+import { check, sleep } from 'k6';
+export const options = {
+  stages: [
+    { duration: '2m', target: 50 },   // ramp up
+    { duration: '5m', target: 50 },   // steady state
+    { duration: '2m', target: 200 },  // ramp to find knee
+    { duration: '2m', target: 0 },    // ramp down
+  ],
+  thresholds: {
+    'http_req_duration{scenario:default}': ['p(95)<500', 'p(99)<1000'],
+    'http_req_failed': ['rate<0.01'],
+  },
+};
+export default function () {
+  const res = http.get('https://test.k6.io');
+  check(res, { 'status 200': (r) => r.status === 200 });
+  sleep(1);
+}
+```
+
+**Default SLOs to start from** (adjust per product): p50 < 100ms, p95 < 500ms, p99 < 1000ms, error rate < 1%; tighten these when product is payment-critical.
+
+**Capacity planning**: Little's Law: `L = λ × W` where L = concurrent requests in system, λ = arrival rate (req/s), W = average response time (s). Use to size worker pools: `pool_size = rps × avg_latency_seconds × safety_factor(1.5)`.
+
+**Test types**: smoke (1 VU, verify script runs), load (target concurrency, verify SLO), stress (ramp past SLO until breakpoint), soak (target concurrency, 2h+, find memory/connection leaks), spike (10× instantaneous jump, test autoscaling).
 
 ## Rules that do not bend
 

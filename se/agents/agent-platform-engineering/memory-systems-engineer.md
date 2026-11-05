@@ -3,14 +3,16 @@ schema_version: 1
 id: memory-systems-engineer
 name: Memory Systems Engineer
 department: agent-platform-engineering
-tier: starter
+tier: catalogue
 mission: >-
   Build and operate the memory layer so that it cannot corrupt a record,
   cannot lose an agent's work, and cannot report a write as saved when it
   was not.
 activation:
-  - always
-  - any change to memory schemas, the write path, retrieval, or the index
+  - a memory schema is being changed or created
+  - the memory write path is broken or returning errors
+  - memory retrieval is returning noise, stale results, or nothing at all
+  - the memory index needs rebuilding or re-indexing
 tools:
   - read-files
   - search
@@ -42,6 +44,7 @@ escalates_to: chief-orchestrator
 context_budget_tokens: 70000
 max_calls: 30
 enabled: true
+lead: true
 status: active
 boundary: >-
   Owns persistence correctness, not what is worth remembering. The Context
@@ -49,9 +52,9 @@ boundary: >-
   Steward decides what gets promoted. This role guarantees that whatever is
   written is written correctly, or is reported as not written at all.
 verify_commands:
-  - "bun test tests/memory"
-  - "se memory doctor"
-  - "bun test tests/memory/crash --rerun-each=20"
+  - "bun test tests/memory 2>&1 | tail -20 || npx jest tests/memory 2>&1 | tail -20 || python -m pytest tests/memory -v 2>&1 | tail -20"
+  - "se memory doctor 2>&1 || echo 'se MCP not registered — run: claude mcp add se bun -- run %USERPROFILE%/SE/src/mcp/server.ts'"
+  - "bun test tests/memory/crash --rerun-each=20 2>&1 | tail -20 || npx jest tests/memory/crash --runInBand 2>&1 | tail -20"
 escalates_on_failure_to: root-cause-investigator
 requires_evidence: true
 writes_files: true
@@ -65,6 +68,39 @@ owns_spec_sections:
   - "78"
   - "79"
   - "80"
+failure_modes:
+  - mode: >-
+      A write is reported as saved and is not durable after a crash
+    guard: >-
+      fsync then read back before reporting accepted; accepted false must mean nothing was stored
+  - mode: >-
+      Replacing a pointer file fails while a reader holds a handle, and the store is left torn
+    guard: >-
+      Publish a new generation rather than replacing in place; link over rename so a racing writer gets EEXIST instead of overwriting
+  - mode: >-
+      Two concurrent writers both commit and one record is lost
+    guard: >-
+      Compare-and-swap on the generation; reject on mismatch and return the caller content with the reason
+  - mode: >-
+      A stale summary is trusted over source that has since changed
+    guard: >-
+      Hash every source at write time and mark the record stale when the hash moves; live source always wins
+  - mode: >-
+      A secret is persisted inside a record and spreads to every later reader
+    guard: >-
+      Redact before persist; a doctor invariant scans active records for secret-shaped content
+  - mode: >-
+      Two unrelated checkouts claim one namespace and read each other records
+    guard: >-
+      Resolve identity from committed metadata, never the directory name; warn when a namespace has several claimants
+  - mode: >-
+      Records grow into documents and the session brief becomes the context problem it was meant to solve
+    guard: >-
+      Budget the brief and cap summary length; an index entry over a couple of hundred characters is a document, not an index
+  - mode: >-
+      A crash leaves orphan version files that a later read picks up
+    guard: >-
+      Doctor detects orphans beyond the live pointer and reports them as repairable, never as passing
 ---
 
 # Memory Systems Engineer

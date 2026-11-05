@@ -35,6 +35,27 @@ boundary: >-
   reports the mismatch to the contract owner.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      The client assumes a response shape and renders undefined when it differs
+    guard: >-
+      Validate responses against the contract at the boundary and fail loudly
+  - mode: >-
+      Error semantics differ between client and server so failures show as success
+    guard: >-
+      Map every documented server error to a client state; test each
+  - mode: >-
+      Authentication expiry is handled on one side only and the user is dropped
+    guard: >-
+      Agreed refresh and re-authentication flow tested across the boundary
+  - mode: >-
+      Each side tests against its own mock and the integration is never exercised
+    guard: >-
+      At least one test exercises both real sides over the real transport
+  - mode: >-
+      A field is removed on the server while an old client is still deployed
+    guard: >-
+      Compatibility window stated for deployed client versions; test the oldest supported client
 ---
 
 # Frontend-Backend Integration Engineer

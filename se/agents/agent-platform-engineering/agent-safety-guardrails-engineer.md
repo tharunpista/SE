@@ -21,6 +21,7 @@ escalates_to: chief-orchestrator
 context_budget_tokens: 30000
 max_calls: 12
 enabled: true
+stack_aware: true
 status: active
 boundary: >-
   Owns what an agent is permitted to do and what retrieved content may
@@ -29,10 +30,35 @@ boundary: >-
   agent's. It does not provision the workspace that contains a write -- the
   Workspace Isolation Engineer does.
 verify_commands:
-  - "bun test"
+  - "<project test command>"
 escalates_on_failure_to: root-cause-investigator
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      Fetched or tool-returned content is followed as instruction
+    guard: >-
+      Data-not-instruction boundary enforced at the read; an acceptance test embeds an imperative payload in fetched content and asserts it is not obeyed
+  - mode: >-
+      The tool allowlist is checked when rendering and not when calling
+    guard: >-
+      Enforce at invocation; a role declaring a capability the host withholds is refused, not silently downgraded
+  - mode: >-
+      Quarantined content reaches a write path by way of a summary
+    guard: >-
+      Trust tier travels with every derivation; attempt the write in a test and assert refusal
+  - mode: >-
+      Blast radius is unbounded, so one bad run rewrites the repository
+    guard: >-
+      Declared path ownership plus a cap on files touched per run; test a run that writes outside its allocation
+  - mode: >-
+      A guardrail logs the violation and lets it through
+    guard: >-
+      Assert a refusal and a non-zero exit, never the presence of a log line
+  - mode: >-
+      Allowlists drift from the roles they protect and fail open
+    guard: >-
+      Derive the allowlist from role declarations; a capability with no mapping is reported, never dropped
 ---
 
 # Agent Safety and Guardrails Engineer

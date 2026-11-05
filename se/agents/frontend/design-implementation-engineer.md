@@ -36,6 +36,31 @@ boundary: >-
   built as drawn, it says so rather than inventing a compromise.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      The implementation matches the mock at one viewport and breaks between breakpoints
+    guard: >-
+      Verify continuously across the range, not at the three designed widths
+  - mode: >-
+      Real content is longer or shorter than the design and the layout collapses
+    guard: >-
+      Test with minimum, maximum and absent content for every slot
+  - mode: >-
+      Spacing and colour are hand-entered and drift from the design tokens
+    guard: >-
+      Consume tokens only; a literal value in a component is a defect
+  - mode: >-
+      A designed interaction has no specified state for disabled, loading, focus or error
+    guard: >-
+      Enumerate every interactive state with the designer before implementing; an unspecified state is a question
+  - mode: >-
+      Animation is implemented without respecting reduced-motion preference
+    guard: >-
+      Honour the reduced-motion setting; verify with the preference enabled
+  - mode: >-
+      Fidelity is judged by the implementer against memory of the design
+    guard: >-
+      Compare against the approved design artefact and record the deliberate deviations
 ---
 
 # Design Implementation Engineer

@@ -34,6 +34,39 @@ boundary: >-
   Test Architect decides what the suite contains.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      The suite is slow, so people stop running it and red stops meaning anything
+    guard: >-
+      Hold a stated runtime budget; a suite nobody runs protects nothing
+  - mode: >-
+      Tests are not parallel-safe and fail only under parallelism
+    guard: >-
+      Isolate shared resources per worker and run the suite in parallel in CI by default
+  - mode: >-
+      A flaky test is retried automatically and a real race is hidden forever
+    guard: >-
+      Flakes are defects with owners; automatic retries record and report, never silence
+  - mode: >-
+      A green CI run depends on cached artefacts that no longer match the source
+    guard: >-
+      Cache keys include every input; run a periodic cold build
+  - mode: >-
+      Failure output does not identify what broke
+    guard: >-
+      Capture logs, artefacts and timing per failure; an unactionable failure gets ignored
+  - mode: >-
+      The test environment differs from production in a way that hides defects
+    guard: >-
+      State the known differences and justify each; an undocumented difference is a blind spot
+  - mode: >-
+      Test suite grows from 5 minutes to 45 minutes over 2 years; nobody notices because it grows 1 minute per month; developers start skipping CI; test coverage effectively drops to zero
+    guard: >-
+      Test suite duration SLO: unit tests < 2 minutes, integration tests < 10 minutes, E2E tests < 10 minutes (parallelized). Enforce with CI timeout: fail the build if unit tests exceed 2 minutes. Parallelism: GitHub Actions matrix strategy, jest --shard=1/4, Playwright --shard=1/4. Budget each test type independently.
+  - mode: >-
+      Flaky test fails 1 in 20 runs; developer re-runs CI until it passes; flaky test is never fixed; over time 10% of the suite is flaky; CI is untrustworthy; every failure is assumed flaky
+    guard: >-
+      Flaky test quarantine: detect flakiness by running a test 10 times and checking for inconsistent results. When a test is confirmed flaky (fails without code change), move it to a quarantine suite that runs separately and doesn't block merges, but reports to a flaky-test dashboard. SLO: < 1% of tests flaky. Any test flaky for > 1 week is deleted or rewritten.
 ---
 
 # Test Infrastructure Engineer
@@ -140,3 +173,37 @@ Parallel runs are isolated, CI and local environments are pinned identically,
 flakiness is measured and published without retry masking, stages run
 fastest-first, caches cannot produce a false pass, and failures are
 actionable from their output.
+
+## Test parallelization
+
+```yaml
+# GitHub Actions matrix sharding
+jobs:
+  test:
+    strategy:
+      matrix:
+        shard: [1, 2, 3, 4]
+    steps:
+      - run: npx playwright test --shard=${{ matrix.shard }}/4
+      # or for Jest:
+      - run: npx jest --shard=${{ matrix.shard }}/4
+```
+
+## Flaky test detection and quarantine
+
+```bash
+# Detect flakiness: run a test 10 times, check for inconsistent results
+npx jest --testPathPattern="suspected-flaky.test.ts" --forceExit 2>&1 | \
+  grep -E "(PASS|FAIL)" | sort | uniq -c
+# If mix of PASS and FAIL: confirmed flaky → quarantine
+```
+
+```typescript
+// jest.config.ts — quarantine suite
+export default {
+  projects: [
+    { displayName: 'stable', testMatch: ['**/*.test.ts'] },
+    { displayName: 'quarantine', testMatch: ['**/*.flaky.ts'] },
+  ],
+};
+```

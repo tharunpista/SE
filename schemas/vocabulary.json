@@ -20,14 +20,14 @@
     "business-and-product-operations"
   ],
   "department_expected_counts": {
-    "orchestration": 7,
+    "orchestration": 9,
     "product-and-requirements": 10,
     "design-and-ux": 13,
     "architecture": 14,
     "frontend": 15,
     "backend-and-data": 22,
     "integration": 9,
-    "ai-and-agent-systems": 15,
+    "ai-and-agent-systems": 16,
     "quality-and-testing": 19,
     "security-and-privacy": 13,
     "platform-and-operations": 17,
@@ -244,7 +244,11 @@
     "customer-feedback-analysis",
     "partnership-requirement",
     "business-dependency-record",
-    "community-contribution-process"
+    "community-contribution-process",
+    "rag-pipeline",
+    "eval-suite",
+    "permission-audit-log",
+    "skill-invocation-record"
   ],
   "interface_kinds": [
     "frontend-backend",
@@ -259,9 +263,16 @@
     "third-party-external"
   ],
   "capabilities": [
+    "browser-navigate",
+    "browser-read",
     "edit-notebook",
     "escalate",
+    "external-api-call",
+    "file-system-write",
+    "install-dependency",
     "invoke-agent",
+    "invoke-skill",
+    "mcp-connect",
     "memory-read",
     "memory-write",
     "read-files",
@@ -299,7 +310,8 @@
     "departments",
     "doctor",
     "render",
-    "memory"
+    "memory",
+    "skills"
   ],
   "$comment_cli": "Implemented se subcommands. A role may only reference one of these in verify_commands unless it declares the gap in blocked_on. Keeping this list honest is what stops a role from running a command that does not exist and reporting the exit code as a failure of the code under test.",
   "trust_tiers": [

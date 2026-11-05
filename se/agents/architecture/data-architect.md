@@ -34,6 +34,27 @@ boundary: >-
   Modeling Engineer designs the schema within the chosen store.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      Two systems both believe they own the same data and both accept writes
+    guard: >-
+      One authoritative copy per fact with the others explicitly derived and read-only
+  - mode: >-
+      Data is copied between systems with no stated convergence window
+    guard: >-
+      State the freshness and convergence bound per flow, and reconcile with drift reported
+  - mode: >-
+      A reporting need drives a schema change that breaks the transactional model
+    guard: >-
+      Separate the analytical shape from the transactional one; derive rather than overload
+  - mode: >-
+      Personal data spreads into systems not approved to hold its class
+    guard: >-
+      Allowed classes stated per system and enforced at the boundary; test an egress
+  - mode: >-
+      Historical correctness is lost because records are updated in place
+    guard: >-
+      Decide per entity whether history is required, and model it before the first update
 ---
 
 # Data Architect

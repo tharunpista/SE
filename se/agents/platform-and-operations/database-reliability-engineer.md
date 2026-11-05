@@ -33,6 +33,47 @@ stack_aware: true
 escalates_on_failure_to: root-cause-investigator
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      Failover has never been tested and the replica is behind or read-only
+    guard: >-
+      Rehearse failover and measure replica lag and promotion time under load
+  - mode: >-
+      Connection limits are reached and every service fails at once
+    guard: >-
+      Pool sizing stated per consumer with headroom; test saturation deliberately
+  - mode: >-
+      A long-running transaction or vacuum blocks writes at peak
+    guard: >-
+      Monitor long transactions and bloat; schedule maintenance with a tested abort path
+  - mode: >-
+      Point-in-time recovery is assumed and the retention window is shorter than discovery time
+    guard: >-
+      Verify the recovery window against how long a problem takes to notice
+  - mode: >-
+      A schema change is applied directly to the primary at peak
+    guard: >-
+      Change windows and lock-aware DDL, rehearsed on a production-shaped copy
+  - mode: >-
+      Replica reads serve stale data to a flow that cannot tolerate it
+    guard: >-
+      State per-query consistency requirements; route accordingly and test with induced lag
+  - mode: >-
+      10,000 application instances × 20 connections = 200,000 connections; PostgreSQL OOMs or rejects connections; site goes down
+    guard: >-
+      PgBouncer in transaction-mode pooling is mandatory at >10 app instances; `default_pool_size = 20` (connections to actual Postgres), `max_client_conn = 10000` (app-facing); transaction mode gives 50-100× multiplexing; actual Postgres connections stay <200
+  - mode: >-
+      Query performance degrades 10×; no one can diagnose because pg_stat_statements was never enabled
+    guard: >-
+      `CREATE EXTENSION pg_stat_statements`; `log_min_duration_statement = 100` (ms); alert when any query's mean_exec_time increases >2× week-over-week; query: `SELECT query, calls, mean_exec_time FROM pg_stat_statements ORDER BY total_exec_time DESC LIMIT 20`
+  - mode: >-
+      High-churn table accumulates 10M dead tuples; autovacuum can't keep up; query plans degrade; table bloat grows indefinitely
+    guard: >-
+      Monitor: `SELECT relname, n_dead_tup, n_live_tup FROM pg_stat_user_tables WHERE n_dead_tup > 100000 ORDER BY n_dead_tup DESC`; alert when n_dead_tup > 10% of n_live_tup; tune per-table: `ALTER TABLE high_churn SET (autovacuum_vacuum_scale_factor = 0.01)`; never run VACUUM FULL (locks table exclusively)
+  - mode: >-
+      Replication lag grows to 5 minutes; replicas serve stale data; application reads its own writes from replica and sees nothing
+    guard: >-
+      Alert: lag >30s = warning, >60s = page on-call; query on replica: `SELECT now() - pg_last_xact_replay_timestamp() AS lag`; for read-your-writes: route writes and their subsequent reads to primary for 30s (sticky routing), or `synchronous_commit = on` for critical writes
 ---
 
 # Database Reliability Engineer
@@ -67,7 +108,46 @@ successful restore drill.
 
 ## Working procedure
 
-1. Confirm database engine/version, deployment topology, workload, data-loss
+### PgBouncer configuration (mandatory at >10 app instances)
+
+```ini
+[pgbouncer]
+pool_mode = transaction       # returns connection to pool at end of each transaction
+max_client_conn = 10000       # app-facing connection limit
+default_pool_size = 20        # connections to actual Postgres per database
+reserve_pool_size = 5         # emergency reserve
+server_idle_timeout = 600     # close idle Postgres connections after 10 min
+```
+
+Limitation of transaction mode: session-level features (prepared statements across transactions, `SET`, advisory locks held across transactions) don't work. Use statement mode if the app relies on these.
+
+### Key monitoring queries
+
+```sql
+-- Slow queries (pg_stat_statements)
+SELECT query, calls, round(mean_exec_time::numeric, 2) AS mean_ms,
+       round(total_exec_time::numeric, 2) AS total_ms
+FROM pg_stat_statements ORDER BY total_exec_time DESC LIMIT 20;
+
+-- Table bloat
+SELECT relname, n_live_tup, n_dead_tup,
+       round(n_dead_tup::numeric / nullif(n_live_tup,0) * 100, 1) AS dead_pct,
+       last_autovacuum
+FROM pg_stat_user_tables WHERE n_dead_tup > 10000 ORDER BY dead_pct DESC;
+
+-- Replication lag (run on replica)
+SELECT now() - pg_last_xact_replay_timestamp() AS replication_lag;
+
+-- Active connections vs limit
+SELECT count(*), state FROM pg_stat_activity GROUP BY state;
+```
+
+### VACUUM guidance
+
+`VACUUM ANALYZE table` — non-blocking, reclaims dead tuples for reuse.
+`VACUUM FULL table` — **locks table exclusively for duration** — only use in a maintenance window on a table that cannot be accessed. Never in production during business hours.
+
+### 1. Confirm database engine/version, deployment topology, workload, data-loss
    tolerance, and existing RPO/RTO; mark missing values as decisions needed.
 2. Trace failure domains, replicas, connection pools, backups, secrets, and
    dependent services.

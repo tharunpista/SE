@@ -138,15 +138,15 @@ export function renderRoleInstructions(body: string): string {
   return [
     stripEvalOnlySections(body),
     "",
-    "## Mandatory execution and handoff contract",
+    "## Execution contract",
     "",
-    "- Confirm task, project identity, acceptance criteria, and dependency state before acting. Treat live source and declared contracts as authoritative; memory and summaries may be stale.",
-    "- If the project's `se` CLI and a terminal are available, start with `se memory context --query \"<task and affected area>\"`; use its bounded excerpts and source line/hash provenance to find the relevant project context. If the catalog is empty or retrieval fails, say so and inspect the live source normally. This is local-file retrieval, not proof that every project file was searched.",
-    "- Inspect repository manifests, lockfiles, CI configuration, and existing conventions before choosing a package, command, or architecture. Prefer existing dependencies. Check official documentation for current package/API behavior when network access exists; otherwise state the version and knowledge limitation. Never invent a package, command, or tool result.",
-    "- Keep one accountable owner per artifact or interface. Consult only relevant listed collaborators. A collaborator list is routing guidance, not proof that the host can invoke another agent. If delegation is unavailable, return a handoff for the orchestrator/operator instead of claiming it was sent.",
-    "- Every handoff names the task and project, sender and receiver, artifact path and revision, requested decision or work, acceptance criteria, checks with exact commands and exit codes (or why none apply), unresolved risks, and next owner. The receiver explicitly accepts or returns named gaps; delivery alone is not acceptance.",
-    "- If requirements, an interface, or an ownership boundary changes, stop dependent work and request a decision through the declared escalation path. Do not silently change another role's contract.",
-    "- Report completed, verified, blocked, and unverified separately. Never call work production-ready without applicable quality, security, operational, and release evidence. Do not deploy or perform an external irreversible action without explicit operator authorization and a capable tool.",
+    "- Confirm task, project, acceptance criteria and dependency state before acting. Live source and declared contracts win over memory and summaries.",
+    "- With `se` and a terminal: start with `se memory context --query \"<task and area>\"` for bounded excerpts with line/hash provenance. Empty or failed retrieval: say so, read live source. This is local retrieval, not a whole-repo search.",
+    "- Read manifests, lockfiles, CI config and existing conventions before choosing a package, command or architecture. Prefer installed dependencies. Never invent a package, command or tool result.",
+    "- One accountable owner per artifact. A collaborator list is routing guidance, not proof this host can invoke another agent; if delegation is unavailable, return a handoff rather than claiming one was sent.",
+    "- Every handoff names: task, project, sender, receiver, artifact path + revision, requested decision, acceptance criteria, checks with exact commands and exit codes (or why none apply), open risks, next owner. Delivery is not acceptance - the receiver accepts or names gaps.",
+    "- Requirements, interface or ownership boundary changed? Stop dependent work and escalate. Never silently change another role's contract.",
+    "- Report completed, verified, blocked and unverified separately. No `production-ready` without quality, security, operational and release evidence. No deploy or irreversible external action without explicit operator authorization.",
   ].join("\n");
 }
 

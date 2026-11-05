@@ -35,6 +35,55 @@ boundary: >-
   authentication layer.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      A session identifier survives privilege change, allowing fixation
+    guard: >-
+      Rotate the session on authentication and on privilege change; test that the pre-login identifier is rejected
+  - mode: >-
+      Logout clears the client and leaves the server session valid
+    guard: >-
+      Server-side invalidation on logout; test the old token after logout
+  - mode: >-
+      A token is validated for signature but not for audience, issuer or expiry
+    guard: >-
+      Verify every claim including audience, issuer, expiry and not-before; test a token from another audience
+  - mode: >-
+      Refresh tokens are long-lived and never rotated or revocable
+    guard: >-
+      Rotate on use with reuse detection; test replay of a consumed refresh token
+  - mode: >-
+      The redirect target after authentication is taken from the request
+    guard: >-
+      Allowlist redirect targets; test an external target and an encoded bypass
+  - mode: >-
+      Clock skew between issuer and verifier rejects or accepts tokens wrongly
+    guard: >-
+      Bounded, stated leeway; test at the boundary in both directions
+  - mode: >-
+      Account enumeration through differing error messages or timing
+    guard: >-
+      Uniform response and timing for unknown user and wrong credential; test both paths
+  - mode: >-
+      Credential stuffing: automated login attempts using leaked username/password pairs succeed because there is no rate limiting or anomaly detection on the auth endpoint
+    guard: >-
+      Rate limiting per IP and per username on login (not same as general rate limiting — this must survive load balancers with real IP forwarding); CAPTCHA or proof-of-work after N failures; alert on burst failure rate from a single IP; test with 100 rapid login attempts from one IP
+  - mode: >-
+      Mobile app stores access tokens in platform-default storage (NSUserDefaults on iOS, SharedPreferences on Android); rooted/jailbroken device exposes them in plaintext
+    guard: >-
+      Store tokens in the platform secure enclave: iOS Keychain (kSecAttrAccessible = kSecAttrAccessibleWhenUnlockedThisDeviceOnly), Android Keystore; never store in SharedPreferences, NSUserDefaults, or app storage; test that tokens are absent in a filesystem dump
+  - mode: >-
+      Mobile OAuth uses the implicit flow or omits PKCE; authorization code is intercepted by a malicious app registered to handle the same redirect scheme
+    guard: >-
+      Mobile MUST use Authorization Code flow with PKCE (RFC 7636): generate a cryptographically random code_verifier (43–128 chars), compute code_challenge = BASE64URL(SHA256(code_verifier)), send code_challenge_method=S256; the implicit flow is deprecated in OAuth 2.1 and MUST NOT be used; test with a modified redirect URI and verify the authorization code cannot be exchanged without the matching verifier
+  - mode: >-
+      High-value actions (payment, email change, API key rotation) proceed on a valid session with no step-up; a stolen session completes the action
+    guard: >-
+      Require MFA step-up for high-value actions: re-prompt TOTP/biometric and issue a short-lived (≤5 min) step-up token scoped to that action; TOTP backup/recovery codes must be hashed with argon2id or bcrypt, never stored plaintext; minimum entropy for recovery codes: 8 groups of 6 alphanumeric characters (≈48-bit effective entropy); test that a session valid for browsing cannot complete the high-value action without step-up
+  - mode: >-
+      Refresh tokens are issued and never rotated; a stolen refresh token gives indefinite access
+    guard: >-
+      Refresh token rotation on every use (RFC 6749 §10.4): when a refresh token is used, issue a new one and invalidate the old; if the old refresh token is used again (reuse detected), immediately revoke the entire token family (all tokens issued from that authorization grant); this detects silent theft; test: use a refresh token, capture the new one, replay the original — verify the entire session is revoked
 ---
 
 # Identity and Access Integration Engineer
@@ -70,6 +119,32 @@ a user believes it does, including on other devices where that is promised.
 
 A refresh token used twice is either a race or a theft. Rotate on every use
 and treat reuse as a security event rather than a retry.
+
+**Refresh token family invalidation (the standard, not the minimum):**
+Issue a `family_id` on initial authorization. Every rotation records the new token and the family. On reuse detection, delete every token in that family. A stolen token used by an attacker after the legitimate user has already rotated triggers revocation of the attacker's new token too.
+
+### 3a. Mobile OAuth: PKCE is not optional
+
+For native and mobile apps, the OAuth redirect URI is a custom scheme (`myapp://callback`) that any app on the device can register. Without PKCE, an attacker app that intercepts the authorization code can exchange it for tokens.
+
+Correct mobile OAuth flow:
+1. Generate `code_verifier`: 32 random bytes, base64url-encoded (no padding)
+2. `code_challenge = BASE64URL(SHA256(ASCII(code_verifier)))`
+3. Send `code_challenge` and `code_challenge_method=S256` in the authorization request
+4. Exchange the code with the original `code_verifier` — the server rejects an exchange without a matching verifier
+
+Libraries: `AppAuth-iOS`, `AppAuth-Android` implement this correctly. Never implement manually.
+
+### 3b. MFA step-up for high-value actions
+
+A valid session does not imply authorization for irreversible or high-value actions. Define a step-up tier:
+- Tier 1 (session): browsing, reading data
+- Tier 2 (step-up required): payment initiation, email/phone change, adding payment method, API key creation
+- Tier 3 (re-auth required): account deletion, password change, adding MFA device
+
+Step-up token: short-lived (≤5 minutes), single-use, scoped to the specific action. Never reusable across different high-value actions.
+
+Recovery code storage: `argon2id(recovery_code, salt, m=65536, t=3, p=4)`. Never bcrypt for recovery codes longer than 72 bytes (bcrypt silently truncates). Never store recovery codes in plaintext anywhere including logs.
 
 ### 4. Give services their own identity
 

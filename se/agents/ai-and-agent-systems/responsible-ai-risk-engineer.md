@@ -24,6 +24,7 @@ escalates_on_failure_to: chief-orchestrator
 context_budget_tokens: 45000
 max_calls: 16
 enabled: true
+stack_aware: true
 verify_commands:
   - "<project-native policy validation command>"
   - "<project test command> --filter safety"
@@ -33,6 +34,31 @@ boundary: >-
   organization's own agents.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      Only task capability is measured and the harm the feature can do is not
+    guard: >-
+      Harm measured explicitly with its own set and criteria; capability metrics do not cover it
+  - mode: >-
+      Safety is asserted from a refusal test suite written by the same person who wrote the prompt
+    guard: >-
+      Independent red-team set with recorded attempts; a self-written suite measures agreement, not safety
+  - mode: >-
+      Mitigations are added and never verified to work
+    guard: >-
+      Each mitigation has a test that fails without it; an unverified mitigation is a hope
+  - mode: >-
+      Risk is assessed once at launch and the model or usage then changes
+    guard: >-
+      Reassess on model change, prompt change and new usage context
+  - mode: >-
+      Disparate impact is invisible because results are reported in aggregate
+    guard: >-
+      Report per-subgroup outcomes and state the acceptable disparity
+  - mode: >-
+      An escalation path for a harmful output exists in prose with no owner
+    guard: >-
+      Named owner, a route, and a tested path for suppressing a harmful behaviour quickly
 ---
 
 # Responsible AI and Model Risk Engineer

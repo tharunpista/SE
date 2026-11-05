@@ -34,6 +34,47 @@ boundary: >-
   between services; a queue used as a work buffer is this role's.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      A redelivered job applies its effect twice
+    guard: >-
+      Idempotent on the job or message id, with processed ids recorded; test duplicate delivery
+  - mode: >-
+      A job fails permanently and disappears with nobody notified
+    guard: >-
+      Dead-letter destination with an owner and an alert; a silently dropped job is lost work
+  - mode: >-
+      Retries are immediate and hammer a failing dependency
+    guard: >-
+      Exponential backoff with jitter and a retry cap; distinguish retryable from terminal failures
+  - mode: >-
+      A job runs twice concurrently because the schedule overlaps its runtime
+    guard: >-
+      Overlap prevention by lock or lease; test a run longer than its interval
+  - mode: >-
+      A long job is killed mid-way and leaves partial state
+    guard: >-
+      Checkpointed and resumable, or transactional; kill it mid-run and assert a consistent state
+  - mode: >-
+      Queue depth grows and the first anyone knows is a user complaint
+    guard: >-
+      Alert on depth and oldest-message age, not only on error rate
+  - mode: >-
+      A poison-pill job (bad payload, corrupt reference, unhandled edge case) retries to its limit, populates the DLQ, and nobody acts on it; similar jobs keep arriving and the DLQ fills silently
+    guard: >-
+      DLQ must have an owner, a retention period, a replay script, and an alert with a stated response SLA; DLQ depth > 0 is a paging alert, not a ticket; every DLQ entry is inspected and the root cause fixed before bulk replay; replay in small batches to avoid re-saturating the main queue
+  - mode: >-
+      A spike of job failures causes immediate retries across all workers; the dependency they hit receives N × retry_count requests simultaneously — a retry storm identical to the cascade it was retrying against
+    guard: >-
+      Retry backoff must include full jitter (not just exponential); cap total retry concurrency at the worker level, not just per job; use a circuit breaker: if failure rate exceeds threshold, stop scheduling retries for that job type for a backoff window
+  - mode: >-
+      Producers enqueue faster than workers process; queue grows unbounded, memory or storage exhausts, and workers crash under the backlog
+    guard: >-
+      Apply backpressure from the queue to the producer: if queue depth > high-water mark, enqueue calls block or return a 429 that the caller must handle; size the queue explicitly; workers report their processing rate; alert when inbound rate > drain rate × 1.2 for more than 5 minutes
+  - mode: >-
+      A fan-out job spawns child jobs proportional to payload size; one large input creates thousands of child jobs and exhausts worker concurrency for all other job types
+    guard: >-
+      Fan-out jobs use a dedicated queue or pool separate from normal-priority work; child job count is bounded per parent; oversized inputs are split upstream before enqueue, not inside the job
 ---
 
 # Background Job Engineer
@@ -82,7 +123,33 @@ Timezones, daylight saving, missed runs after an outage, overlapping runs, and
 the "catch up or skip" decision. A cron job with no overlap guard eventually
 runs twice at once and corrupts something.
 
-### 6. Make queue health observable
+### 6a. Dead-letter discipline
+
+A dead-letter queue with no process around it is a deletion. The process is:
+alert on first entry → investigate root cause → fix → replay a single
+verified message → confirm no re-failure → replay remaining in batches (100,
+pause, 1000, pause, rest). Never replay the whole DLQ atomically — a fix that
+looks correct on one message sometimes fails at scale, and you will have
+refilled it.
+
+Retain DLQ entries for at least twice your longest debug-and-fix cycle (a
+week minimum). If entries are expiring before anyone looks, that is a staffing
+or alerting problem, not a retention problem.
+
+### 6b. Backpressure from queue to producers
+
+A queue with no backpressure mechanism is a buffer that absorbs a spike by
+growing until it crashes. Design backpressure before the first producer is
+wired:
+
+- State the target drain rate (messages/s per worker instance).
+- Alert when inbound rate exceeds drain rate × 1.2 sustained for 5 minutes.
+- If the queue supports it (SQS does not; Redis does via LLEN), block or
+  rate-limit producers when depth exceeds the high-water mark.
+- Autoscale workers on oldest-message-age, not queue depth — depth is a
+  lagging indicator if messages vary in processing cost.
+
+### 7. Make queue health observable
 
 Depth, oldest message age, failure rate and processing time per job type, with
 alerts on the age rather than only the depth. A queue draining steadily while

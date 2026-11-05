@@ -34,6 +34,31 @@ boundary: >-
   Engineer owns the allowlist and blast-radius policy.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      A tool description is ambiguous and the agent calls it for the wrong purpose
+    guard: >-
+      One purpose per tool with the boundary stated; measure selection accuracy against labelled tasks
+  - mode: >-
+      A tool has unbounded blast radius and one wrong call is unrecoverable
+    guard: >-
+      Scope each tool to the narrowest effect that serves it; irreversible effects are separate and gated
+  - mode: >-
+      A tool returns an unbounded payload straight into context
+    guard: >-
+      Cap returned size and paginate or spill; an unbounded result is charged every turn thereafter
+  - mode: >-
+      Tool errors are returned as prose and the agent cannot distinguish retryable from terminal
+    guard: >-
+      Structured error with a retryable flag; test each documented failure
+  - mode: >-
+      A tool accepts free-form input and is used to reach beyond its intent
+    guard: >-
+      Validate and constrain arguments at the tool boundary; test traversal and injection payloads
+  - mode: >-
+      Adding tools degrades selection because every description is resident
+    guard: >-
+      Measure the cost and the selection accuracy as the set grows; prefer fewer, sharper tools
 ---
 
 # Agent Tooling Engineer

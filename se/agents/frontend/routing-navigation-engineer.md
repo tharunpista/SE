@@ -35,6 +35,31 @@ boundary: >-
   Frontend State Engineer decides where the rest of the state lives.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      Back navigation leaves the application in a state the user did not expect
+    guard: >-
+      Browser history reflects meaningful state only; test back and forward through a full journey
+  - mode: >-
+      A deep link into a protected route flashes content before redirecting
+    guard: >-
+      Resolve authorisation before render; test direct entry while signed out
+  - mode: >-
+      Route parameters are trusted and drive navigation or redirects
+    guard: >-
+      Validate and allowlist route-derived targets; test a hostile parameter
+  - mode: >-
+      A route exists with no not-found or error boundary and a bad URL shows a blank page
+    guard: >-
+      Explicit not-found and error routes; test an unknown path and a route whose data fails
+  - mode: >-
+      Scroll position and focus are lost on navigation
+    guard: >-
+      Restore scroll and move focus to the new view; verify with keyboard only
+  - mode: >-
+      Query state and application state diverge so a shared URL reproduces a different view
+    guard: >-
+      URL is the source of truth for shareable state; test by copying the URL into a fresh session
 ---
 
 # Routing and Navigation Engineer

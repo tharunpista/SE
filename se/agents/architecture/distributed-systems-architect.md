@@ -35,6 +35,31 @@ boundary: >-
   this behaviour has to meet.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      The design assumes a call either succeeds or fails, and ignores the timeout that did both
+    guard: >-
+      Treat unknown outcomes as a first-class case; every mutation is idempotent or reconciled
+  - mode: >-
+      Consistency is assumed across services because each is individually transactional
+    guard: >-
+      Name the inconsistency window per flow and the reconciliation that closes it
+  - mode: >-
+      Retries are designed per hop and multiply into a storm
+    guard: >-
+      A retry budget for the whole request, with backoff and a circuit breaker at one layer
+  - mode: >-
+      A slow dependency is handled as though it were a dead one
+    guard: >-
+      Bound every wait; partial slowness is the common failure and the harder one
+  - mode: >-
+      Clock-based ordering is assumed between machines
+    guard: >-
+      Order by logical sequence or version, never by wall clock
+  - mode: >-
+      The design survives one failure in testing and cascading failure in production
+    guard: >-
+      State the degradation mode under load shedding and test the cascade deliberately
 ---
 
 # Distributed Systems Architect
@@ -87,10 +112,29 @@ exactly one behaviour under failure, which is to fail entirely.
 
 ### 6. Never let a distributed transaction be implied
 
-Where two systems must agree, state the mechanism: outbox, saga with
-compensations, or an accepted window of inconsistency with a reconciliation
-job. Two writes in sequence with a comment hoping both succeed is the default
-and it is wrong.
+Where two systems must agree, state the mechanism explicitly. Two writes in
+sequence with a comment hoping both succeed is the default and it is wrong.
+
+**Saga pattern** — use when a business transaction spans multiple services
+and each service has its own database:
+
+- *Choreography*: each service emits an event on success; downstream services
+  react; on failure each service emits a compensating event (OrderCreated →
+  PaymentProcessed → InventoryReserved; on InventoryFailed → PaymentRefunded
+  → OrderCancelled). No central coordinator; works well for 3–5 services.
+- *Orchestration*: a saga orchestrator sends commands to each service and
+  handles compensations centrally (Temporal, AWS Step Functions). Required
+  when the flow has >5 steps, long-running waits, or complex branching.
+
+**Consistency model selection per data item**:
+
+| Model | Guarantee | Use when | Example stores |
+|---|---|---|---|
+| Linearizable | Reads see the latest write globally | Financial balances, inventory counts, auth sessions | etcd, Zookeeper, single-leader Postgres |
+| Causal | Reads see writes that causally precede them | User profile reads own writes, comment threads | CockroachDB (serializable), DynamoDB (session consistency) |
+| Eventual | Replicas converge at some future time | Social feeds, analytics counts, search indexes | Cassandra, DynamoDB (eventual), Redis replication |
+
+Pick per data item, not per system. Financial → CP (linearizable). Social feeds → AP (eventual). Never choose "eventual" for data where a stale read causes a user-visible or business-critical error.
 
 ## Rules that do not bend
 

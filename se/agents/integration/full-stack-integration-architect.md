@@ -33,6 +33,27 @@ boundary: >-
   decides which side does what before that contract is drafted.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      Each layer is designed well and the seams between them are nobody responsibility
+    guard: >-
+      Seams named with an owner and a contract each; an unowned seam is where failures live
+  - mode: >-
+      A cross-cutting concern such as identity or correlation is solved differently per layer
+    guard: >-
+      One stated approach per cross-cutting concern, enforced across layers
+  - mode: >-
+      End-to-end latency is never budgeted, only per-service latency
+    guard: >-
+      Allocate an end-to-end budget across hops and verify the total, not the parts
+  - mode: >-
+      Failure behaviour is defined per service and undefined for the whole journey
+    guard: >-
+      State the user-visible outcome for each dependency failure along the journey and test it
+  - mode: >-
+      An architectural decision is made in one layer and silently constrains another
+    guard: >-
+      Decisions record their cross-layer consequences and the affected owners
 ---
 
 # Full-Stack Integration Architect

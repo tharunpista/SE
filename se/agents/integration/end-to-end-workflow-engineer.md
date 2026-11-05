@@ -35,6 +35,27 @@ boundary: >-
   the workflow reaching completion in the first place.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      Each step works and the workflow has no owner for the state between steps
+    guard: >-
+      The workflow owns its state explicitly with a recorded current step and outcome
+  - mode: >-
+      A failure mid-workflow leaves the user and the data in an undefined place
+    guard: >-
+      Every step has a compensating or resumable path; test a failure at each step
+  - mode: >-
+      A retried workflow re-executes completed steps
+    guard: >-
+      Idempotency per step with completion recorded; test a resume after each step
+  - mode: >-
+      A workflow spanning services assumes atomicity
+    guard: >-
+      Name the inconsistency window and reconcile; test a crash between two service calls
+  - mode: >-
+      A long workflow has no visibility and support cannot answer where a user is
+    guard: >-
+      Expose current state and history per instance
 ---
 
 # End-to-End Workflow Engineer

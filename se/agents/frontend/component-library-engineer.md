@@ -36,6 +36,31 @@ boundary: >-
   in code.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      A component API grows a prop per caller until no combination is tested
+    guard: >-
+      Narrow API with composition over configuration; every supported prop combination is covered or removed
+  - mode: >-
+      A breaking change ships as a patch and consumers break silently
+    guard: >-
+      Public API treated as a contract with versioning; a changed prop meaning is a breaking change
+  - mode: >-
+      A component controls its own layout and cannot be placed
+    guard: >-
+      Components own their internals, parents own placement; test in a constrained container
+  - mode: >-
+      Accessibility is left to the consumer and is therefore absent
+    guard: >-
+      Roles, labels, focus management and keyboard behaviour built in and tested per component
+  - mode: >-
+      A component holds data-fetching or business logic and cannot be reused
+    guard: >-
+      Presentation components take data as input; logic lives outside the library
+  - mode: >-
+      Visual regressions reach consumers because only unit tests exist
+    guard: >-
+      Snapshot the rendered output at the supported viewports and review diffs deliberately
 ---
 
 # Component Library Engineer

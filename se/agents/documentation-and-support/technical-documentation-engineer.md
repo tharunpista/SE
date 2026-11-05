@@ -22,6 +22,8 @@ escalates_to: chief-orchestrator
 context_budget_tokens: 30000
 max_calls: 12
 enabled: true
+stack_aware: true
+lead: true
 status: active
 boundary: >-
   Owns architecture, setup and operational documentation for people who run or
@@ -36,6 +38,31 @@ verify_commands:
 escalates_on_failure_to: root-cause-investigator
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      A documented command or signature was written from memory and does not exist
+    guard: >-
+      Every command and signature copied from a verified run or the installed source; documentation errors do not fail a compiler
+  - mode: >-
+      Documentation is accurate at writing and silently rots as the system changes
+    guard: >-
+      Tie docs to a verifiable source and re-check on release; state the version the document applies to
+  - mode: >-
+      Setup instructions work only on the author machine
+    guard: >-
+      A fresh environment completes them from the written steps, verified on a clean machine
+  - mode: >-
+      Operational documentation describes the happy path and not the failure
+    guard: >-
+      Document the failure modes, their symptoms and the recovery action
+  - mode: >-
+      Documentation duplicates a fact that lives in code and the two diverge
+    guard: >-
+      Reference or generate from the source of truth rather than restating it
+  - mode: >-
+      A document has no owner and nobody notices it is wrong
+    guard: >-
+      Each document names an owner and a review trigger
 ---
 
 # Technical Documentation Engineer

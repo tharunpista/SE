@@ -12,14 +12,14 @@ Exactly one role is accountable per artifact kind. Others contribute.
 | `agent-tool-spec` | `agent-tooling-engineer` | — | `agent-systems-engineer` |
 | `agent-trace` | `agent-observability-engineer` | — | `agent-systems-engineer`, `agent-tooling-engineer`, `ai-workflow-engineer`, `observability-engineer`, `prompt-role-definition-engineer` |
 | `ai-evaluation-set` | `ai-evaluation-engineer` | — | `ai-data-engineer`, `ai-systems-architect`, `llm-application-engineer`, `ml-engineer`, `model-lifecycle-deprecation-engineer`, `model-performance-engineer`, `prompt-role-definition-engineer`, `responsible-ai-risk-engineer`, `retrieval-knowledge-engineer` |
-| `ai-system-design` | `ai-systems-architect` | — | `ai-evaluation-engineer`, `llm-application-engineer`, `ml-engineer`, `responsible-ai-risk-engineer` |
+| `ai-system-design` | `ai-systems-architect` | — | `ai-evaluation-engineer`, `ai-systems-lead`, `llm-application-engineer`, `ml-engineer`, `responsible-ai-risk-engineer` |
 | `ai-workflow` | `ai-workflow-engineer` | — | `agent-systems-engineer`, `agent-tooling-engineer` |
 | `analytical-dataset` | `analytics-engineer` | — | `ai-data-engineer`, `data-pipeline-engineer`, `data-quality-engineer`, `ml-engineer`, `product-data-analyst` |
 | `android-application` | `android-application-engineer` | — | — |
 | `api-convention` | `api-contract-owner` | — | `api-architect` |
 | `api-documentation` | `api-documentation-engineer` | — | `agent-tooling-engineer`, `api-architect`, `api-contract-owner` |
 | `api-endpoint` | `backend-lead` | — | `api-contract-owner`, `backend-service-engineer`, `file-object-storage-engineer`, `frontend-backend-integration-engineer`, `identity-access-integration-engineer` |
-| `architecture-decision` | `solution-architect` | — | `ai-systems-architect`, `api-architect`, `application-architect`, `architecture-decision-analyst`, `chief-orchestrator`, `decision-recorder`, `distributed-systems-architect`, `full-stack-integration-architect`, `integration-architect`, `migration-modernization-architect`, `performance-architect`, `principal-architect`, `reliability-architect`, `root-cause-investigator`, `technical-debt-analyst`, `technical-feasibility-engineer` |
+| `architecture-decision` | `solution-architect` | — | `ai-systems-architect`, `ai-systems-lead`, `api-architect`, `application-architect`, `architecture-decision-analyst`, `chief-orchestrator`, `decision-recorder`, `distributed-systems-architect`, `full-stack-integration-architect`, `integration-architect`, `migration-modernization-architect`, `performance-architect`, `principal-architect`, `reliability-architect`, `root-cause-investigator`, `technical-debt-analyst`, `technical-feasibility-engineer` |
 | `authorization-model` | `authorization-model-engineer` | — | `identity-access-integration-engineer`, `security-architect` |
 | `backend-performance-budget` | `backend-performance-engineer` | — | `caching-engineer`, `database-engineer`, `observability-engineer`, `performance-architect`, `performance-load-test-engineer`, `realtime-systems-engineer`, `search-engineer` |
 | `backend-service` | `backend-lead` | — | `backend-service-engineer`, `background-job-engineer`, `concurrency-transaction-engineer`, `domain-logic-engineer` |
@@ -37,7 +37,7 @@ Exactly one role is accountable per artifact kind. Others contribute.
 | `compliance-control-map` | `compliance-control-engineer` | — | `cryptography-key-management-engineer`, `data-governance-steward`, `data-retention-deletion-engineer`, `privacy-engineer`, `responsible-ai-risk-engineer`, `security-architect`, `security-incident-responder` |
 | `component-test` | `frontend-test-engineer` | — | `accessibility-test-engineer`, `component-library-engineer`, `forms-validation-engineer`, `frontend-application-engineer`, `frontend-state-engineer` |
 | `concurrency-review` | `concurrency-transaction-engineer` | — | `data-flow-state-consistency-engineer`, `distributed-systems-architect` |
-| `context-assembly-policy` | `context-engineer` | — | `ai-workflow-engineer`, `memory-systems-engineer`, `prompt-role-definition-engineer`, `retrieval-knowledge-engineer` |
+| `context-assembly-policy` | `context-engineer` | — | `ai-systems-lead`, `ai-workflow-engineer`, `memory-systems-engineer`, `prompt-role-definition-engineer`, `retrieval-knowledge-engineer` |
 | `contract-test` | `contract-test-engineer` | — | `api-contract-owner`, `external-integration-engineer`, `frontend-data-fetching-engineer`, `integration-test-engineer`, `messaging-event-engineer` |
 | `cost-ledger` | `token-cost-governance-engineer` | — | `capacity-cost-engineer`, `context-engineer`, `model-integration-engineer`, `model-performance-engineer`, `workload-capacity-planner` |
 | `cross-platform-mobile-implementation` | `cross-platform-mobile-engineer` | — | — |
@@ -70,6 +70,7 @@ Exactly one role is accountable per artifact kind. Others contribute.
 | `environment-config` | `environment-configuration-engineer` | — | `devops-engineer`, `infrastructure-as-code-engineer`, `integration-environment-engineer`, `secrets-management-engineer` |
 | `error-taxonomy` | `api-contract-owner` | — | `error-recovery-integration-specialist`, `external-integration-engineer`, `full-stack-integration-architect`, `integration-architect`, `journey-workflow-designer`, `ux-content-designer` |
 | `escalation-record` | `operations-coordinator` | — | — |
+| `eval-suite` | `llm-application-engineer` | — | — |
 | `event-schema` | `messaging-event-engineer` | — | `backend-lead`, `background-job-engineer`, `data-flow-state-consistency-engineer`, `distributed-systems-architect`, `realtime-systems-engineer` |
 | `experiment-design` | `experimentation-specialist` | — | `product-data-analyst` |
 | `external-integration` | `external-integration-engineer` | — | `integration-architect`, `model-integration-engineer`, `notification-delivery-engineer` |
@@ -109,7 +110,7 @@ Exactly one role is accountable per artifact kind. Others contribute.
 | `mobile-performance-budget` | `mobile-performance-engineer` | — | `compatibility-test-engineer` |
 | `model-binding` | `model-integration-engineer` | — | `llm-application-engineer`, `model-lifecycle-deprecation-engineer` |
 | `model-invocation` | `llm-application-engineer` | — | `agent-systems-engineer`, `ai-systems-architect`, `ai-workflow-engineer`, `context-engineer`, `model-integration-engineer`, `model-performance-engineer` |
-| `model-risk-assessment` | `responsible-ai-risk-engineer` | — | `ai-evaluation-engineer`, `ai-systems-architect`, `ml-engineer`, `privacy-engineer` |
+| `model-risk-assessment` | `responsible-ai-risk-engineer` | — | `ai-evaluation-engineer`, `ai-systems-architect`, `ai-systems-lead`, `ml-engineer`, `privacy-engineer` |
 | `model-version-pin` | `model-lifecycle-deprecation-engineer` | — | `ai-evaluation-engineer`, `model-integration-engineer` |
 | `module-boundary` | `solution-architect` | — | `application-architect`, `domain-architect`, `principal-architect` |
 | `network-config` | `networking-engineer` | — | `cloud-infrastructure-engineer` |
@@ -123,6 +124,7 @@ Exactly one role is accountable per artifact kind. Others contribute.
 | `pentest-report` | `offensive-security-engineer` | — | — |
 | `performance-budget` | `performance-architect` | — | `capacity-cost-engineer`, `model-performance-engineer`, `performance-load-test-engineer`, `solution-architect`, `technical-feasibility-engineer` |
 | `performance-test` | `performance-load-test-engineer` | — | `backend-performance-engineer`, `performance-architect` |
+| `permission-audit-log` | `permissions-broker` | — | — |
 | `positioning` | `product-marketing-specialist` | — | `market-competitive-analyst` |
 | `pricing-model` | `pricing-packaging-analyst` | — | `market-competitive-analyst` |
 | `privacy-data-map` | `privacy-engineer` | — | `ai-data-engineer`, `compliance-control-engineer`, `data-governance-steward`, `data-retention-deletion-engineer`, `notification-delivery-engineer`, `test-data-engineer` |
@@ -134,6 +136,7 @@ Exactly one role is accountable per artifact kind. Others contribute.
 | `prototype` | `prototype-specialist` | — | `technical-feasibility-engineer` |
 | `provenance-record` | `decision-recorder` | — | `architecture-decision-analyst`, `knowledge-steward`, `prompt-role-definition-engineer` |
 | `push-notification-config` | `push-notification-engineer` | — | — |
+| `rag-pipeline` | `llm-application-engineer` | — | — |
 | `realtime-channel` | `realtime-systems-engineer` | — | — |
 | `realtime-protocol` | `realtime-systems-engineer` | — | `networking-engineer` |
 | `regression-test` | `regression-test-engineer` | — | `defect-triage-engineer`, `e2e-test-engineer`, `exploratory-test-engineer`, `frontend-test-engineer`, `fuzz-property-test-engineer`, `qa-lead`, `root-cause-investigator` |
@@ -160,10 +163,11 @@ Exactly one role is accountable per artifact kind. Others contribute.
 | `security-test-suite` | `security-test-engineer` | — | `application-security-engineer`, `authorization-model-engineer`, `fuzz-property-test-engineer`, `offensive-security-engineer`, `vulnerability-management-engineer` |
 | `seo-metadata` | `seo-web-metadata-engineer` | — | `information-architect` |
 | `service-worker` | `offline-pwa-engineer` | — | — |
+| `skill-invocation-record` | `skill-router` | — | — |
 | `slo-definition` | `site-reliability-engineer` | — | `capacity-cost-engineer`, `incident-response-coordinator`, `networking-engineer`, `observability-engineer`, `platform-architect`, `reliability-architect` |
 | `store-submission-record` | `mobile-release-compliance-engineer` | — | — |
 | `support-article` | `support-knowledge-engineer` | — | `incident-response-coordinator`, `ux-content-designer` |
-| `system-architecture` | `solution-architect` | — | `ai-systems-architect`, `application-architect`, `data-architect`, `distributed-systems-architect`, `domain-architect`, `full-stack-integration-architect`, `platform-architect`, `principal-architect`, `reliability-architect`, `security-architect` |
+| `system-architecture` | `solution-architect` | — | `ai-systems-architect`, `ai-systems-lead`, `application-architect`, `data-architect`, `distributed-systems-architect`, `domain-architect`, `full-stack-integration-architect`, `platform-architect`, `principal-architect`, `reliability-architect`, `security-architect` |
 | `task-record` | `chief-orchestrator` | — | `operations-coordinator`, `project-manager`, `requirements-engineer`, `technical-program-manager`, `workload-capacity-planner` |
 | `technical-debt-record` | `technical-debt-analyst` | — | `application-architect`, `architecture-decision-analyst`, `independent-technical-reviewer`, `migration-modernization-architect`, `model-lifecycle-deprecation-engineer`, `principal-architect`, `root-cause-investigator`, `technical-feasibility-engineer`, `vulnerability-management-engineer` |
 | `technical-documentation` | `technical-documentation-engineer` | — | `license-compliance-engineer` |

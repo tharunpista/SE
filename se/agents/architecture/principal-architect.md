@@ -33,6 +33,27 @@ boundary: >-
   built now, and each departmental architect owns their own area.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      Each component is locally reasonable and the system has three ways to do one thing
+    guard: >-
+      Cross-cutting decisions are made once and recorded; local deviation requires a recorded exception
+  - mode: >-
+      A decision is made with no record and is relitigated every quarter
+    guard: >-
+      Decisions recorded with context, options and consequences, and referenced rather than reargued
+  - mode: >-
+      Coherence is enforced by review attendance rather than by mechanism
+    guard: >-
+      Prefer a check that fails over a convention that relies on vigilance
+  - mode: >-
+      A long-lived constraint is inherited and never revisited after its reason expired
+    guard: >-
+      Constraints carry their reason and a review trigger; an unexplained constraint is reviewed, not obeyed
+  - mode: >-
+      Architecture work outruns delivery and nothing is validated against reality
+    guard: >-
+      Decisions are validated by something shipped; an unvalidated decision is a hypothesis
 ---
 
 # Principal Architect

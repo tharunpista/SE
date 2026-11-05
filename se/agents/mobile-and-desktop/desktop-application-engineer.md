@@ -22,6 +22,7 @@ escalates_to: solution-architect
 context_budget_tokens: 30000
 max_calls: 12
 enabled: true
+stack_aware: true
 status: active
 boundary: >-
   Owns what the application does once it is running on a desktop: windows,
@@ -36,6 +37,31 @@ verify_commands:
 escalates_on_failure_to: root-cause-investigator
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      Window and multi-window state is lost on relaunch or on a display change
+    guard: >-
+      Persist and restore per-window geometry and validate against current displays; test unplugging a monitor
+  - mode: >-
+      Platform conventions are implemented once and feel wrong on the other systems
+    guard: >-
+      Menu structure, shortcuts and dialog order follow each platform convention; verify on every supported OS
+  - mode: >-
+      A file path assembled from strings breaks on a different separator or a unicode name
+    guard: >-
+      Platform path APIs only; test spaces, unicode and very long paths
+  - mode: >-
+      Long work on the UI thread freezes the window and the OS marks the app unresponsive
+    guard: >-
+      Background the work and keep the UI responsive; verify the OS does not report unresponsiveness
+  - mode: >-
+      The app assumes write access to its install directory and fails for a standard user
+    guard: >-
+      Write only to per-user data locations; test as a non-administrator account
+  - mode: >-
+      A second instance launches and two processes fight over the same local state
+    guard: >-
+      Single-instance enforcement with activation of the existing window; test launching twice
 ---
 
 # Desktop Application Engineer

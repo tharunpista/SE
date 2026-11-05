@@ -34,6 +34,27 @@ boundary: >-
   all; this role answers whether an interaction works for a user.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      A prototype answers a question nobody had and takes as long as the build
+    guard: >-
+      State the uncertain question first and build the cheapest artefact that answers it
+  - mode: >-
+      The prototype is mistaken for an implementation and ships
+    guard: >-
+      Prototypes are explicitly throwaway and labelled; the finding is the deliverable
+  - mode: >-
+      Fidelity is higher than the question requires and biases the feedback toward visuals
+    guard: >-
+      Match fidelity to the question; a polished prototype collects opinions about polish
+  - mode: >-
+      The prototype avoids the risky interaction and proves nothing
+    guard: >-
+      Target the riskiest unknown directly
+  - mode: >-
+      A finding is recorded without the condition that produced it
+    guard: >-
+      Record what was tested, with whom, and under what conditions
 ---
 
 # Prototype Specialist

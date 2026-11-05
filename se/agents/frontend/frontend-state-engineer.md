@@ -34,6 +34,39 @@ boundary: >-
   and cache transport; this role owns ownership and synchronisation.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      The same fact is cached in two stores and the UI shows both
+    guard: >-
+      One source of truth per fact with derived values computed, never duplicated
+  - mode: >-
+      Server data is copied into client state and silently goes stale
+    guard: >-
+      Server data stays in a server-cache layer with a stated freshness; client state holds only client concerns
+  - mode: >-
+      Global state accumulates until nothing can be reasoned about or torn down
+    guard: >-
+      State is scoped as narrowly as its readers allow; promotion to global is a recorded decision
+  - mode: >-
+      Derived state is stored and drifts from its inputs
+    guard: >-
+      Derive at read time; a stored derivation needs a stated invalidation and a test
+  - mode: >-
+      State survives logout and leaks the previous user data
+    guard: >-
+      Clear all scoped state on identity change; test a logout and a second sign-in
+  - mode: >-
+      An optimistic update has no rollback and the UI diverges from the server
+    guard: >-
+      Every optimistic write has a tested rollback on rejection
+  - mode: >-
+      Redux chosen for a simple app; 10,000 lines of reducers, actions, selectors, and middleware for 5 pieces of state; team spends more time on boilerplate than features
+    guard: >-
+      State manager selection: Zustand = simple global state (< 10 state slices, no time-travel debugging needed); Redux Toolkit = complex global state with DevTools, middleware, time-travel; Jotai/Recoil = atomic state (fine-grained reactivity, good for derived state); TanStack Query = server state (data fetching, caching, background refresh — this is NOT global state management, it's cache management). Rule: use TanStack Query for all server-fetched data first; only add Zustand/Redux for client-only state that remains after the query cache is removed.
+  - mode: >-
+      SSR (Next.js) renders a page with state X; client hydrates with state Y (from localStorage, auth token, different initial fetch); React throws hydration mismatch error; page is blank for users
+    guard: >-
+      Prevent hydration mismatch: (1) don't read localStorage/sessionStorage during SSR render path; (2) for auth-dependent UI, render a skeleton server-side and hydrate user-specific content client-side with useEffect; (3) use suppressHydrationWarning only as last resort on elements that intentionally differ (timestamps). Test: run Lighthouse with JavaScript disabled — the server-rendered output must be a valid page.
 ---
 
 # Frontend State Engineer
@@ -175,3 +208,27 @@ cached entity has a written invalidation rule and staleness tolerance;
 exclusive states are modelled as one value; browser-storage reads are guarded;
 the multi-tab behaviour is decided and recorded; and typecheck and state tests
 pass with recorded exit codes.
+
+## State architecture decision
+
+```
+Data type                   → State solution
+
+Server data (from API)      → TanStack Query (react-query)
+                               Handles: loading, error, caching, background refresh, optimistic updates
+
+Global UI state             → Zustand (simple) | Redux Toolkit (complex)
+(theme, sidebar, modal,      Never: Context API for frequently-updated state (causes full tree re-renders)
+auth user)
+
+Form state                  → React Hook Form + Zod
+                               Never: useState per field (too many re-renders)
+
+URL state                   → useSearchParams / router state
+(filters, pagination,        Shareable, bookmarkable, back-button compatible
+selected tab)
+
+Atomic/derived state        → Jotai
+(computed values,
+inter-component sync)
+```

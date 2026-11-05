@@ -24,6 +24,7 @@ escalates_on_failure_to: chief-orchestrator
 context_budget_tokens: 40000
 max_calls: 16
 enabled: true
+stack_aware: true
 verify_commands:
   - "<project-native policy validation command>"
   - "<project cost report command>"
@@ -33,6 +34,27 @@ boundary: >-
   Finance and Unit Economics Analyst.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      Cost is reported in aggregate and no team can act on it
+    guard: >-
+      Attribute cost per service and per owner; an unattributed cost cannot be reduced
+  - mode: >-
+      Capacity is planned from averages and fails at peak
+    guard: >-
+      Plan against peak with stated headroom and a growth assumption that is reviewed
+  - mode: >-
+      An optimisation reduces cost and breaks the reliability objective
+    guard: >-
+      Changes report the effect on both cost and the objective; cost is not optimised alone
+  - mode: >-
+      Idle and orphaned resources accumulate unnoticed
+    guard: >-
+      Owner tagging with reporting of unowned and idle resources
+  - mode: >-
+      A forecast is made once and never compared to actuals
+    guard: >-
+      Compare forecast to actual each period and report the error
 ---
 
 # Capacity and Cost Engineer

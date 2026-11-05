@@ -28,13 +28,42 @@ enabled: true
 stack_aware: true
 verify_commands:
   - "<project test command> --filter crypto"
-  - "<project typecheck command>"
+  - "semgrep --config=p/secrets --error"
 boundary: >-
   Owns algorithms, modes and the key hierarchy. The Secrets Management
   Engineer owns the storage and delivery of secrets at runtime, including the
   keys this role defines.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      A primitive is used correctly in isolation and wrongly in composition, such as encryption without authentication
+    guard: >-
+      Authenticated encryption only; a mode without integrity is rejected in review and by a lint rule
+  - mode: >-
+      A nonce or IV is reused across messages under the same key
+    guard: >-
+      Nonce derivation stated and tested for uniqueness; reuse is a key-compromise event, not a bug
+  - mode: >-
+      A recalled API from an older library version is used and is now insecure rather than merely wrong
+    guard: >-
+      Verify every primitive against the installed version; here a stale signature is a vulnerability
+  - mode: >-
+      Keys cannot be rotated because the ciphertext carries no key identifier
+    guard: >-
+      Key id travels with the ciphertext; rotation exercised end to end including decrypting old data
+  - mode: >-
+      Password hashing uses a fast general-purpose digest
+    guard: >-
+      A memory-hard password hash with calibrated parameters; assert the chosen cost in a test
+  - mode: >-
+      Comparison of secrets or MACs short-circuits and leaks timing
+    guard: >-
+      Constant-time comparison for every secret value; lint for direct equality on secret material
+  - mode: >-
+      Randomness comes from a general-purpose generator
+    guard: >-
+      Cryptographic random source only; lint for non-cryptographic generators in security paths
 ---
 
 # Cryptography and Key Management Engineer

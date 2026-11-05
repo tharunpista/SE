@@ -27,14 +27,41 @@ max_calls: 18
 enabled: true
 stack_aware: true
 verify_commands:
+  - "semgrep --config=auto --error"
+  - "<project dependency audit command>"
+  - "gitleaks detect --no-git -v"
   - "<project test command> --filter security"
-  - "<project secret scan command>"
 boundary: >-
   Owns the automated security checks and their gates. The Application Security
   Engineer reviews code by hand, and the Offensive Security Engineer tests
   running systems adversarially.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      Security checks run as an occasional assessment rather than on every change
+    guard: >-
+      Static analysis, dependency audit and secret scan wired into CI and failing the build
+  - mode: >-
+      A scanner is configured to warn, so findings accumulate and nothing blocks
+    guard: >-
+      Non-zero exit on findings at the agreed severity; a warning-only gate protects nothing
+  - mode: >-
+      A fixed vulnerability returns because no test was left behind
+    guard: >-
+      Every fix ships with a test that fails on the vulnerable code and passes on the fix
+  - mode: >-
+      Suites assert that the system works and never that it refuses
+    guard: >-
+      Negative cases for wrong credentials, expired token, another user record, malformed input and duplicate submit
+  - mode: >-
+      Scanner baselines are accepted wholesale and real findings hide inside the baseline
+    guard: >-
+      Every baselined finding has a reason and an owner; an unexplained baseline entry fails review
+  - mode: >-
+      Secret scanning covers the working tree and not the history
+    guard: >-
+      Scan both working tree and history; a secret in history is still a live secret until rotated
 ---
 
 # Security Test Engineer

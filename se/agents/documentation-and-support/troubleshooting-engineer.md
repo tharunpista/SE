@@ -22,6 +22,7 @@ escalates_to: chief-orchestrator
 context_budget_tokens: 30000
 max_calls: 12
 enabled: true
+stack_aware: true
 status: active
 boundary: >-
   Turns a diagnosis that already exists into a procedure someone else can
@@ -35,6 +36,27 @@ verify_commands:
 escalates_on_failure_to: root-cause-investigator
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      A procedure is written from a theory rather than a reproduced failure
+    guard: >-
+      Reproduce the failure and verify the resolution before writing; an unverified procedure wastes the reader time
+  - mode: >-
+      A procedure has no stated symptom so the reader cannot tell if it applies
+    guard: >-
+      Start from the observable symptom with a clear entry condition
+  - mode: >-
+      Steps are listed with no expected output so the reader cannot tell if a step worked
+    guard: >-
+      Each step states its expected result and what to do when it differs
+  - mode: >-
+      The procedure ends in a dead end with no escalation
+    guard: >-
+      Every path ends in a resolution or a named escalation with what to attach
+  - mode: >-
+      Procedures accumulate for versions nobody runs
+    guard: >-
+      State the version scope and retire procedures whose cause is fixed
 ---
 
 # Troubleshooting Engineer

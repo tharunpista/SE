@@ -25,6 +25,7 @@ escalates_on_failure_to: chief-orchestrator
 context_budget_tokens: 45000
 max_calls: 16
 enabled: true
+stack_aware: true
 verify_commands:
   - "<project-native policy validation command>"
   - "<project test command> --filter privacy"
@@ -34,6 +35,43 @@ boundary: >-
   Retention and Deletion Engineer executes deletion.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      Personal data is collected with no recorded basis for holding it
+    guard: >-
+      Every field in the inventory names its purpose and basis; a field with neither is deleted, not grandfathered
+  - mode: >-
+      The data inventory is written once and drifts from the schema immediately
+    guard: >-
+      Re-derive the inventory from the live schema and dependency set each release, and diff it
+  - mode: >-
+      A deletion request removes the primary row and leaves copies in logs, backups, caches and analytics
+    guard: >-
+      Map every destination before implementing deletion; test a request end to end and assert each copy is handled
+  - mode: >-
+      Retention is a policy document with no mechanism
+    guard: >-
+      Retention enforced by a scheduled job with evidence of execution; an unenforced period is not a period
+  - mode: >-
+      Personal data is sent to a third party or a model provider without a recorded basis
+    guard: >-
+      Egress destinations enumerated and approved; diff them on every dependency and integration change
+  - mode: >-
+      Pseudonymised data is treated as anonymous and is re-identifiable by joining
+    guard: >-
+      Treat pseudonymised data as personal; re-identification risk is assessed against the data actually held
+  - mode: >-
+      Consent state is captured and never honoured downstream
+    guard: >-
+      Consent travels with the record and is enforced at the point of use; test a withdrawal
+  - mode: >-
+      A personal data breach occurs; the team debates severity for days; the 72-hour GDPR supervisory authority notification window expires without a report
+    guard: >-
+      Breach notification runbook must exist before an incident happens: severity classification criteria, the 72-hour clock start (moment of discovery, not confirmation), the DPA notification template, the internal escalation chain; test the runbook in a tabletop drill; "investigating whether it's a breach" does not stop the clock
+  - mode: >-
+      A model or AI feature is trained or fine-tuned on user data without a recorded legal basis; the data includes personal information users did not expect to be used for model training
+    guard: >-
+      Model training use of personal data requires explicit opt-in consent or a compelling legitimate interest assessment; default is opt-out; audit training data sources against the inventory before any model training job; this is a separate basis from the original collection basis
 ---
 
 # Privacy Engineer

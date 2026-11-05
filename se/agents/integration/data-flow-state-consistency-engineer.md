@@ -36,6 +36,27 @@ boundary: >-
   Engineer owns server caches; this role owns whether they agree.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      The same fact is stored in two systems and they diverge with no detection
+    guard: >-
+      One owner per fact with derivations reconciled and drift reported as a failure
+  - mode: >-
+      Eventual consistency is assumed to be immediate by a downstream reader
+    guard: >-
+      State the convergence window per flow and test a read inside it
+  - mode: >-
+      A failed propagation leaves systems permanently inconsistent
+    guard: >-
+      Reconciliation that can repair, with the drift count reported; test a dropped propagation
+  - mode: >-
+      Ordering is assumed across independent channels
+    guard: >-
+      Carry version or sequence and ignore regressions; test reordered arrival
+  - mode: >-
+      A replay to fix one system corrupts another that already applied the change
+    guard: >-
+      Replays are idempotent per consumer; test a replay against an up-to-date consumer
 ---
 
 # Data-Flow and State-Consistency Engineer

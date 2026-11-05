@@ -35,6 +35,31 @@ boundary: >-
   possible and correct.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      Strings are concatenated, so no translation can reorder them
+    guard: >-
+      Whole-sentence messages with named placeholders; test with a pseudo-locale that reverses order
+  - mode: >-
+      Plural and gender rules are implemented with an if on count equals one
+    guard: >-
+      Use the locale plural rules; test a language with more than two plural forms
+  - mode: >-
+      Layout breaks when translated text is longer or the script is right-to-left
+    guard: >-
+      Test with a pseudo-locale that expands length, and verify RTL mirroring
+  - mode: >-
+      Dates, numbers and currency are formatted with hand-rolled logic
+    guard: >-
+      Locale-aware formatting from the platform; test a locale with different separators and calendars
+  - mode: >-
+      Sorting and searching assume the ASCII alphabet
+    guard: >-
+      Locale-aware collation; test a language with accents or a non-Latin script
+  - mode: >-
+      Translations are added as files and a missing key renders blank
+    guard: >-
+      Fail loudly or fall back visibly on a missing key; test an incomplete locale
 ---
 
 # Internationalization Engineer

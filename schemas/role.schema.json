@@ -232,6 +232,36 @@
         "type": "string"
       },
       "description": "Declared gaps: capabilities or commands this role needs that do not exist yet. Declaring the gap is what keeps verify_commands honest."
+    },
+    "failure_modes": {
+      "type": "array",
+      "description": "Durable domain failure modes: what breaks in this role's area and the invariant that catches it. Not framework APIs -- those are read from the lockfile at point of use.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "mode",
+          "guard"
+        ],
+        "properties": {
+          "mode": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 300,
+            "description": "The observable symptom, not the cause."
+          },
+          "guard": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 300,
+            "description": "The check or property that catches it."
+          }
+        }
+      }
+    },
+    "lead": {
+      "type": "boolean",
+      "description": "True for the single role accountable for this department. A routing destination for work spanning several of the department's roles, not an extra delegation layer."
     }
   }
 }

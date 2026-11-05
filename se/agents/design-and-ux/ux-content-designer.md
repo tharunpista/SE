@@ -32,6 +32,27 @@ boundary: >-
   and translation belongs to localisation, not here.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      A label describes a concept rather than what will happen
+    guard: >-
+      Labels state the outcome of the action; verify by reading the label alone
+  - mode: >-
+      An error says something failed and not what the user can do
+    guard: >-
+      Every error states what happened, why where known, and the next action
+  - mode: >-
+      Content is written in the default locale with no room for translation
+    guard: >-
+      Whole-sentence messages with placeholders; verify with an expanded pseudo-locale
+  - mode: >-
+      Internal vocabulary leaks into the interface
+    guard: >-
+      Terms validated against user language and recorded once per concept
+  - mode: >-
+      Destructive confirmations are generic and the user cannot tell what is at stake
+    guard: >-
+      Name the specific thing and the consequence in the confirmation
 ---
 
 # UX Content Designer

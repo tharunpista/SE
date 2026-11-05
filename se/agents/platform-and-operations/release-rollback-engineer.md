@@ -35,6 +35,31 @@ boundary: >-
   Readiness Reviewer decides whether the evidence permits shipping.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      A rollback reverts code and leaves an incompatible schema
+    guard: >-
+      Every release is rollback-compatible with the previous version, and the pair is tested together
+  - mode: >-
+      Rollback is slower than fixing forward and is therefore never used
+    guard: >-
+      Measure rollback time and keep it inside the stated recovery objective
+  - mode: >-
+      A phased rollout has no halt criteria and keeps shipping through a crash spike
+    guard: >-
+      Stated thresholds checked before each stage advances, with an automatic halt
+  - mode: >-
+      Rolling back one service breaks another that already depends on the new behaviour
+    guard: >-
+      Dependency order recorded for rollback as well as deploy; test the reverse order
+  - mode: >-
+      A rollback loses data written by the newer version
+    guard: >-
+      State what the newer version writes that the older cannot read; test the downgrade with real data
+  - mode: >-
+      A blue-green deployment runs old and new code simultaneously against the same database; the migration adds a NOT NULL column; old instances cannot insert rows and start returning 500s
+    guard: >-
+      Database migrations must be backward-compatible with the previous code version for the entire rollout window; use the expand-migrate-contract pattern so old code runs correctly against the migrated schema; never deploy a migration and a code change as one atomic step
 ---
 
 # Release and Rollback Engineer

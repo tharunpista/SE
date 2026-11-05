@@ -34,6 +34,27 @@ boundary: >-
   belongs to the translators, not here.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      Only the default locale is exercised and translated builds break
+    guard: >-
+      Verify every declared locale, including a long-text and an RTL language
+  - mode: >-
+      Translated text overflows or truncates in real layouts
+    guard: >-
+      Verify against the longest translation, not the average; test at the largest font scale too
+  - mode: >-
+      Dates, numbers, currency and addresses are checked only in the default format
+    guard: >-
+      Verify per locale including separators, calendars and name and address order
+  - mode: >-
+      Sorting and search behave wrongly in locales with accents or non-Latin scripts
+    guard: >-
+      Test collation and search per locale against expected order
+  - mode: >-
+      A missing translation renders blank and passes an automated check
+    guard: >-
+      Assert completeness per locale and make a missing key fail visibly
 ---
 
 # Localization QA Engineer

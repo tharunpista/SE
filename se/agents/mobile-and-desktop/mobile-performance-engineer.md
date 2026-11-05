@@ -22,6 +22,7 @@ escalates_to: solution-architect
 context_budget_tokens: 30000
 max_calls: 12
 enabled: true
+stack_aware: true
 status: active
 boundary: >-
   Owns the device-side budgets and the measurements against them. The
@@ -37,6 +38,35 @@ verify_commands:
 escalates_on_failure_to: root-cause-investigator
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      Performance is measured on a flagship device and the budget is met nowhere else
+    guard: >-
+      Budgets stated per device tier and verified on the lowest supported device, not the development one
+  - mode: >-
+      Startup is measured warm and the cold path is never seen
+    guard: >-
+      Cold start measured after a reboot or force-stop; warm numbers are reported separately and never as the headline
+  - mode: >-
+      A frame budget is reported as an average and hides the janky percentile
+    guard: >-
+      Report the worst percentiles; a p50 frame time passing while p99 drops frames is a failing screen
+  - mode: >-
+      Memory looks stable in a short session and grows across navigation
+    guard: >-
+      Measure after repeated navigation cycles; a flat short-session graph proves nothing about a leak
+  - mode: >-
+      Poor-network behaviour is never exercised, so timeouts and retries are untested
+    guard: >-
+      Test under constrained and lossy network profiles; assert the UI reaches a stated state rather than hanging
+  - mode: >-
+      Binary size regresses one dependency at a time with nobody accountable
+    guard: >-
+      Size budget enforced in CI with the per-change delta reported
+  - mode: >-
+      Battery and data use are only discovered from store reviews
+    guard: >-
+      Measure wake-ups, background work and bytes per session against a stated budget before release
 ---
 
 # Mobile Performance, Battery and Network Engineer

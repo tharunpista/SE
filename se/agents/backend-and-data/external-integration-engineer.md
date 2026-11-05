@@ -35,6 +35,43 @@ boundary: >-
   themselves.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      A vendor type leaks into the domain and a vendor change ripples through the system
+    guard: >-
+      Translate at the boundary into an owned type; the vendor model never crosses it
+  - mode: >-
+      A vendor outage becomes this system outage
+    guard: >-
+      Timeout, retry budget and a stated degraded behaviour; test with the vendor unreachable
+  - mode: >-
+      A webhook is replayed or spoofed and applied as genuine
+    guard: >-
+      Verify the signature and treat delivery as at-least-once with idempotency on the event id; test a replay and a bad signature
+  - mode: >-
+      Vendor rate limits are discovered in production
+    guard: >-
+      Client-side limiting to the documented budget with backoff on 429; test the limited path
+  - mode: >-
+      Sandbox behaviour differs from production and the difference is found at launch
+    guard: >-
+      Record known differences and verify the critical path against production constraints
+  - mode: >-
+      A vendor error is surfaced raw to the caller or swallowed entirely
+    guard: >-
+      Map vendor failures to owned error cases; test the mapping for each documented failure
+  - mode: >-
+      Webhook processing is slow (database writes, downstream calls); vendor's HTTP timeout expires and it re-delivers; the event is applied twice with minutes between — idempotency on the event id misses this if the first processing completed
+    guard: >-
+      Acknowledge the webhook before processing it: write "received" to the store, return 200 immediately, process asynchronously via a background job; idempotency checks against received id, not completed id; test with vendor timeout simulation
+  - mode: >-
+      A vendor begins returning errors (quota exhausted, incident); the product retries without a circuit breaker; every request thread blocks on a vendor call that will not succeed
+    guard: >-
+      Circuit breaker on each vendor client: open after N consecutive failures, half-open after backoff window, test trip and recovery; bulkhead so one vendor's slow path cannot exhaust the whole thread pool
+  - mode: >-
+      Vendor API credentials rotate and the integration fails silently until a user report
+    guard: >-
+      Credential health check on startup and periodically; alert on 401/403 from vendor before users notice; zero-downtime rotation procedure documented and tested
 ---
 
 # External Integration Engineer

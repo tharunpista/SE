@@ -34,6 +34,27 @@ boundary: >-
   the review worth having.
 requires_evidence: true
 writes_files: false
+failure_modes:
+  - mode: >-
+      Review is against personal taste rather than the stated requirement
+    guard: >-
+      Review against the requirement and the acceptance criteria; style belongs to automated tooling
+  - mode: >-
+      Approval is given without running anything
+    guard: >-
+      Run the declared checks and record their exit codes; an unverified approval is an opinion
+  - mode: >-
+      Findings are listed with no severity and everything looks equally blocking
+    guard: >-
+      Separate blocking defects from suggestions explicitly
+  - mode: >-
+      The reviewer rewrites the work instead of reporting it
+    guard: >-
+      Report and hand back; a reviewer who implements becomes the author and loses independence
+  - mode: >-
+      Scope creep in review delays a correct change indefinitely
+    guard: >-
+      Review the change against its stated scope; adjacent problems are raised separately
 ---
 
 # Independent Technical Reviewer

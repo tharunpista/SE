@@ -34,6 +34,27 @@ boundary: >-
   what earns a permanent place.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      A defect is fixed with no test, and returns
+    guard: >-
+      Reproduce first as a failing test, then fix; a fix with no preceding red test is a guess
+  - mode: >-
+      The regression corpus grows without pruning until it dominates the runtime
+    guard: >-
+      Review the corpus for still-relevant risk; retire tests whose code is gone with the reason recorded
+  - mode: >-
+      A regression test asserts the fix implementation rather than the user-visible defect
+    guard: >-
+      Assert the symptom the user reported, so a different fix still passes
+  - mode: >-
+      Nobody knows which test covers which defect
+    guard: >-
+      Link each regression test to its defect identifier
+  - mode: >-
+      A quarantined failing test is forgotten and the regression returns unnoticed
+    guard: >-
+      Quarantine has an owner and an expiry; an expired quarantine fails the build
 ---
 
 # Regression Test Engineer

@@ -36,6 +36,51 @@ boundary: >-
   push, and marketing campaigns belong to the Content Specialist.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      A retry double-sends and the user receives the message twice
+    guard: >-
+      Idempotency key per logical message with a send ledger; test a retry after a timeout
+  - mode: >-
+      Bounces and complaints are ignored and sender reputation collapses
+    guard: >-
+      Process bounce and complaint feedback and suppress; test that a hard bounce stops future sends
+  - mode: >-
+      A transactional message is delayed behind a bulk campaign
+    guard: >-
+      Separate queues and priorities for transactional and bulk; test under bulk load
+  - mode: >-
+      Unsubscribe or preference state is not honoured at send time
+    guard: >-
+      Check preferences at send, not at enqueue; test a withdrawal between enqueue and send
+  - mode: >-
+      Templates render with a missing variable and ship a broken message
+    guard: >-
+      Fail closed on missing template data; test every template with absent and empty values
+  - mode: >-
+      Delivery is assumed from a successful API call
+    guard: >-
+      Track provider delivery status separately from acceptance; report accepted and delivered distinctly
+  - mode: >-
+      A new sending domain or IP sends at scale immediately; Gmail/Outlook/Yahoo rate-limit or block it; deliverability drops below 50% with no alert
+    guard: >-
+      IP warm-up plan: start at 500/day for a new IP, double weekly, monitor open and bounce rates per day; never skip warm-up for a new domain or new dedicated IP; monitor Google Postmaster Tools and Microsoft SNDS for reputation signals; alert if spam rate > 0.1% (Gmail's threshold for filtering)
+  - mode: >-
+      SPF, DKIM or DMARC misconfigured or absent; messages fail authentication and are silently dropped or junked
+    guard: >-
+      SPF, DKIM and DMARC (p=reject) are verified before first send and checked in deployment pipeline; test with mail-tester.com equivalent; DMARC aggregate reports are monitored weekly
+  - mode: >-
+      Soft bounces are treated the same as hard bounces and immediately suppressed; legitimate addresses are permanently disabled after one temporary failure
+    guard: >-
+      Soft bounce = temporary failure (mailbox full, server temporarily unavailable, over quota); policy: retry with exponential backoff (1h, 4h, 24h) for up to 72 hours; if 5+ consecutive soft bounces over 30 days → classify as hard bounce → permanent suppress; never suppress on first soft bounce; track soft vs hard bounce ratio separately; a sudden soft bounce spike indicates your sending IP is being throttled, not that addresses are invalid
+  - mode: >-
+      Sending list is never pruned; addresses with zero engagement for 12+ months degrade sender reputation even without bouncing
+    guard: >-
+      List hygiene / sunset policy: suppress addresses with zero opens or clicks in 90 days after a re-engagement campaign (send one re-engagement email, wait 7 days, suppress non-openers); re-engagement campaign subject line must be explicit ("Are you still interested?"); stale sending is the primary cause of gradual reputation degradation that evades all bounce and complaint monitoring
+  - mode: >-
+      Dedicated IP is provisioned below the volume threshold where it helps; shared IP is used above the threshold where the team loses control over their own reputation
+    guard: >-
+      IP strategy decision: below 100K emails/day use a shared IP pool (pooled reputation, managed by ESP); above 100K/day use a dedicated IP (you own the reputation, you manage warm-up); for mixed workloads: dedicated IP for transactional (receipts, auth codes), shared for marketing — transactional must never be affected by marketing reputation; document this decision in the notification system configuration, not in a Notion page nobody reads
 ---
 
 # Notification and Transactional Delivery Engineer
@@ -79,6 +124,23 @@ gets sent to someone who opted out.
 Ingest the provider's feedback, classify hard against soft, update
 suppression automatically, and alert on rate changes. An unprocessed bounce
 stream is how a sending domain gets blocked.
+
+**Bounce classification and suppression policy:**
+| Event | Action | Timing |
+|---|---|---|
+| Hard bounce (invalid address, domain doesn't exist) | Permanent suppress immediately | On first occurrence |
+| Soft bounce (mailbox full, temporary failure) | Retry with backoff; suppress after 5 consecutive over 30 days | See schedule above |
+| Complaint (marked spam) | Permanent suppress immediately + alert if rate > 0.08% | On first occurrence |
+| Unsubscribe | Suppress for the category (marketing / all) | Immediate, within 10 days legally required |
+
+**List hygiene schedule (run monthly):**
+1. Identify addresses with 0 opens/clicks in 90 days
+2. Send re-engagement email: "We haven't heard from you — still interested?"
+3. Wait 7 days
+4. Suppress non-responders
+5. Remove from active lists (do not delete — keep suppression record)
+
+Alert thresholds: hard bounce rate > 2% → pause sending immediately; complaint rate > 0.1% → pause marketing sends; complaint rate > 0.08% → investigate (Gmail's threshold is 0.1% for filtering, 0.3% for blocking).
 
 ### 5. Keep templates data-driven and localisable
 

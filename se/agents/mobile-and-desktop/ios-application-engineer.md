@@ -22,6 +22,7 @@ escalates_to: solution-architect
 context_budget_tokens: 40000
 max_calls: 16
 enabled: true
+stack_aware: true
 status: active
 boundary: >-
   Implements iOS screens and flows inside the architecture the Mobile Lead
@@ -37,6 +38,51 @@ verify_commands:
 escalates_on_failure_to: root-cause-investigator
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      Work on the main actor blocks the UI and the watchdog terminates the app at launch
+    guard: >-
+      Async work off the main actor; verify launch under Instruments and keep cold start inside the platform watchdog limit
+  - mode: >-
+      A background task is suspended before it finishes and the work silently never completes
+    guard: >-
+      Declare the background mode, request an expiration handler, and verify by backgrounding mid-task on a device
+  - mode: >-
+      A permission is requested with no purpose string and the app is rejected or crashes on first use
+    guard: >-
+      Every permission has its usage-description key present; verify first-run on a clean install, not an upgrade
+  - mode: >-
+      A retain cycle in a closure or delegate leaks a view controller per presentation
+    guard: >-
+      Weak or unowned capture for self in escaping closures; verify with the memory graph debugger after repeated presentation
+  - mode: >-
+      State restoration is untested, so the system terminates the app and the user loses position
+    guard: >-
+      Persist scene state and verify by terminating from the background, not by relaunching from the debugger
+  - mode: >-
+      Keychain items survive reinstall or sync unexpectedly and leak state between users
+    guard: >-
+      Set an explicit accessibility class and sync attribute per item; test reinstall and a second device
+  - mode: >-
+      Dynamic Type at the largest accessibility size truncates or overlaps controls
+    guard: >-
+      Scalable text styles with no fixed heights on text containers; verify at the largest accessibility size
+  - mode: >-
+      VoiceOver reads controls in an order that does not match the screen
+    guard: >-
+      Traversal verified with VoiceOver on, with labels and traits on every control
+  - mode: >-
+      Layout breaks under right-to-left or on a device with a different safe-area inset
+    guard: >-
+      Leading and trailing constraints rather than left and right; verify RTL and a notched and non-notched device
+  - mode: >-
+      Cold start regression ships; on iPhone 8 app takes 3.2 seconds to first interaction; iOS watchdog kills apps taking >20 seconds; App Store rating drops
+    guard: >-
+      Cold start SLO: time-to-first-interaction < 400ms on the minimum supported device (iPhone 8 for most apps targeting iOS 15+). Measure with Xcode Instruments Time Profiler. Instrument with os_signpost(.begin, name:'Cold Start') at app start, .end at first screen rendered.
+  - mode: >-
+      Instruments is not part of the CI workflow; performance regressions ship because developers don't run Instruments manually
+    guard: >-
+      Instruments tooling required in CI: (1) Time Profiler — CPU usage, app launch time; (2) Allocations — memory usage, retain cycles; (3) Energy Log — CPU wakes, network, disk; (4) Leaks — memory leaks. Automate with xctrace record --template 'Time Profiler' --launch -- /path/to/app. Alert when launch time delta > 10% vs baseline.
 ---
 
 # iOS Application Engineer
@@ -157,3 +203,31 @@ each flow's backgrounding and termination behaviour is stated; permissions are
 re-checked on foreground; every declared capability traces to a flow;
 accessibility labels and Dynamic Type are verified; and the build and tests
 pass on the oldest supported version with recorded exit codes.
+
+## iOS performance targets
+
+| Metric | Target | Tool |
+|---|---|---|
+| Cold start | < 400ms (iPhone 8) | Instruments Time Profiler, MetricKit |
+| Warm start | < 200ms | Instruments |
+| Memory (steady state) | < 150MB | Instruments Allocations |
+| Main thread frame budget | < 16ms (60fps) | Instruments Core Animation |
+| App binary size | < 50MB on-device | Xcode build report |
+| OTA download | < 200MB (App Store limit) | Xcode App Thinning |
+
+MetricKit in production (iOS 13+):
+```swift
+import MetricKit
+
+class AppDelegate: UIApplicationDelegate, MXMetricManagerSubscriber {
+  func application(_ application: UIApplication, didFinishLaunchingWithOptions...) {
+    MXMetricManager.shared.add(self)
+  }
+  func didReceive(_ payloads: [MXMetricPayload]) {
+    for payload in payloads {
+      let launchTime = payload.applicationLaunchMetrics?.histogrammedTimeToFirstDraw
+      // Send to your analytics backend
+    }
+  }
+}
+```

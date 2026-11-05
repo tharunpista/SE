@@ -36,6 +36,47 @@ boundary: >-
   output is fit to use.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      A rerun produces different output than the first run
+    guard: >-
+      Deterministic and idempotent stages keyed by input partition; rerun the same window and diff
+  - mode: >-
+      A failure mid-pipeline leaves downstream tables half-updated
+    guard: >-
+      Atomic publish per stage with a visible completion marker; test a crash mid-stage
+  - mode: >-
+      A schema change upstream silently drops or mistypes a column
+    guard: >-
+      Contract check on input schema that fails the run; test an added, removed and retyped column
+  - mode: >-
+      Late-arriving data is ignored and totals never reconcile
+    guard: >-
+      Stated lateness window and a restatement path; test data arriving after the window
+  - mode: >-
+      A backfill competes with the live pipeline and corrupts both
+    guard: >-
+      Isolated backfill with its own output target and a controlled swap
+  - mode: >-
+      Failure is noticed by a consumer rather than by the pipeline
+    guard: >-
+      Alert on freshness and row-count anomalies, not only on task failure
+  - mode: >-
+      One partition or shard contains orders-of-magnitude more data than others; one worker processes for hours while others idle; SLA is missed because of one hot key
+    guard: >-
+      Monitor partition-level row counts and processing time before and after every pipeline run; if ratio between hottest and median partition > 10:1, alert and add a repartition step; test with deliberately skewed input data
+  - mode: >-
+      A pipeline processes personal data and routes it to a downstream system that is not in the privacy data map; a new analytics sink, model training dataset, or BI tool is wired in and nobody told the privacy engineer
+    guard: >-
+      Pipeline egress destinations are enumerated in the privacy data map; a new sink added to the pipeline is a privacy data map change that must be reviewed; CI lint step asserts no undocumented data destinations
+  - mode: >-
+      Streaming pipeline uses processing time for window aggregations; a reprocessing run produces different totals than the live run; revenue metrics are wrong and nobody knows for how long
+    guard: >-
+      NEVER use processing time for business metrics — use event time with a declared watermark; watermark delay = 2× p99 source latency (if p99 source latency is 30s, watermark delay = 60s); late-arriving events beyond the watermark go to a side output (late-data handler), never silently dropped; test: inject an event 2× watermark late and assert it reaches the side output; for Flink: `WatermarkStrategy.forBoundedOutOfOrderness(Duration.ofSeconds(60))`; for Kafka Streams: `grace(Duration.ofSeconds(60))` on window definitions
+  - mode: >-
+      Schema change is applied to a reprocessing job that reads historical Avro/Protobuf data; old records cannot be deserialized with the new schema; reprocessing silently drops records or fails halfway
+    guard: >-
+      All schema changes must be backward-compatible: add optional fields only, never remove or rename required fields; before deploying a schema change, run the pipeline against 30-day-old data in a staging environment; for Avro: use Schema Registry BACKWARD_TRANSITIVE compatibility; for Protobuf: use reserved field numbers for removed fields; test: encode a record with schema v1, decode with schema v2, assert all fields present in v1 are readable in v2
 ---
 
 # Data Pipeline Engineer
@@ -65,6 +106,30 @@ because it will be rerun during an incident.
 Partition by when the event happened, and define the lateness window and what
 happens to records arriving after it. Partitioning by arrival time produces
 numbers that change retroactively and reports nobody can reconcile.
+
+**Watermark strategy (streaming pipelines):**
+
+The watermark is the pipeline's claim about how far event time has progressed. Setting it correctly is the central correctness decision for streaming aggregations.
+
+```
+# Rule: watermark delay = 2× p99 source latency
+# Measure p99 latency from event timestamp to Kafka/queue arrival
+
+# Flink
+WatermarkStrategy
+  .forBoundedOutOfOrderness(Duration.ofSeconds(watermark_delay_seconds))
+  .withIdleness(Duration.ofMinutes(5))  # handles idle partitions
+
+# Kafka Streams
+TimeWindows.ofSizeAndGrace(
+  Duration.ofMinutes(5),          # window size
+  Duration.ofSeconds(60)          # grace = watermark delay
+)
+```
+
+Late data beyond the watermark: always route to a side output for later reprocessing or auditing. Never drop silently — dropping late data produces metrics that cannot be audited.
+
+**The reprocessing trap:** A streaming pipeline with processing-time windows cannot be correctly reprocessed. If you ever need to replay historical data, you need event-time windows. This is a design decision to make at the start, not a migration to do after the fact.
 
 ### 3. Checkpoint, and resume rather than restart
 

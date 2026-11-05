@@ -34,6 +34,27 @@ boundary: >-
   Infrastructure Engineer owns test execution.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      Setup instructions work for the person who wrote them
+    guard: >-
+      A fresh machine completes setup from the written steps; verify on a clean environment
+  - mode: >-
+      A slow local loop is accepted and everyone works around it
+    guard: >-
+      Hold a stated feedback-time budget; measure it rather than estimating
+  - mode: >-
+      Tooling diverges per developer and bugs appear only on one machine
+    guard: >-
+      Pinned toolchain checked into the repository; a version mismatch fails fast with a clear message
+  - mode: >-
+      An internal tool has no owner and breaks silently
+    guard: >-
+      Every tool has an owner and a smoke test in CI
+  - mode: >-
+      Friction is assumed rather than measured, so the wrong thing is fixed
+    guard: >-
+      Gather the actual time cost before optimising
 ---
 
 # Developer Experience Engineer

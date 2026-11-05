@@ -33,6 +33,23 @@ boundary: >-
   UX Researcher.
 requires_evidence: true
 writes_files: false
+failure_modes:
+  - mode: >-
+      Exploration repeats the scripted cases and finds nothing new
+    guard: >-
+      Target the seams: concurrency, interruption, unusual ordering, stale sessions and hostile input
+  - mode: >-
+      A found defect cannot be reproduced because the path was not recorded
+    guard: >-
+      Record the actual steps, state and environment as you go, not from memory afterwards
+  - mode: >-
+      Time is spent broadly with no record of what was covered
+    guard: >-
+      State the charter and record coverage and findings per session
+  - mode: >-
+      Findings stay as anecdotes and never become tests
+    guard: >-
+      Every confirmed defect becomes a reproducible case handed to the owning level
 ---
 
 # Exploratory Test Engineer

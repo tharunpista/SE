@@ -37,6 +37,27 @@ boundary: >-
   depends entirely on it having no stake in the outcome.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      A decision is recorded without the authority it was made under
+    guard: >-
+      Record who decided and on what authority; an unattributed decision cannot be relied on or revisited
+  - mode: >-
+      What was proposed is recorded as what was decided
+    guard: >-
+      Separate proposal, decision and open question explicitly
+  - mode: >-
+      The rejected options and their reasons are omitted
+    guard: >-
+      Record the alternatives and why they lost; without them the decision is relitigated
+  - mode: >-
+      A superseded decision stays active and both are cited
+    guard: >-
+      Supersession is explicit and the old record is marked, never deleted
+  - mode: >-
+      Decisions are recorded where nobody looks and are rediscovered as new questions
+    guard: >-
+      Records are reachable from the work they constrain
 ---
 
 # Requirements and Decision Recorder

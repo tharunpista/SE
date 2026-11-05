@@ -22,6 +22,7 @@ escalates_to: solution-architect
 context_budget_tokens: 30000
 max_calls: 12
 enabled: true
+stack_aware: true
 status: active
 boundary: >-
   Owns getting a built application onto a machine and keeping it current:
@@ -36,6 +37,31 @@ verify_commands:
 escalates_on_failure_to: root-cause-investigator
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      An unsigned or un-notarized build is blocked by the OS and looks like a crash to the user
+    guard: >-
+      Sign and notarize in CI and verify the artifact on a clean machine, never only on a developer machine
+  - mode: >-
+      An update applies and local state from the previous version is unreadable
+    guard: >-
+      Forward state migrations tested from every shipped version over a real installed profile
+  - mode: >-
+      A bad release reaches everyone because there is no staged rollout or kill switch
+    guard: >-
+      Phased rollout with a halt mechanism; verify the halt actually stops delivery before shipping
+  - mode: >-
+      Rollback is assumed to work and has never been exercised
+    guard: >-
+      Downgrade tested from the new version to the previous one, including state compatibility
+  - mode: >-
+      The updater cannot update itself and strands old installs
+    guard: >-
+      Test an update that changes the updater; strand recovery documented and verified
+  - mode: >-
+      An install over an existing version leaves two copies or orphaned files
+    guard: >-
+      Test upgrade, reinstall and uninstall paths and assert the filesystem is left clean
 ---
 
 # Desktop Packaging, Signing and Update Engineer

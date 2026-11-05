@@ -33,6 +33,27 @@ boundary: >-
   owns the implemented rules.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      One word means different things in two contexts and the integration silently corrupts meaning
+    guard: >-
+      One agreed meaning per term per context, with an explicit translation at the boundary
+  - mode: >-
+      Bounded contexts are drawn along team lines rather than along meaning
+    guard: >-
+      Contexts follow language and invariants; a context with two meanings for one term is two contexts
+  - mode: >-
+      The model mirrors the current database rather than how the business works
+    guard: >-
+      Model from business behaviour and invariants; a schema-derived model encodes yesterday accidents
+  - mode: >-
+      An invariant spans two contexts and is enforced in neither
+    guard: >-
+      Each invariant has one owning context; a cross-context invariant is a design smell with a stated resolution
+  - mode: >-
+      The model is agreed verbally and drifts the moment code is written
+    guard: >-
+      Model expressed in types and tests that fail when the rule is broken
 ---
 
 # Domain Architect

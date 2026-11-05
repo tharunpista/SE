@@ -36,6 +36,43 @@ boundary: >-
   systems.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      A migration deploys before or after the code that depends on it and the running version breaks
+    guard: >-
+      Backward-compatible steps: add nullable, backfill, enforce in a later release; never rename or drop in the deploy that stops writing
+  - mode: >-
+      A blocking DDL takes a lock and the service stops serving
+    guard: >-
+      Lock-aware DDL with a lock timeout and a tested abort path; measure on a copy at production volume first
+  - mode: >-
+      A backfill rewrites the whole table in one statement and exhausts resources
+    guard: >-
+      Batched and resumable backfill with progress recorded; a rerun must not double-apply
+  - mode: >-
+      Rollback is assumed and never exercised
+    guard: >-
+      Each step has a tested down path, or is declared irreversible with an explicit decision
+  - mode: >-
+      The migration is tested on an empty schema and fails on real data
+    guard: >-
+      Run against a restored production-shaped copy including the rows that violate the new constraint
+  - mode: >-
+      Two deploys run the migration concurrently and conflict
+    guard: >-
+      Advisory lock or single-runner guarantee; test concurrent invocation
+  - mode: >-
+      ALTER TABLE on a 100M+ row table acquires a full table lock; site is down for 20 minutes while the migration runs
+    guard: >-
+      Never run ALTER TABLE directly on large tables in production; MySQL → gh-ost (GitHub online schema change) or pt-online-schema-change (Percona); PostgreSQL → expand-migrate-contract pattern or pg_repack for bloat; test: run on a production-sized copy, measure lock duration, verify zero application errors during migration
+  - mode: >-
+      Migration adds NOT NULL column without a default; PostgreSQL rewrites the entire table (pre-PG11) or fails on existing rows
+    guard: >-
+      Three-step pattern: (1) ADD COLUMN nullable — instant; (2) backfill with DEFAULT in batches of 10K rows with 10ms sleep between batches; (3) ADD CONSTRAINT CHECK NOT VALID then VALIDATE CONSTRAINT (background, no lock in PG12+), then SET NOT NULL; never combine ADD COLUMN NOT NULL DEFAULT in one statement on large tables
+  - mode: >-
+      Migration fails halfway; database is in unknown state; rollback script was never written or tested
+    guard: >-
+      Every migration file has a tested down migration; irreversible operations (DROP COLUMN, DROP TABLE) are explicitly flagged as irreversible in the migration file header; rollback is rehearsed in staging before every production deployment
 ---
 
 # Database Migration Engineer
@@ -83,6 +120,35 @@ says nothing about fifty million.
 Batched, idempotent, restartable, rate-limited, with progress recorded. A
 single-statement backfill over a large table is an outage with a schema change
 attached.
+
+### 5b. Online migration tooling
+
+**PostgreSQL — zero-downtime NOT NULL column (3-step):**
+```sql
+-- Step 1: add nullable (instant, no lock)
+ALTER TABLE users ADD COLUMN score INT;
+
+-- Step 2: backfill in batches (no lock contention)
+UPDATE users SET score = 0
+WHERE id IN (SELECT id FROM users WHERE score IS NULL LIMIT 10000);
+-- repeat until 0 rows updated, with pg_sleep(0.01) between batches
+
+-- Step 3: add check constraint (background validation in PG12+)
+ALTER TABLE users ADD CONSTRAINT users_score_nn CHECK (score IS NOT NULL) NOT VALID;
+ALTER TABLE users VALIDATE CONSTRAINT users_score_nn;  -- no lock, runs in background
+-- After validate: ALTER TABLE users ALTER COLUMN score SET NOT NULL;  -- instant
+```
+
+**MySQL — gh-ost for large-table ALTER (zero downtime):**
+```bash
+gh-ost --host=db-primary --database=myapp --table=users \
+  --alter="ADD COLUMN last_seen_at TIMESTAMP NULL" \
+  --execute
+# Creates shadow table, copies rows, tails binlog, atomically renames.
+# Can be paused; monitors replica lag; safe to interrupt.
+```
+
+**Migration state machine (required):** track `pending → running → applied | failed | rolled_back | verified` in a migrations table with a unique constraint on the migration file hash. Never run a migration file twice.
 
 ### 6. Verify the data, not just the exit code
 

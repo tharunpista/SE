@@ -2,7 +2,7 @@ import type { Diagnostics } from "../util/diagnostics.ts";
 import {
   ARTIFACT_KINDS, CAPABILITY_KINDS, CLI_COMMANDS, DEPARTMENTS, INTERFACE_KINDS, MEMORY_SCOPES, suggest,
 } from "./vocabulary.ts";
-import type { MemoryScope, Role, Tier } from "./types.ts";
+import type { FailureMode, MemoryScope, Role, Tier } from "./types.ts";
 
 const ID_RE = /^[a-z][a-z0-9]*(-[a-z0-9]+)*$/;
 
@@ -15,7 +15,7 @@ const KNOWN_KEYS = new Set([
   "context_budget_tokens", "max_calls", "enabled", "status", "supersedes",
   "superseded_by", "boundary", "requires_evidence", "writes_files",
   "owns_spec_sections", "verify_commands", "escalates_on_failure_to",
-  "stack_aware", "blocked_on",
+  "stack_aware", "blocked_on", "failure_modes", "lead",
 ]);
 
 const REQUIRED_KEYS = [
@@ -31,6 +31,68 @@ interface Ctx {
 
 function isStringArray(v: unknown): v is string[] {
   return Array.isArray(v) && v.every((x) => typeof x === "string");
+}
+
+/**
+ * Parse `failure_modes`. Fail closed: a malformed entry is rejected rather than
+ * silently dropped, because a role that believes it carries domain knowledge
+ * and does not is worse than one that never claimed to.
+ */
+function failureModes(ctx: Ctx, v: unknown): FailureMode[] {
+  if (v === undefined) return [];
+  if (!Array.isArray(v)) {
+    ctx.diags.error({
+      code: "role/type", file: ctx.file, key: "failure_modes",
+      message: `Expected a list of {mode, guard} entries, received ${typeof v}.`,
+    });
+    return [];
+  }
+  const out: FailureMode[] = [];
+  for (const [i, raw] of v.entries()) {
+    const at = `failure_modes[${i}]`;
+    if (raw === null || typeof raw !== "object" || Array.isArray(raw)) {
+      ctx.diags.error({
+        code: "role/type", file: ctx.file, key: at,
+        message: "Each entry must be a mapping with `mode` and `guard`.",
+      });
+      continue;
+    }
+    const e = raw as Record<string, unknown>;
+    const unknown = Object.keys(e).filter((k) => k !== "mode" && k !== "guard");
+    if (unknown.length > 0) {
+      ctx.diags.error({
+        code: "role/unknown-key", file: ctx.file, key: at,
+        message: `Unknown key(s): ${unknown.join(", ")}.`,
+        hint: "A failure mode carries exactly what breaks (`mode`) and what catches it (`guard`).",
+      });
+      continue;
+    }
+    const mode = e["mode"]; const guard = e["guard"];
+    if (typeof mode !== "string" || mode.trim().length < 10) {
+      ctx.diags.error({
+        code: "role/invalid-failure-mode", file: ctx.file, key: `${at}.mode`,
+        message: "`mode` must be a string of at least 10 characters stating the observable symptom.",
+      });
+      continue;
+    }
+    if (typeof guard !== "string" || guard.trim().length < 10) {
+      ctx.diags.error({
+        code: "role/invalid-failure-mode", file: ctx.file, key: `${at}.guard`,
+        message: "`guard` must be a string of at least 10 characters naming the check that catches this mode.",
+        hint: "A failure mode with no guard is a warning, not knowledge. State the property or command that detects it.",
+      });
+      continue;
+    }
+    out.push({ mode: mode.trim(), guard: guard.trim() });
+  }
+  const dupes = out.map((m) => m.mode).filter((m, i, a) => a.indexOf(m) !== i);
+  if (dupes.length > 0) {
+    ctx.diags.error({
+      code: "role/duplicate-entry", file: ctx.file, key: "failure_modes",
+      message: `Duplicate failure modes: ${[...new Set(dupes)].join(", ")}.`,
+    });
+  }
+  return out;
 }
 
 function strArray(ctx: Ctx, key: string, v: unknown, fallback: string[] = []): string[] {
@@ -497,6 +559,8 @@ export function validateRole(
     escalates_on_failure_to: typeof onFailure === "string" ? onFailure : null,
     blocked_on,
     stack_aware: (fm["stack_aware"] as boolean | undefined) ?? false,
+    failure_modes: failureModes(ctx, fm["failure_modes"]),
+    lead: (fm["lead"] as boolean | undefined) ?? false,
     body,
     file,
   };

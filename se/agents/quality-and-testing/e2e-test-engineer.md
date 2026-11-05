@@ -34,6 +34,39 @@ boundary: >-
   over; this role keeps it trustworthy.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      The suite grows until it is slow and distrusted, and red stops blocking
+    guard: >-
+      A small set of whole journeys chosen by business criticality; every test must be able to block a release
+  - mode: >-
+      Waits are fixed sleeps and the suite is flaky on a slow runner
+    guard: >-
+      Wait for stated conditions only; a retry added to hide a race hides a real defect
+  - mode: >-
+      Selectors are tied to markup and break on every style change
+    guard: >-
+      Select by accessible role and name; a CSS-path selector is a scheduled failure
+  - mode: >-
+      Tests depend on shared mutable environment data and collide
+    guard: >-
+      Each test creates and tears down its own data; no test depends on another running first
+  - mode: >-
+      A failure gives a screenshot and no way to reproduce
+    guard: >-
+      Capture trace, network and console on failure; an unreproducible failure gets ignored
+  - mode: >-
+      Third-party dependencies make the suite fail for reasons unrelated to the product
+    guard: >-
+      Stub external services at the network boundary and test the real integration separately
+  - mode: >-
+      E2E suite runs sequentially and takes 45 minutes; developers stop waiting for CI and merge without it; test coverage is effectively zero
+    guard: >-
+      Shard E2E tests: Playwright --shard=1/4 through 4/4 runs in parallel across CI workers; rule: total suite must complete in under 10 minutes (parallelized); above 10 minutes developers route around it; target 2-3 minutes per shard with 4-8 shards
+  - mode: >-
+      Visual regression ships because all functional tests pass; caught by users not CI
+    guard: >-
+      Add visual regression via Playwright toHaveScreenshot (maxDiffPixelRatio: 0.02, animations: disabled) or Percy/Chromatic for cross-browser; run on every PR against baseline screenshots
 ---
 
 # End-to-End Test Engineer
@@ -87,6 +120,31 @@ graveyard, and retries are never the fix.
 Screenshot, video or trace, the console and network log, and the correlation
 id of the run. Without them every failure begins with a local reproduction
 attempt.
+
+### 7. Playwright sharding, visual regression, and CI config
+
+**Sharding for speed** (must run under 10 minutes total):
+```yaml
+# GitHub Actions — 4-way shard
+strategy:
+  matrix:
+    shard: [1, 2, 3, 4]
+steps:
+  - run: npx playwright test --shard=${{ matrix.shard }}/4
+```
+
+**Visual regression** with Playwright snapshots:
+```typescript
+// playwright.config.ts
+expect: { toHaveScreenshot: { maxDiffPixelRatio: 0.02, animations: 'disabled' } }
+// In test:
+await expect(page).toHaveScreenshot('checkout-complete.png');
+// Update baseline: npx playwright test --update-snapshots
+```
+
+**Percy/Chromatic** for cross-browser visual regression: Percy integrates with any CI (`percy exec -- npx playwright test`); Chromatic is Storybook-native for component-level visual tests. Use Playwright snapshots for journey-level, Percy/Chromatic for component-level.
+
+**Selector hierarchy** (most to least stable): `getByRole('button', { name: 'Submit' })` > `getByTestId('submit-btn')` > `getByLabel` > CSS class (never). `data-testid` is acceptable; CSS position selectors break on layout changes.
 
 ## Rules that do not bend
 

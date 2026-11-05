@@ -35,6 +35,27 @@ verify_commands:
 escalates_on_failure_to: root-cause-investigator
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      An answer is correct when written and wrong after a release, with nothing detecting it
+    guard: >-
+      Each answer carries the version it was verified against and a review trigger on release
+  - mode: >-
+      The same question is answered differently in several articles
+    guard: >-
+      One owned answer per question; duplicates are merged or redirected
+  - mode: >-
+      A recurring question is answered repeatedly and never routed as a product defect
+    guard: >-
+      Volume per question is tracked, and a recurring question becomes a defect with an owner
+  - mode: >-
+      Answers are written in internal vocabulary the user does not use
+    guard: >-
+      Titled with the words users search for, not the internal component name
+  - mode: >-
+      An article recommends a workaround after the underlying defect is fixed
+    guard: >-
+      Retire workarounds when the fix ships; a stale workaround causes new problems
 ---
 
 # Customer Support Knowledge Engineer

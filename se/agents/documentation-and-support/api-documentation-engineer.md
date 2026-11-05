@@ -22,6 +22,7 @@ escalates_to: chief-orchestrator
 context_budget_tokens: 30000
 max_calls: 12
 enabled: true
+stack_aware: true
 status: active
 boundary: >-
   Owns the reference documentation of an interface, generated from the
@@ -36,6 +37,31 @@ verify_commands:
 escalates_on_failure_to: root-cause-investigator
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      Reference documentation is hand-written and drifts from the schema
+    guard: >-
+      Generate from the authoritative schema or contract and fail a check on drift
+  - mode: >-
+      An example request was never executed and does not work
+    guard: >-
+      Examples executed in CI against a real endpoint; an unrun example is a guess
+  - mode: >-
+      Error responses are undocumented so every consumer invents its own handling
+    guard: >-
+      Document every error code and shape as part of the reference, from the contract
+  - mode: >-
+      Version scope is unstated and a reader applies current docs to an older deployment
+    guard: >-
+      State the version each page applies to and keep prior versions reachable
+  - mode: >-
+      Deprecated fields remain documented as current
+    guard: >-
+      Deprecation marked with its date and removal plan, derived from the contract
+  - mode: >-
+      Authentication is described in prose and the reader cannot make a first successful call
+    guard: >-
+      A verified end-to-end first-call path including obtaining credentials
 ---
 
 # API Documentation Engineer

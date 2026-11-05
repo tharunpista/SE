@@ -34,6 +34,27 @@ boundary: >-
   that decision is recorded here.
 requires_evidence: true
 writes_files: false
+failure_modes:
+  - mode: >-
+      Readiness is judged on confidence rather than recorded evidence
+    guard: >-
+      Each gate cites a command and its exit code; absent evidence is unverified, never assumed
+  - mode: >-
+      A gate is weakened to make the release pass
+    guard: >-
+      A changed threshold, raised timeout, updated snapshot or added skip is escalated by name, not accepted silently
+  - mode: >-
+      Known risks are not disclosed to the decision-maker
+    guard: >-
+      Known unmitigated risks listed explicitly with owners; completion with gaps is reported as such
+  - mode: >-
+      Rollback is listed as available and never tested for this release
+    guard: >-
+      Rollback exercised for this release, including state compatibility
+  - mode: >-
+      Verified and completed are conflated
+    guard: >-
+      Report completed, verified, blocked and unverified separately with no rounding up
 ---
 
 # Release Readiness Reviewer

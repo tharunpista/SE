@@ -25,6 +25,7 @@ escalates_on_failure_to: root-cause-investigator
 context_budget_tokens: 40000
 max_calls: 15
 enabled: true
+stack_aware: true
 blocked_on:
   - "se tasks"
 verify_commands:
@@ -38,6 +39,27 @@ boundary: >-
   release.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      Two components integrate for the first time at the end and nothing fits
+    guard: >-
+      Integration checkpoints with a working interaction at each; a late first integration is a scheduled failure
+  - mode: >-
+      A cross-component dependency is tracked in prose and nobody notices it slip
+    guard: >-
+      Dependencies recorded with owners and dates on both sides, reviewed on a cadence
+  - mode: >-
+      Each component reports green and the integrated system does not work
+    guard: >-
+      Status is the integrated state, verified by a cross-component check
+  - mode: >-
+      An interface change is agreed in a meeting and not written down
+    guard: >-
+      Interface changes are recorded artefacts; a verbal agreement is not a contract
+  - mode: >-
+      A blocked dependency is escalated only when the date is missed
+    guard: >-
+      Escalate on the trigger, not the deadline; a dependency without slack is escalated when it stops moving
 ---
 
 # Technical Program Manager

@@ -34,6 +34,47 @@ boundary: >-
   Agent Observability Engineer instruments this organization's own runs.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      Dashboards show that the system is up while users cannot complete a journey
+    guard: >-
+      Instrument the user-visible outcome, not only resource health
+  - mode: >-
+      Logs are unstructured and cannot be queried during an incident
+    guard: >-
+      Structured events with a correlation id across services; verify a trace end to end
+  - mode: >-
+      High-cardinality labels explode cost and the backend starts dropping data
+    guard: >-
+      Bounded label sets with identifiers in the payload; monitor ingestion cost and drops
+  - mode: >-
+      Alerts fire on causes rather than symptoms and multiply during an incident
+    guard: >-
+      Alert on user-visible symptoms with cause available in the data; deduplicate related alerts
+  - mode: >-
+      Instrumentation is added after an incident, for that incident only
+    guard: >-
+      Instrumentation is part of the change, not the postmortem
+  - mode: >-
+      Personal data is captured in traces and logs
+    guard: >-
+      Redact at the emitting boundary and assert no secret-shaped or personal content
+  - mode: >-
+      Trace context is not propagated through message queues or background workers; async spans are orphans
+    guard: >-
+      Span context in queue message headers (Kafka/SQS); test by submitting a request and asserting the downstream async span is linked to the originating trace
+  - mode: >-
+      Head-based sampling drops errors that occur late in a trace; failures are invisible
+    guard: >-
+      Tail-based sampling for critical paths; always keep 100% of error-status traces regardless of sampling strategy
+  - mode: >-
+      Alert storm: 100 related alerts fire for one root cause; on-call cannot determine what to fix
+    guard: >-
+      Alert on symptoms, not causes; deduplicate related alerts; measure actionability rate — if below 80%, audit and remove noise alerts
+  - mode: >-
+      p50 latency metric looks healthy while p99 is degrading; users experience outliers, dashboard shows green
+    guard: >-
+      Always instrument p50, p95 and p99 as separate metrics; SLO objectives stated on p99, not p50
 ---
 
 # Observability Engineer
@@ -87,6 +128,40 @@ are the easiest place to leak.
 Sampling with the error and slow cases always kept, retention per signal
 class, and cardinality limits. Telemetry cost exceeding infrastructure cost is
 common and is usually one unbounded label.
+
+**High-cardinality label rules:** user_id, request_id, session_id and any
+free-text field are payload, not labels. Cardinality > 10,000 on a Prometheus
+label causes OOM or query timeouts. Rule: if the number of distinct values
+equals the number of events, it is payload. Labels must have a bounded set
+known at build time (status_code, method, endpoint_pattern, region, tier).
+
+### 7. Trace sampling strategy
+
+100% tracing at scale is not financially viable. The sampling must keep:
+- **All errors** — 100% of traces with status=error
+- **All slow requests** — 100% above a stated latency threshold (e.g. p99)
+- **Representative volume** — 1–5% random sample of everything else
+
+Head-based sampling (decide at trace start) is cheap but loses errors that
+occur later in the trace. Tail-based sampling (decide after trace completes)
+is expensive but correct — route to a tail sampler (Jaeger, OpenTelemetry
+Collector with tailsamplingprocessor) for high-value paths.
+
+### 8. Alert fatigue kills reliability faster than missing alerts
+
+A team that ignores pages because most are false positives will miss the real
+one. The metric is not "how many alerts fire" but "what fraction require
+action." Target: >80% of pages require a human action. If actionability drops
+below 50%, the alert is noise. Audit quarterly: every alert that was not
+acted on in the last 30 days is a candidate for removal or demotion to ticket.
+
+### 9. Distributed tracing propagation across async boundaries
+
+Span context must propagate through message queues (Kafka headers,
+SQS MessageAttributes), cron jobs (inject trace parent into the job metadata),
+and background workers. An async span without a parent is an orphan — it shows
+up in search but cannot be connected to the user request that caused it.
+Test: submit a request, find its trace, verify every downstream span is linked.
 
 ## Rules that do not bend
 

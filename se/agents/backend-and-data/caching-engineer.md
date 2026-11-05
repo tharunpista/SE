@@ -35,6 +35,47 @@ boundary: >-
   efficiency, which is usually the cheaper fix.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      A cache key omits the caller scope and one tenant sees another tenant data
+    guard: >-
+      Scope every key by tenant and identity; test two identities against the same resource
+  - mode: >-
+      Invalidation is best-effort and stale data persists indefinitely
+    guard: >-
+      Every cached value states its staleness bound and its invalidation trigger; test the write-then-read path
+  - mode: >-
+      Cache expiry is aligned so everything misses at once and stampedes the origin
+    guard: >-
+      Jittered expiry plus single-flight on miss; test concurrent misses on one key
+  - mode: >-
+      The origin fails and the cache amplifies the outage instead of absorbing it
+    guard: >-
+      Stated behaviour on origin failure: serve stale with a bound, or fail; test with the origin down
+  - mode: >-
+      A cache is added where staleness was never agreed
+    guard: >-
+      Acceptable staleness is a recorded decision before the cache exists
+  - mode: >-
+      Cached entries grow unbounded and evict the entries that mattered
+    guard: >-
+      Bounded size with a stated eviction policy; measure hit rate, not cache size
+  - mode: >-
+      A single key (viral post, flash-sale item, shared config) receives millions of reads and saturates one Redis node
+    guard: >-
+      Detect hot keys via redis-cli --hotkeys or keyspace notifications; mitigate with local in-process cache (L1) in front of Redis (L2), or key sharding with client-side scatter-gather
+  - mode: >-
+      Redis Cluster reshards and in-flight writes to moved slots are lost silently
+    guard: >-
+      Handle MOVED and ASK redirects in the client; use WAIT for critical writes; test with a cluster rebalance in progress
+  - mode: >-
+      Cache-aside read-after-write: reader fetches stale cache entry milliseconds after a write, within TTL
+    guard: >-
+      For read-your-own-writes consistency, write through the cache on mutation or invalidate before returning the write response; never rely on TTL expiry for this
+  - mode: >-
+      A cache layer is introduced on a path that was previously strongly consistent; the product silently regresses to eventual consistency
+    guard: >-
+      Consistency requirement for each path is a recorded decision before the cache is added; label every cached path with its stated consistency class
 ---
 
 # Caching Engineer

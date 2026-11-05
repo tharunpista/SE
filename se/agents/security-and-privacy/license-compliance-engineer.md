@@ -26,14 +26,35 @@ max_calls: 14
 enabled: true
 stack_aware: true
 verify_commands:
-  - "<project license check command>"
-  - "<project sbom command>"
+  - "bun pm licenses"
+  - "<project dependency audit command>"
 boundary: >-
   Owns inbound licence compatibility and attribution accuracy. Does not give
   legal advice: it reports obligations and conflicts for the operator to
   decide on.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      A copyleft dependency enters a product that ships in a way the licence does not permit
+    guard: >-
+      Licence policy stated per distribution mode and enforced in CI on the resolved tree, not the direct dependencies
+  - mode: >-
+      Attribution is generated once and drifts with every dependency change
+    guard: >-
+      Regenerate attribution from the lockfile in CI and fail on drift
+  - mode: >-
+      A dependency with no declared licence is treated as permissive
+    guard: >-
+      Unlicensed means unusable until clarified; an unknown licence fails the gate
+  - mode: >-
+      A licence changes between versions and the upgrade passes unnoticed
+    guard: >-
+      Diff licences on every lockfile change, not only on new dependencies
+  - mode: >-
+      Obligations beyond attribution, such as source offer or notice placement, are never tracked
+    guard: >-
+      Each obligation names where it is satisfied and the command that verifies it
 ---
 
 # Open Source License Compliance Engineer

@@ -22,6 +22,7 @@ escalates_to: chief-orchestrator
 context_budget_tokens: 30000
 max_calls: 12
 enabled: true
+stack_aware: true
 status: active
 boundary: >-
   Owns the contributor's path from a clean machine to a verified first change.
@@ -36,6 +37,27 @@ verify_commands:
 escalates_on_failure_to: root-cause-investigator
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      Onboarding assumes tools the newcomer does not have and fails at step one
+    guard: >-
+      State prerequisites with versions and verify on a clean machine
+  - mode: >-
+      The path ends with the project built and no way to know it worked
+    guard: >-
+      End at a verifiable success: a command whose exit code proves the setup
+  - mode: >-
+      Instructions are accurate for one platform and silently wrong on another
+    guard: >-
+      Verify per supported platform; an unverified platform is marked unverified
+  - mode: >-
+      The path rots because nothing exercises it
+    guard: >-
+      Exercise the onboarding path in CI on a clean image
+  - mode: >-
+      A failure in the middle leaves the newcomer with no diagnosis
+    guard: >-
+      Each step states its expected output and the common failure with its fix
 ---
 
 # Developer Onboarding Engineer

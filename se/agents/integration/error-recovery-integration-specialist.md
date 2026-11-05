@@ -35,6 +35,27 @@ boundary: >-
   UX Content Designer owns the wording.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      Errors are caught and logged, and the flow continues on invalid state
+    guard: >-
+      Each failure has a stated recovery or a hard stop; a swallowed error is a silent corruption
+  - mode: >-
+      Recovery paths are written and never exercised
+    guard: >-
+      Inject each failure in a test and assert the stated recovery
+  - mode: >-
+      Retries are applied to non-idempotent operations
+    guard: >-
+      Classify every operation as retryable or not; retry only the safe ones
+  - mode: >-
+      A partial failure is reported to the user as complete success
+    guard: >-
+      Report partial outcomes explicitly, naming what succeeded and what did not
+  - mode: >-
+      Recovery amplifies the original failure under load
+    guard: >-
+      Backoff, caps and circuit breaking; test recovery while the dependency is still failing
 ---
 
 # Error and Recovery Integration Specialist

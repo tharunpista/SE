@@ -36,6 +36,39 @@ boundary: >-
   Owner owns the contract; this role does not change either unilaterally.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      A retried request creates a second row because the client timed out after the server committed
+    guard: >-
+      Caller-supplied idempotency key persisted in the effect transaction; test the same request twice and assert one row
+  - mode: >-
+      An error response leaks a stack trace, SQL fragment or internal hostname
+    guard: >-
+      Stable code plus a safe message; detail to logs with a correlation id, and assert the shape of a 500
+  - mode: >-
+      Input is validated in the handler and bypassed by a second caller of the same logic
+    guard: >-
+      Validate at the domain boundary the logic owns, not per entry point; test the second path
+  - mode: >-
+      Partial failure leaves the request half-applied with no way to tell
+    guard: >-
+      One transaction per unit of work, or a compensating action with its own test
+  - mode: >-
+      A long-running request has no deadline and holds a connection until the pool is empty
+    guard: >-
+      Per-request deadline shorter than the caller budget; no transaction open across a network call
+  - mode: >-
+      Pagination is unbounded and one caller pulls the whole table
+    guard: >-
+      Enforced maximum page size with a stable sort key; test the maximum and a cursor past the end
+  - mode: >-
+      Service reports /health as 200 OK while its database connection is broken; Kubernetes continues routing traffic to a broken pod
+    guard: >-
+      Three distinct endpoints: /health = process alive (always 200 if process is running); /ready = checks DB connection, cache, and critical dependencies (returns 503 if any fail); /live = event loop not deadlocked; Kubernetes liveness probe → /live; readiness probe → /ready; never combine them
+  - mode: >-
+      SIGTERM sent during rolling deploy; service immediately exits; in-flight requests return 502
+    guard: >-
+      Graceful shutdown: on SIGTERM (1) stop accepting new connections, (2) drain in-flight requests with 30s timeout, (3) close DB pool, (4) exit; Kubernetes terminationGracePeriodSeconds must exceed drain timeout; test: send SIGTERM with 100 concurrent in-flight requests, assert 0 fail
 ---
 
 # Backend Service Engineer
@@ -54,6 +87,42 @@ misbehaves under retry or concurrency, or a service that must validate
 untrusted input.
 
 ## Working procedure
+
+### 0. Health checks and graceful shutdown
+
+**Three-endpoint health pattern (Kubernetes):**
+```typescript
+app.get('/health', (_, res) => res.json({ status: 'ok' }));  // liveness: process alive
+
+app.get('/ready', async (_, res) => {
+  try {
+    await db.query('SELECT 1');
+    await cache.ping();
+    res.json({ status: 'ready' });
+  } catch (err) {
+    res.status(503).json({ status: 'not_ready', error: err.message });
+  }
+});
+
+app.get('/live', (_, res) => res.json({ status: 'live', pid: process.pid }));
+```
+
+**Graceful shutdown on SIGTERM:**
+```typescript
+process.on('SIGTERM', async () => {
+  server.close();                                          // stop accepting new connections
+  await new Promise(r => setTimeout(r, 30_000));          // drain in-flight (30s)
+  await db.end();
+  process.exit(0);
+});
+```
+`terminationGracePeriodSeconds` in the Kubernetes pod spec must be >30s.
+
+**Structured log format** (minimum fields for distributed tracing):
+```json
+{ "timestamp": "...", "level": "info", "trace_id": "...", "span_id": "...",
+  "user_id": "...", "request_id": "...", "service": "...", "duration_ms": 45 }
+```
 
 ### 1. Implement against the contract, and report mismatches rather than
 drifting

@@ -33,6 +33,27 @@ boundary: >-
   physically lives once permission exists.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      A field has no classification and ends up in a system not approved for its class
+    guard: >-
+      Every field classified with an owner before it is stored; unclassified means unstored
+  - mode: >-
+      Classification is recorded once and the schema moves on
+    guard: >-
+      Re-derive from the live schema each release and diff; an unreviewed new column is a gap
+  - mode: >-
+      A permissive system holds data classified for a restricted one
+    guard: >-
+      Allowed classes stated per system and enforced; test an egress of restricted data
+  - mode: >-
+      Access is granted for a task and never removed
+    guard: >-
+      Grants carry expiry and a review owner; test that expiry denies
+  - mode: >-
+      Derived and aggregated data is assumed to lose its classification
+    guard: >-
+      Derivations inherit the strictest input class unless a recorded assessment says otherwise
 ---
 
 # Data Governance Steward

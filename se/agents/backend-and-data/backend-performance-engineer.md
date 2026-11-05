@@ -34,6 +34,39 @@ boundary: >-
   Engineer owns the load-test suite this role measures against.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      A budget is held against an average and the slow tail is invisible
+    guard: >-
+      State and measure p95 and p99; an average inside budget with a failing tail is a failing service
+  - mode: >-
+      Load is generated against a warm cache and a small dataset
+    guard: >-
+      Test at representative data volume with a cold cache; a fast run on seed data proves nothing
+  - mode: >-
+      A symptom is optimised while the cause stays, and the regression returns
+    guard: >-
+      Profile before changing; the change names the measured cause and shows the before and after
+  - mode: >-
+      Each row of a response triggers its own query
+    guard: >-
+      Assert query counts, not latency; a count that scales with rows is the defect
+  - mode: >-
+      Connection pool and thread-pool limits are never reached in testing and are hit immediately in production
+    guard: >-
+      Exercise saturation deliberately and assert the degradation mode is the stated one
+  - mode: >-
+      A performance fix increases memory or cost and nobody notices
+    guard: >-
+      Report the trade-off with each change; latency bought with unbounded memory is deferred failure
+  - mode: >-
+      ORM makes N+1 queries silently; loading 100 users makes 101 queries; first caught under production load when database CPU spikes to 100%
+    guard: >-
+      N+1 detection tooling: Rails → Bullet gem (raises in test); Django → Django Debug Toolbar + nplusone; Node/TypeScript → query count assertions (`expect(queryCount).toBeLessThan(5)`); Java/Spring → `hibernate.show_sql=true` + P6Spy; never rely on latency alone — assert query counts in integration tests
+  - mode: >-
+      Connection pool sized at ORM default (10 per instance); 50 instances × 10 = 500 connections; PostgreSQL max_connections exceeded under load
+    guard: >-
+      Formula: `pool_size_per_instance = floor(postgres_max_connections / num_app_instances) - 2`; with 500 max_connections and 50 instances → pool_size = 8; use PgBouncer to decouple app-facing connections from Postgres connections at scale
 ---
 
 # Backend Performance Engineer
@@ -57,6 +90,32 @@ operation that must be demonstrated at a stated volume before release.
 A profile or a trace, at realistic data volume, with the percentiles stated.
 Optimisation without a baseline cannot be shown to have worked and frequently
 has not.
+
+### 1b. EXPLAIN ANALYZE workflow for slow query diagnosis
+
+```sql
+EXPLAIN (ANALYZE, BUFFERS, FORMAT TEXT)
+SELECT u.id, u.email, COUNT(o.id)
+FROM users u LEFT JOIN orders o ON o.user_id = u.id
+WHERE u.created_at > NOW() - INTERVAL '30 days'
+GROUP BY u.id, u.email;
+```
+
+What to look for:
+- `Seq Scan` on a large table → missing index
+- Rows estimate vs actual rows far off → `ANALYZE table` needed to update statistics
+- `Hash Join` with large hash → memory spill; increase `work_mem`
+- `Nested Loop` with many iterations → missing index on the join key
+- `Shared Buffers Hit` = low → data not in cache, I/O bound
+
+**N+1 detection in tests (not just production):**
+```typescript
+// Assert query count stays constant regardless of result set size
+const before = await db.query('SELECT count FROM pg_stat_statements WHERE query LIKE $1', ['%users%']);
+await service.listUsersWithOrders(100);  // 100 users
+const after = await db.query('SELECT count FROM pg_stat_statements ...');
+expect(after.count - before.count).toBeLessThan(5);  // should be 1-2, never 100+
+```
 
 ### 2. Look for the count first, then the constant
 

@@ -32,6 +32,39 @@ stack_aware: true
 escalates_on_failure_to: root-cause-investigator
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      A query omits the tenant predicate and returns another tenant data
+    guard: >-
+      Tenant scope enforced in one access layer, not per query; test cross-tenant access deliberately
+  - mode: >-
+      A cache, search index or queue is shared without tenant scoping
+    guard: >-
+      Scope every derived store by tenant; test two tenants against one key
+  - mode: >-
+      One tenant exhausts a shared resource and degrades everyone
+    guard: >-
+      Per-tenant quotas and limits; test a noisy tenant
+  - mode: >-
+      Tenant deletion leaves data behind in derived systems
+    guard: >-
+      Deletion enumerated across every store and tested end to end
+  - mode: >-
+      A migration or backfill is written for one tenant and skips the rest
+    guard: >-
+      Tenant-complete operations with progress per tenant and a reconciliation count
+  - mode: >-
+      An administrative capability crosses tenants with no audit
+    guard: >-
+      Cross-tenant access is explicit, logged and alerted; assert the audit record in a test
+  - mode: >-
+      Tenant isolation is enforced by application-level WHERE clauses; a new query path or ORM lazy-load bypasses them silently
+    guard: >-
+      Where the database supports it, use row-level security (PostgreSQL RLS) as the enforcement layer, not only application logic; application code is defense-in-depth, not the primary control; at minimum, every ORM query path is linted for missing tenant_id predicate in CI
+  - mode: >-
+      A noisy tenant drives a CPU or storage spike that triggers autoscaling for all tenants; shared infrastructure cost is not allocated back; the incident looks like a platform problem
+    guard: >-
+      Per-tenant resource metering (CPU, storage, queue depth, API call rate) emitted as metrics; quota enforcement at the application layer with 429 before the platform reaches saturation; alert when any single tenant exceeds 20% of cluster capacity
 ---
 
 # Multi-Tenancy Isolation Engineer

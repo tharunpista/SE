@@ -34,6 +34,31 @@ boundary: >-
   of each step.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      A migration is planned as a single cutover with no way back
+    guard: >-
+      Stages that each keep working, with a tested rollback available at every step
+  - mode: >-
+      Old and new run together with no stated source of truth
+    guard: >-
+      One authoritative side per data set per stage, written down and enforced
+  - mode: >-
+      Traffic is shifted with no comparison between old and new behaviour
+    guard: >-
+      Shadow or compare before shifting; a difference is a finding, not noise
+  - mode: >-
+      The migration stalls half-finished and both systems must be maintained forever
+    guard: >-
+      Each stage has an owner, a completion criterion and a decommission date
+  - mode: >-
+      Data is migrated once and the ongoing divergence is unhandled
+    guard: >-
+      Continuous reconciliation while both exist, with drift reported
+  - mode: >-
+      Edge-case behaviour of the old system is undiscovered until users complain
+    guard: >-
+      Characterise actual behaviour including the bugs consumers depend on before replacing it
 ---
 
 # Migration and Modernization Architect

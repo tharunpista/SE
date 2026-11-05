@@ -34,6 +34,39 @@ boundary: >-
   Pipeline Engineer lands the raw data.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      Two reports define the same measure differently and both are presented as truth
+    guard: >-
+      One owned definition per measure in one place; a second definition is a defect
+  - mode: >-
+      A model is rebuilt and historical numbers change with no record
+    guard: >-
+      Changes to a measure are versioned and announced with the restatement
+  - mode: >-
+      A dashboard query scans the raw event table and costs more than the insight
+    guard: >-
+      Query modelled tables with stated grain; measure query cost per dashboard
+  - mode: >-
+      A join fans out and silently multiplies a metric
+    guard: >-
+      Assert row counts and grain after every join; a changed grain is the bug
+  - mode: >-
+      Deleted or suppressed source records remain in the modelled dataset
+    guard: >-
+      Deletion and consent propagate into models; test a deletion end to end
+  - mode: >-
+      Same business metric defined differently in 3 BI dashboards; executives see different numbers; nobody knows which is correct
+    guard: >-
+      Single source of truth for all metrics: every metric defined once in dbt as a model or semantic layer definition (dbt Semantic Layer / Cube); BI tools query the semantic layer, not raw SQL; a metric exists in one place — changing it changes it everywhere; a second definition of the same metric is a defect
+  - mode: >-
+      dbt model uses SELECT * from a source table; source schema changes; model silently breaks or produces wrong output; dashboard shows incorrect data for days
+    guard: >-
+      dbt source freshness + schema tests: define all source tables in sources.yml with loaded_at_field; run dbt source freshness in CI; add column-level tests (not_null, unique, accepted_values, relationships); a source not updated in 24h fails freshness; a column with unexpected NULLs fails the test
+  - mode: >-
+      A test exists for the pipeline and none for the numbers
+    guard: >-
+      Assert known totals against a fixture; a pipeline that runs is not a number that is right
 ---
 
 # Analytics Engineer
@@ -58,11 +91,59 @@ One definition, in the shared model, referenced everywhere. A measure
 reimplemented in a dashboard is a second definition that will drift, and it
 will be the one quoted in the meeting.
 
-### 2. Layer deliberately: raw, cleaned, modelled
+### 2. Layer deliberately: staging, intermediate, marts (dbt structure)
 
-Keep raw data unmodified, do cleaning in a stated layer, and expose only the
-modelled layer to consumers. Mixing the layers means a cleaning fix silently
-changes what raw history says.
+Standard dbt project layout:
+
+```
+models/
+  staging/          # one-to-one with sources; rename, cast, light clean only
+    stg_orders.sql
+    stg_users.sql
+  intermediate/     # joins and business logic; not exposed to BI
+    int_order_items_enriched.sql
+  marts/            # consumer-facing; one schema per business domain
+    finance/
+      fct_orders.sql
+      dim_customers.sql
+```
+
+Sources defined in `sources.yml` with freshness checks:
+
+```yaml
+sources:
+  - name: raw
+    freshness:
+      warn_after: {count: 12, period: hour}
+      error_after: {count: 24, period: hour}
+    tables:
+      - name: orders
+        loaded_at_field: _loaded_at
+        columns:
+          - name: id
+            tests: [not_null, unique]
+          - name: amount
+            tests: [not_null, {accepted_values: {values: []}}]
+```
+
+For slowly-changing dimensions (customer address history), use **SCD Type 2**
+snapshots:
+
+```yaml
+# snapshots/customers_snapshot.yml
+snapshots:
+  - name: customers_snapshot
+    config:
+      strategy: timestamp
+      updated_at: updated_at
+      unique_key: id
+```
+
+This generates `dbt_valid_from`/`dbt_valid_to` columns so historical queries
+remain correct after a customer changes their address.
+
+Keep raw data unmodified; cleaning happens in staging only. Mixing the layers
+means a cleaning fix silently changes what raw history says.
 
 ### 3. Make grain explicit in every table
 

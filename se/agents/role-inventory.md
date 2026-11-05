@@ -2,17 +2,19 @@
 
 # Role inventory
 
-191 roles across 16 departments.
+194 roles across 16 departments.
 
-## Orchestration (7)
+## Orchestration (9)
 
 | id | name | tier | mission |
 |---|---|---|---|
 | `chief-orchestrator` | Chief Orchestrator | starter | Decompose a goal into bounded, owned, sequenced tasks; select the smallest sufficient roster; and refuse to let work proceed on unresolved contracts, unresolved project identity, or unsupported completion claims. |
 | `decision-recorder` | Requirements and Decision Recorder | catalogue | Record what was actually decided and on whose authority, keep the four provenance classes separate, and preserve superseded history so a past decision can be understood on its own terms. |
-| `knowledge-steward` | Memory Coordinator and Knowledge Steward | starter | Decide what is worth remembering and what may be promoted beyond the project that learned it, so memory stays small, trustworthy and free of one project's conventions presented as universal truth. |
+| `knowledge-steward` | Memory Coordinator and Knowledge Steward | catalogue | Decide what is worth remembering and what may be promoted beyond the project that learned it, so memory stays small, trustworthy and free of one project's conventions presented as universal truth. |
 | `operations-coordinator` | Operations Coordinator | catalogue | Keep the escalation queue moving and every open commitment owned, so no decision sits unanswered and no blocked work is forgotten. |
+| `permissions-broker` | Permissions Broker | starter | Act as the single gateway for all agent requests to access external systems — browsers, MCP servers, external APIs, paths outside the project, shell commands, and package installations — by formatting a human-readable permission prompt, waiting for explicit operator approval, and logging every decision. |
 | `project-manager` | Project Manager | catalogue | Own scope, sequence and delivery status, and keep schedule pressure from being converted into silently lowered acceptance criteria. |
+| `skill-router` | Skill Router | catalogue | Discover available Claude Code skills, evaluate whether a skill produces the required output faster or at lower token cost than dispatching a specialist agent, invoke the skill when it wins, and fall back to the appropriate agent when it does not. |
 | `technical-program-manager` | Technical Program Manager | catalogue | Own cross-component dependencies and integration checkpoints, so that components built in parallel actually meet, and nothing reaches release sequencing untested across its boundaries. |
 | `workload-capacity-planner` | Workload and Capacity Planner | catalogue | Decide how much work should run at once, so that parallelism buys real throughput instead of contention, rework and an unreviewable pile of simultaneous changes. |
 
@@ -28,7 +30,7 @@
 | `product-manager` | Product Manager | catalogue | Decide what is built next and in what order, and keep the reason for each decision attached to it so that a later reversal is a decision rather than a surprise. |
 | `product-operations-specialist` | Product Operations Specialist | catalogue | Keep the product's recurring processes running and its feedback loops closed, so that what customers report reaches the role that can act on it and what ships is communicated to the people affected. |
 | `product-strategist` | Product Strategist | catalogue | State who the product is for, what it must be better at than the alternative, and what it deliberately will not do, so that scope decisions later have something to be measured against. |
-| `requirements-engineer` | Requirements Engineer | starter | Convert stated needs into requirements that can be tested, and separate what the user actually said from what anyone inferred. |
+| `requirements-engineer` | Requirements Engineer | catalogue | Convert stated needs into requirements that can be tested, and separate what the user actually said from what anyone inferred. |
 | `user-researcher` | User Researcher | catalogue | Plan studies that could disprove the plan, synthesise what participants actually did and said, and keep the sample's limits attached to every conclusion. |
 
 ## Design & UX (13)
@@ -120,7 +122,7 @@
 | id | name | tier | mission |
 |---|---|---|---|
 | `api-contract-owner` | API Contract Owner | starter | Own the authoritative request and response contract between producer and consumer, and make it exist before either side builds against an assumption. |
-| `contract-test-engineer` | Contract Test Engineer | starter | Prove that each producer and each consumer independently conform to the agreed interface, and catch a breaking change at the boundary that introduced it rather than in production. |
+| `contract-test-engineer` | Contract Test Engineer | catalogue | Prove that each producer and each consumer independently conform to the agreed interface, and catch a breaking change at the boundary that introduced it rather than in production. |
 | `data-flow-state-consistency-engineer` | Data-Flow and State-Consistency Engineer | catalogue | Trace where each fact lives across client, services and stores, and make sure the copies converge, so no screen shows a number another system has already changed. |
 | `end-to-end-workflow-engineer` | End-to-End Workflow Engineer | catalogue | Make a complete user workflow work across every system it touches, and prove it with the whole path rather than with each component's own tests. |
 | `error-recovery-integration-specialist` | Error and Recovery Integration Specialist | catalogue | Make failure across a boundary produce a specific, recoverable outcome, so that every error the user meets has a cause, an owner, and a next action. |
@@ -129,7 +131,7 @@
 | `integration-environment-engineer` | Integration Environment Engineer | catalogue | Provide an environment where the whole system can be exercised reproducibly, so that "it works on my machine" and "it fails in staging" both become answerable questions. |
 | `integration-release-coordinator` | Integration Release Coordinator | catalogue | Sequence the release of components that depend on each other so that no deployment order leaves a consumer talking to a producer that does not understand it. |
 
-## AI & Agent Systems (15)
+## AI & Agent Systems (16)
 
 | id | name | tier | mission |
 |---|---|---|---|
@@ -138,9 +140,10 @@
 | `ai-data-engineer` | AI Data Engineer | catalogue | Prepare the datasets AI work depends on, with provenance, consent and licensing recorded, so a model is never trained or evaluated on data the product had no right to use. |
 | `ai-evaluation-engineer` | AI Evaluation Engineer | catalogue | Measure whether an AI feature actually does its task, on a held-out set with stated criteria, so a prompt or model change is a measured trade rather than a vibe. |
 | `ai-systems-architect` | AI Systems Architect | catalogue | Decide where a model belongs in the system and what the product does when it is wrong, slow, or unavailable, so that a probabilistic component sits behind a deterministic boundary. |
+| `ai-systems-lead` | AI Systems Lead | starter | Own the AI and agent systems capability for the product: decide the AI architecture, enforce evaluation standards, prevent hallucination and cost surprises, and coordinate the 15 specialist AI roles so they produce a coherent, measurable, production-safe system. |
 | `ai-workflow-engineer` | AI Workflow Engineer | catalogue | Compose multi-step AI work into a workflow that can be resumed, inspected and bounded, so a failure at step four does not mean starting again or silently skipping it. |
 | `context-engineer` | Context Engineer | catalogue | Decide what goes into a model's context and in what order, within a fixed budget, so the most decision-relevant material is present and nothing irrelevant is paid for. |
-| `llm-application-engineer` | LLM Application Engineer | catalogue | Build the invocation path so that a model call is bounded, validated, retryable and traceable, and so a bad response degrades the feature instead of corrupting the system. |
+| `llm-application-engineer` | LLM Application Engineer | catalogue | Build the invocation path so that a model call is bounded, validated, retryable and traceable, and so a bad response degrades the feature instead of corrupting the system. Own RAG architecture, context management, prompt engineering, and the evaluation harness that proves the system is working. |
 | `ml-engineer` | ML Engineer | catalogue | Train and ship models whose reported performance survives contact with production data, and never let a metric measured on leaked data become a product claim. |
 | `model-integration-engineer` | Model Integration Engineer | catalogue | Connect the product to model providers behind one internal interface, so that a provider outage, limit, or price change is a configuration decision rather than a rewrite. |
 | `model-lifecycle-deprecation-engineer` | Model Lifecycle and Deprecation Engineer | catalogue | Own the fact that the same prompt returns different output next quarter: pin versions, detect behavioural drift, and migrate before a provider retires a model. |
@@ -236,7 +239,7 @@
 | `agent-observability-engineer` | Agent Observability Engineer | catalogue | Instrument agent runs with stable identifiers, invocation spans, structured events, cross-agent trace correlation, and diagnostic dashboards. |
 | `agent-safety-guardrails-engineer` | Agent Safety and Guardrails Engineer | catalogue | Own provenance trust tiers, data-not-instruction handling, quarantine, write-path containment, tool allowlists, blast-radius limits, and injection acceptance tests. |
 | `harness-integration-engineer` | Harness Integration Engineer | catalogue | Own host adapters, author-once rendering, host capability detection, conformance tests, and accurate support tiers. |
-| `memory-systems-engineer` | Memory Systems Engineer | starter | Build and operate the memory layer so that it cannot corrupt a record, cannot lose an agent's work, and cannot report a write as saved when it was not. |
+| `memory-systems-engineer` | Memory Systems Engineer | catalogue | Build and operate the memory layer so that it cannot corrupt a record, cannot lose an agent's work, and cannot report a write as saved when it was not. |
 | `orchestration-runtime-engineer` | Orchestration Runtime Engineer | catalogue | Own the task graph, cycle detection, topological scheduling, failure propagation, run journal, idempotent replay, resumability, and stop-the-line behavior. |
 | `token-cost-governance-engineer` | Token and Cost Governance Engineer | catalogue | Enforce per-role context budgets, call caps, delegation depth, pre-invocation limits, and inference cost accounting. |
 | `workspace-isolation-engineer` | Workspace Isolation Engineer | catalogue | Own per-agent workspace provisioning, path ownership enforcement, merge gating, and refusal to run parallel writers without isolation. |

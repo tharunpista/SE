@@ -22,6 +22,7 @@ escalates_to: product-manager
 context_budget_tokens: 30000
 max_calls: 12
 enabled: true
+lead: true
 status: active
 boundary: >-
   Tracks who owes what to whom across business functions, and keeps unresolved

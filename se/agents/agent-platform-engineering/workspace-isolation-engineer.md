@@ -21,6 +21,7 @@ escalates_to: chief-orchestrator
 context_budget_tokens: 30000
 max_calls: 12
 enabled: true
+stack_aware: true
 status: active
 boundary: >-
   Owns where an agent is allowed to write and the refusal to run parallel
@@ -28,10 +29,35 @@ boundary: >-
   whether a write is permitted at all; this role owns the containment that
   makes a permitted write safe to run beside another one.
 verify_commands:
-  - "bun test"
+  - "<project test command>"
 escalates_on_failure_to: root-cause-investigator
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      Parallel writers share a tree and silently corrupt each other edits
+    guard: >-
+      Refuse to start more than one writer without isolation; the refusal is the feature
+  - mode: >-
+      Isolation is declared in metadata and never provisioned at runtime
+    guard: >-
+      Verify the workspace exists and is writable before the run; a declaration the runtime does not honour is a false guarantee
+  - mode: >-
+      A merge gate is skipped because the change looked small
+    guard: >-
+      Gate every merge on the same checks; size is not a risk assessment
+  - mode: >-
+      An agent writes outside its declared paths and nobody notices until review
+    guard: >-
+      Enforce declared path ownership at write time; test the escape attempt and assert refusal
+  - mode: >-
+      Abandoned worktrees accumulate until the disk fills
+    guard: >-
+      Clean up on exit and detect orphans; report reclaimable space rather than failing silently
+  - mode: >-
+      Two agents are allocated overlapping paths and both believe they own the file
+    guard: >-
+      Allocation is exclusive per path; an overlapping request is refused with both claimants named
 ---
 
 # Workspace Isolation Engineer

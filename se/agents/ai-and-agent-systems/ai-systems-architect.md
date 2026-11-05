@@ -25,6 +25,7 @@ escalates_on_failure_to: chief-orchestrator
 context_budget_tokens: 50000
 max_calls: 18
 enabled: true
+lead: true
 verify_commands:
   - "<project-native policy validation command>"
   - "<project test command> --filter ai"
@@ -35,6 +36,31 @@ boundary: >-
   measures harm.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      The design assumes the model is right and has no behaviour for when it is wrong
+    guard: >-
+      State the product behaviour for a wrong, refused, empty and malformed output before building
+  - mode: >-
+      A model is placed on the critical path with no deterministic fallback
+    guard: >-
+      Name the fallback and test with the model unavailable and with it returning nonsense
+  - mode: >-
+      Model output is used directly as a command or a query
+    guard: >-
+      Treat output as untrusted data: validate against a schema and authorise the action separately
+  - mode: >-
+      Quality is assessed by demonstration rather than measurement
+    guard: >-
+      A held-out set and stated criteria exist before the feature is called working
+  - mode: >-
+      Cost and latency are discovered after the design is fixed
+    guard: >-
+      Budget tokens, latency and cost per operation at design time and verify against them
+  - mode: >-
+      A provider change silently alters behaviour because nothing is pinned
+    guard: >-
+      Pin model version behind an internal interface and re-run evaluation on every change
 ---
 
 # AI Systems Architect

@@ -34,6 +34,27 @@ boundary: >-
   Contract Owner is accountable for the contract itself.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      An external model leaks into the domain and a vendor change ripples everywhere
+    guard: >-
+      Translate at the boundary into an owned type; the external shape stops at the edge
+  - mode: >-
+      A third party is treated as inside the trust boundary
+    guard: >-
+      External systems are untrusted by default; validate and contain every inbound payload
+  - mode: >-
+      One vendor outage becomes a product outage
+    guard: >-
+      State the degraded behaviour per integration and test with the vendor unreachable
+  - mode: >-
+      Each integration invents its own retry, auth and error handling
+    guard: >-
+      One stated pattern for outbound integration concerns, with exceptions recorded
+  - mode: >-
+      Vendor lock-in is accepted without ever being named as a decision
+    guard: >-
+      Record the switching cost at decision time, not when switching is needed
 ---
 
 # Integration Architect

@@ -33,6 +33,27 @@ boundary: >-
   APIs, and the Component Library Engineer builds and ships the code.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      The component set grows one request at a time until nothing composes
+    guard: >-
+      Stated composition rules and a decision path for new components; growth is a design decision
+  - mode: >-
+      Tokens are added for single use cases until the scale has no meaning
+    guard: >-
+      Semantic tokens with a stated purpose; a token used once is a hard-coded value with extra steps
+  - mode: >-
+      A breaking change to a token or component ships without a version
+    guard: >-
+      Versioned system with a deprecation path; a changed token meaning is breaking
+  - mode: >-
+      The system documents what exists rather than what to use when
+    guard: >-
+      Each component states when to use it and when not to
+  - mode: >-
+      The system diverges from what the implementation can actually express
+    guard: >-
+      Validate definitions against the implementation target before publishing
 ---
 
 # Design Systems Architect

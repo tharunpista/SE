@@ -26,14 +26,40 @@ max_calls: 16
 enabled: true
 stack_aware: true
 verify_commands:
+  - "gitleaks detect --no-git -v"
+  - "gitleaks detect -v"
   - "<project test command> --filter secrets"
-  - "<project secret scan command>"
 boundary: >-
   Owns secret storage, delivery, rotation and leak response. Accountable owner
   for the redaction policy: what must never appear in a log, a transcript, or
   an agent's context.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      A secret is committed and treated as handled once the commit is reverted
+    guard: >-
+      Rotate first, then remove; a secret in history is compromised regardless of the current tree
+  - mode: >-
+      Secrets reach logs or an agent context through an error or a diagnostic dump
+    guard: >-
+      Redact at the boundary that formats output; assert no secret-shaped content in logs and emitted events
+  - mode: >-
+      Rotation is manual, so it is never exercised and fails when it is urgent
+    guard: >-
+      Rotate on a schedule in a non-production environment; an unrehearsed rotation is not a capability
+  - mode: >-
+      A secret has no owner and cannot be revoked because nobody knows what breaks
+    guard: >-
+      Inventory maps each secret to an owner and its consumers; revocation is tested
+  - mode: >-
+      Build logs or CI output echo an injected secret
+    guard: >-
+      Mask in the runner and assert masking with a canary value in a pipeline test
+  - mode: >-
+      A long-lived credential is used where a short-lived one would do
+    guard: >-
+      Prefer short-lived issued credentials; any long-lived secret carries a recorded justification and expiry
 ---
 
 # Secrets Management Engineer

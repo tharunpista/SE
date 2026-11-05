@@ -22,6 +22,7 @@ escalates_to: solution-architect
 context_budget_tokens: 40000
 max_calls: 16
 enabled: true
+stack_aware: true
 status: active
 boundary: >-
   Implements Android screens and flows inside the architecture the Mobile Lead
@@ -31,9 +32,39 @@ boundary: >-
   level to avoid a compatibility path, and does not treat an OEM-specific
   failure as the user's problem.
 verify_commands:
-  - "<project mobile build command> --platform android"
-  - "<project test command> --filter android"
-  - "<project lint command>"
+  - "./gradlew assembleDebug"
+  - "./gradlew testDebugUnitTest"
+  - "./gradlew lintDebug"
+  - "adb shell am kill <applicationId>"
+failure_modes:
+  - mode: Process death loses an in-progress form; works on a dev device, fails on a loaded phone
+    guard: "adb shell am kill <applicationId> mid-flow, then resume; untested saved state is broken saved state"
+  - mode: Main-thread I/O causes ANRs; Play demotes the app on vitals
+    guard: StrictMode penaltyLog in debug; Play vitals ANR rate under 0.47% and crashes under 1.09%
+  - mode: PendingIntent without an explicit mutability flag crashes on API 31+
+    guard: FLAG_IMMUTABLE unless mutation is required; build and launch against the max target API
+  - mode: Notifications silently never appear on API 33+
+    guard: POST_NOTIFICATIONS requested at runtime with a denial path; verify on an API 33+ device
+  - mode: Scoped storage makes raw file paths fail on API 29+
+    guard: MediaStore or SAF, never a constructed path; test on the minimum and a current API level
+  - mode: Deferred work never runs under Doze or App Standby
+    guard: WorkManager with constraints rather than AlarmManager; `adb shell dumpsys deviceidle force-idle`
+  - mode: An exported component is reachable by any app on the device
+    guard: android:exported declared explicitly on every component; audit each intent filter for implicit exposure
+  - mode: Rotation or a dialog loses state that process-death tests missed
+    guard: State in ViewModel or SavedStateHandle; rotate and kill in the same test pass
+  - mode: An Activity or View held in a static or long-lived reference leaks
+    guard: Application context for anything outliving a screen; LeakCanary in debug builds
+  - mode: A deep link opens a second instance instead of resuming the first
+    guard: launchMode singleTop plus onNewIntent; `adb shell am start -a android.intent.action.VIEW -d <url>`
+  - mode: Back navigation breaks under predictive back on API 33+
+    guard: OnBackPressedDispatcher, never an onBackPressed override; test with predictive back enabled
+  - mode: UI truncates or overlaps at the largest supported font scale
+    guard: sp for text and no fixed heights on text containers; verify at 200% font scale
+  - mode: TalkBack reads controls in an order that does not match the screen
+    guard: Traversal verified with TalkBack on, not inferred from the layout tree
+  - mode: Ships green on a Pixel and fails on a manufacturer build
+    guard: Verify on the minimum API level and at least one OEM battery-managed device before done
 escalates_on_failure_to: root-cause-investigator
 requires_evidence: true
 writes_files: true

@@ -22,6 +22,7 @@ escalates_to: solution-architect
 context_budget_tokens: 40000
 max_calls: 16
 enabled: true
+stack_aware: true
 status: active
 boundary: >-
   Owns the shared code and the contract at the native boundary. The Mobile Lead
@@ -36,6 +37,31 @@ verify_commands:
 escalates_on_failure_to: root-cause-investigator
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      A bridge call that is cheap in isolation is called per list row and stalls the UI
+    guard: >-
+      Batch across the boundary and assert a call count in tests; a count that scales with rows is the defect
+  - mode: >-
+      Types serialise differently on each platform and a value silently changes meaning
+    guard: >-
+      One declared wire contract for the bridge with round-trip tests per platform, including null, empty and large values
+  - mode: >-
+      An exception thrown in shared code is swallowed at the native boundary
+    guard: >-
+      Errors cross the bridge as declared values, never as thrown objects; test the failure path from both sides
+  - mode: >-
+      Shared code assumes a thread or lifecycle that one platform does not provide
+    guard: >-
+      State the threading and lifecycle contract at the boundary; verify on the platform with the stricter model
+  - mode: >-
+      A dependency upgrade on one platform silently changes shared behaviour
+    guard: >-
+      Shared behaviour covered by tests that run on both platforms in CI, not on whichever is convenient
+  - mode: >-
+      Logic that must stay platform-specific is pulled into shared code for symmetry
+    guard: >-
+      Platform-specific behaviour is listed and justified; symmetry is not a reason to unify a divergent requirement
 ---
 
 # Cross-Platform Mobile Engineer

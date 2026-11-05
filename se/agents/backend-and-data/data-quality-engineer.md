@@ -35,6 +35,39 @@ boundary: >-
   and monitors the expectation.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      Checks pass on aggregate and miss a broken partition
+    guard: >-
+      Check per partition and per segment; a passing total hides a missing day
+  - mode: >-
+      A check warns and the downstream job consumes the bad data anyway
+    guard: >-
+      Blocking checks fail the pipeline; a warning-only check is documentation
+  - mode: >-
+      Freshness is never checked, so a stopped pipeline looks like stable data
+    guard: >-
+      Freshness assertion per dataset with an owner; stale data is a failure, not a gap
+  - mode: >-
+      Thresholds are set from one good week and alert constantly thereafter
+    guard: >-
+      Thresholds derived from a stated distribution and reviewed; a muted check is no check
+  - mode: >-
+      Uniqueness is assumed because the source is trusted
+    guard: >-
+      Assert uniqueness and referential integrity at the boundary regardless of source
+  - mode: >-
+      A failed check has no owner and is acknowledged forever
+    guard: >-
+      Every check names an owner and an action; an unowned check is noise
+  - mode: >-
+      Data quality checks run once per day on a schedule; a bad batch loads at 2am; downstream reports are wrong for 22 hours; finance presents incorrect numbers in a board meeting
+    guard: >-
+      Data quality checks must run as close to data arrival as possible, not on a fixed schedule. Use dbt tests triggered by the pipeline on completion: dbt test --select tag:critical runs immediately after each pipeline run. For streaming data: implement row-count and null-rate checks in the pipeline itself, before writing to the output table. Alert when checks fail, not when you next check.
+  - mode: >-
+      Data contract between producer and consumer is documented in Confluence; producer changes a column type; consumer breaks; nobody knew because the contract wasn't machine-readable
+    guard: >-
+      Data contracts as code: define the schema in a machine-readable format (Great Expectations expectations suite, dbt source schema tests, or Soda checks). The producer runs the contract checks before publishing. The consumer has the same checks in its ingestion pipeline. Breaking change = CI failure on the producer side, before it reaches the consumer.
 ---
 
 # Data Quality Engineer
@@ -141,3 +174,55 @@ Every relied-upon dataset has baselined expectations across the five
 dimensions, alerts name the specifics and an owner, blocking behaviour is
 pre-decided, drift is monitored, and every past incident has a check that
 would now catch it.
+
+## Great Expectations (the standard for complex DQ)
+
+```python
+import great_expectations as gx
+
+context = gx.get_context()
+validator = context.sources.add_pandas("my_data").read_csv("orders.csv")
+validator.expect_column_values_to_not_be_null("order_id")
+validator.expect_column_values_to_be_unique("order_id")
+validator.expect_column_values_to_be_between("amount", min_value=0, max_value=100000)
+validator.expect_column_pair_values_a_to_be_greater_than_b("delivery_date", "order_date")
+results = validator.validate()
+```
+
+## dbt tests for data quality
+
+```yaml
+# models/staging/stg_orders.yml
+models:
+  - name: stg_orders
+    columns:
+      - name: order_id
+        tests: [not_null, unique]
+      - name: status
+        tests:
+          - accepted_values:
+              values: ['pending', 'processing', 'shipped', 'delivered', 'cancelled']
+      - name: user_id
+        tests:
+          - relationships:
+              to: ref('stg_users')
+              field: id
+      - name: amount
+        tests:
+          - dbt_utils.expression_is_true:
+              expression: ">= 0"
+```
+
+## Anomaly detection (Z-score)
+
+```sql
+-- Flag rows where a metric is > 3 standard deviations from the 30-day mean
+WITH stats AS (
+  SELECT AVG(daily_revenue) AS mean, STDDEV(daily_revenue) AS std
+  FROM daily_metrics WHERE date >= CURRENT_DATE - 30
+)
+SELECT date, daily_revenue,
+  ABS(daily_revenue - mean) / NULLIF(std, 0) AS z_score
+FROM daily_metrics, stats
+WHERE ABS(daily_revenue - mean) / NULLIF(std, 0) > 3;
+```

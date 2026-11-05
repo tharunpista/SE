@@ -22,6 +22,7 @@ escalates_to: solution-architect
 context_budget_tokens: 30000
 max_calls: 12
 enabled: true
+stack_aware: true
 status: active
 boundary: >-
   Owns signing, submission, store requirements and the rollout mechanism for
@@ -37,6 +38,31 @@ verify_commands:
 escalates_on_failure_to: root-cause-investigator
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      A privacy declaration drifts from what the binary and its SDKs actually collect
+    guard: >-
+      Re-derive the declaration from the dependency set on every release; a declaration written once is wrong by the next SDK bump
+  - mode: >-
+      A signing key or provisioning profile expires and release is blocked at the worst moment
+    guard: >-
+      Track expiry with lead-time alerting and verify the signing path on a clean runner each release
+  - mode: >-
+      A permission or background mode is added by a dependency and the store rejects the build
+    guard: >-
+      Diff the effective permission and background-mode set against the approved list in CI
+  - mode: >-
+      A staged rollout has no halt criteria, so a crash spike keeps shipping
+    guard: >-
+      Stated halt thresholds on crash and ANR rate, checked before each stage advances
+  - mode: >-
+      An upgrade path from an old shipped version is never tested
+    guard: >-
+      Install the oldest supported version, then upgrade; fresh-install testing proves nothing about upgrades
+  - mode: >-
+      Build metadata is not reproducible, so a reported crash cannot be mapped to a build
+    guard: >-
+      Archive symbols and the build identifier per release; verify a symbolicated crash before shipping
 ---
 
 # Mobile Release and Store Compliance Engineer

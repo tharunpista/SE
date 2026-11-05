@@ -34,6 +34,27 @@ boundary: >-
   Engineer.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      The support matrix lives in prose and is not what CI runs
+    guard: >-
+      Matrix declared once and consumed by CI; an untested row is reported as untested
+  - mode: >-
+      Testing covers the latest versions and the minimum supported one is never exercised
+    guard: >-
+      Always include the declared minimum; that is the row most likely to fail
+  - mode: >-
+      Emulators pass and real devices fail
+    guard: >-
+      Verify on at least one real device or manufacturer build per supported platform family
+  - mode: >-
+      A feature is used without a fallback for a browser in the matrix
+    guard: >-
+      Detect capability and provide a tested fallback; an unsupported browser gets a stated experience
+  - mode: >-
+      The matrix never shrinks and the suite cost grows forever
+    guard: >-
+      Review support against actual usage and retire rows deliberately with the decision recorded
 ---
 
 # Compatibility Test Engineer

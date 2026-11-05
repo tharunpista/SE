@@ -33,6 +33,27 @@ boundary: >-
   and the Business Analyst owns the underlying business process rules.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      The journey is mapped as the successful path and the real one is full of waits and failures
+    guard: >-
+      Map the waits, failures, retries and handoffs explicitly; the unhappy path is most of the journey
+  - mode: >-
+      A handoff between people or systems has no owner and the user waits indefinitely
+    guard: >-
+      Every handoff names who holds it and what the user sees while waiting
+  - mode: >-
+      Offline, interrupted and resumed journeys are unconsidered
+    guard: >-
+      State what happens when the user leaves and returns at each step
+  - mode: >-
+      The journey assumes the user starts at the beginning
+    guard: >-
+      State the entry points and what is required at each; deep entry is the common case
+  - mode: >-
+      Journey maps are produced once and never reconciled with what shipped
+    guard: >-
+      Reconcile against the built flow and record the differences
 ---
 
 # Journey and Workflow Designer

@@ -36,6 +36,31 @@ boundary: >-
   journeys or contract conformance.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      Tests assert implementation detail and break on every refactor while missing real regressions
+    guard: >-
+      Assert user-visible behaviour through accessible queries; a test that survives a rewrite is the goal
+  - mode: >-
+      Everything is mocked, so the test passes while the integration is broken
+    guard: >-
+      Mock at the network boundary only; test the component with its real children
+  - mode: >-
+      Async assertions race and the suite is flaky
+    guard: >-
+      Wait for a stated condition, never a fixed delay; a tolerated flaky test trains everyone to ignore red
+  - mode: >-
+      Only success paths are covered
+    guard: >-
+      Negative cases for failed requests, empty results, permission denial and invalid input
+  - mode: >-
+      Coverage is high and no test would catch a broken journey
+    guard: >-
+      Allocate by risk; one trustworthy journey test is worth many component tests
+  - mode: >-
+      A snapshot is updated without being read
+    guard: >-
+      Snapshot diffs are reviewed as changes; an auto-accepted snapshot asserts nothing
 ---
 
 # Frontend Test Engineer

@@ -33,6 +33,27 @@ boundary: >-
   UX Lead decides which findings must be resolved before release.
 requires_evidence: true
 writes_files: false
+failure_modes:
+  - mode: >-
+      Review is against memory of the design rather than the approved artefact
+    guard: >-
+      Compare against the approved artefact and record the deviations specifically
+  - mode: >-
+      Deviations are reported as impressions and cannot be acted on
+    guard: >-
+      Each difference names the element, the expected value and the actual one
+  - mode: >-
+      Only the designed viewport and the designed content are checked
+    guard: >-
+      Check across the supported range with real content, including long and absent
+  - mode: >-
+      Interactive and error states are not reviewed because the design showed resting states
+    guard: >-
+      Review every specified state; an unspecified state is a question for the designer
+  - mode: >-
+      Blocking differences and nitpicks are reported in one undifferentiated list
+    guard: >-
+      Separate blocking from suggestion explicitly
 ---
 
 # Design QA Reviewer

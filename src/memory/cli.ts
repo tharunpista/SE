@@ -8,7 +8,7 @@
  */
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { isAbsolute, join } from "node:path";
+import { basename, isAbsolute, join } from "node:path";
 import {
   AmbiguousProjectError,
   ensureRepoLocalMemoryGitignore,
@@ -18,6 +18,8 @@ import {
   resolveProject,
   type MemoryLocation,
   type ProjectIdentity,
+  slugify,
+  PROJECT_CONFIG_PATH,
 } from "./project.ts";
 import { formatDoctorReport, runDoctor } from "./doctor.ts";
 import { describeClaim, recordClaim, type ClaimReport } from "./namespace.ts";
@@ -54,6 +56,7 @@ subcommands:
                                      answer in the host's hook format. Injects
                                      only for a new context window, never on
                                      resume, compact or fork.
+  standup [--since <iso>]   What was done: records grouped by task, with evidence.
   recall [topic]            Every live record, newest first, with freshness.
                             --limit <n>        at most n records
                             --budget <tokens>  stop at this size (default 4000)
@@ -921,6 +924,89 @@ function cmdInit(repoRoot: string, flags: Flags): number {
   }
 }
 
+/**
+ * `se memory standup [--since <ISO date>]` -- what was actually done.
+ *
+ * Reads the records the day's work wrote and groups them by `task_id`, which
+ * the store has always accepted and nothing ever read back. The point is that
+ * this is a *report of evidence*, not a narrative: each line carries the
+ * record's own evidence and source freshness, so a summary cannot claim work
+ * that left no trace.
+ *
+ * Deliberately not a model summary. A standup assembled by an LLM from a long
+ * transcript costs the whole transcript and can describe work that did not
+ * happen; assembled from records it costs a few hundred tokens and cannot.
+ */
+function cmdStandup(ctx: MemoryContext, flags: Flags): number {
+  const s = store(ctx);
+  const live = s.liveManifest();
+  const sinceFlag = flagString(flags, "since");
+  // Default window: midnight today, local, expressed as an ISO instant so the
+  // comparison against written_at is a plain string compare on the same shape.
+  const since = sinceFlag ?? new Date(new Date().setHours(0, 0, 0, 0)).toISOString();
+
+  const all = live
+    ? Object.keys(live.entries).map((id) => s.get(id)).filter((r): r is NonNullable<typeof r> => r !== null)
+    : [];
+  const records = all
+    .filter((r) => r.written_at >= since)
+    .sort((a, b) => (a.written_at < b.written_at ? -1 : 1));
+
+  if (flags.has("json")) {
+    console.log(JSON.stringify({
+      schema_version: 1, project_id: ctx.projectId, since,
+      record_count: records.length,
+      records: records.map((r) => ({
+        record_id: r.record_id, task_id: r.task_id ?? null, type: r.type, scope: r.scope,
+        status: r.status, summary: r.summary, written_at: r.written_at,
+        evidence: r.evidence ?? [], sources: r.source_refs.map((x) => x.path),
+      })),
+    }, null, 2));
+    return 0;
+  }
+
+  console.log(`standup --- ${ctx.projectId}, since ${since}`);
+  if (records.length === 0) {
+    console.log("\nNothing recorded in this window.");
+    console.log("A session that wrote no record left no evidence of what it did.");
+    return 0;
+  }
+
+  // Grouped by task so a day reads as the work items it was, not a flat log.
+  const byTask = new Map<string, typeof records>();
+  for (const r of records) {
+    const key = r.task_id ?? "(no task id)";
+    const bucket = byTask.get(key);
+    if (bucket) bucket.push(r); else byTask.set(key, [r]);
+  }
+
+  for (const [task, group] of byTask) {
+    console.log(`\n${task}`);
+    for (const r of group) {
+      const flag = r.status === "active" ? "" : ` [${r.status}]`;
+      console.log(`  ${r.written_at.slice(11, 16)}  ${r.type}${flag}`);
+      console.log(`         ${r.summary.split("\n")[0]}`);
+      /*
+       * Evidence is rendered as `detail:exit` because an exit code is the only
+       * part a reader can act on: 0 means the check ran and passed, anything
+       * else means the record describes an attempt. Printing the object would
+       * hide exactly the field that decides whether this line is a result.
+       */
+      if (r.evidence && r.evidence.length > 0) {
+        const shown = r.evidence.map((e) => (e.exit_code === undefined ? `${e.kind}:${e.detail}` : `${e.detail}:${e.exit_code}`));
+        console.log(`         evidence: ${shown.join(", ")}`);
+      } else {
+        console.log(`         evidence: NONE RECORDED`);
+      }
+    }
+  }
+  const noEvidence = records.filter((r) => !r.evidence || r.evidence.length === 0).length;
+  console.log(`
+${records.length} record(s), ${byTask.size} task(s).`);
+  if (noEvidence > 0) console.log(`${noEvidence} carry no evidence and are claims, not results.`);
+  return 0;
+}
+
 export function cmdMemory(repoRoot: string, positional: readonly string[], flags: Flags): number {
   const sub = positional[0];
 
@@ -950,6 +1036,51 @@ export function cmdMemory(repoRoot: string, positional: readonly string[], flags
      * who wants to enable memory here will look.
      */
     if (flags.has("hook")) {
+      /*
+       * `--auto-init`: pin an identity on first encounter rather than going
+       * silent.
+       *
+       * Part XX 23 refuses to *resolve* an identity from the directory name,
+       * because a rename would then silently orphan every record written under
+       * the old one. Using the name once to *seed a committed pin* is a
+       * different act: after this the id lives in .se/project.json and survives
+       * renames, moves and clones. That is the whole reason the file exists.
+       *
+       * Gated on the directory being a version-controlled project. Opening a
+       * session in a home directory or a downloads folder must not create
+       * files, so anything without a repository stays a silent no-op.
+       */
+      const autoInit =
+        flags.has("auto-init") &&
+        cause instanceof AmbiguousProjectError &&
+        existsSync(join(repoRoot, ".git"));
+
+      if (autoInit) {
+        try {
+          const seed = slugify(basename(repoRoot));
+          const result = initProject(repoRoot, seed || "project");
+          const retried = resolveContext(repoRoot, flags, { persistClaim: true });
+          console.log(
+            JSON.stringify({
+              hookSpecificOutput: {
+                hookEventName: "SessionStart",
+                additionalContext:
+                  `Project memory enabled for "${result.identity.id}".\n` +
+                  `Identity pinned in ${PROJECT_CONFIG_PATH} so it survives renames and clones; ` +
+                  `commit it to share the namespace, or delete it to disable memory here.\n` +
+                  `No records yet. Record a decision when one is made:\n` +
+                  `  se memory remember "<what was decided>" --evidence "<command>:<exit>"`,
+              },
+            }),
+          );
+          void retried;
+          return 0;
+        } catch {
+          // Unwritable directory, a race with another session, anything else:
+          // fall through to the silent no-op. Never fail a session start.
+        }
+      }
+
       console.log("{}");
       return 0;
     }
@@ -991,6 +1122,8 @@ export function cmdMemory(repoRoot: string, positional: readonly string[], flags
       return flags.has("hook") ? cmdBriefHook(ctx, flags) : cmdBrief(ctx, flags);
     case "recall":
       return cmdRecall(ctx, positional, flags);
+    case "standup":
+      return cmdStandup(ctx, flags);
     case "remember":
       try {
         return cmdRemember(ctx, positional, flags);

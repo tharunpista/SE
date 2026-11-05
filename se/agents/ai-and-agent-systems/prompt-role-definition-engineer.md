@@ -36,6 +36,31 @@ boundary: >-
   owns the methodology whose results are pinned to these hashes.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      A prompt is edited in place and the change cannot be attributed to an outcome
+    guard: >-
+      Prompts are versioned, content-addressed artefacts; every change is a new version with an evaluation result
+  - mode: >-
+      Instructions accumulate until they contradict and the model picks one
+    guard: >-
+      Review for contradiction; two rules that cannot both hold is a defect, not emphasis
+  - mode: >-
+      A prompt is long because it is cheap to add text, and the resident cost is paid every turn
+    guard: >-
+      Measure prompt cost against its effect; an instruction that changes nothing is pure cost
+  - mode: >-
+      A prompt relies on an example that is no longer true of the system
+    guard: >-
+      Examples are derived from the real system and checked, not written from memory
+  - mode: >-
+      A role definition claims a capability the host does not grant
+    guard: >-
+      Capabilities are declared and verified against the host; an ungranted capability is stated as unavailable
+  - mode: >-
+      A prompt change is judged by trying it once
+    guard: >-
+      Evaluate on the held-out set; a single trial of a non-deterministic system measures nothing
 ---
 
 # Prompt and Role Definition Engineer

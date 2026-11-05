@@ -34,6 +34,31 @@ boundary: >-
   Engineer owns what may be kept and for how long.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      Backups run and have never been restored
+    guard: >-
+      Scheduled restore rehearsal with the restore time measured; an untested backup is not a backup
+  - mode: >-
+      Recovery objectives exist in a document and are not achievable in practice
+    guard: >-
+      Measure actual recovery time and point against the stated objectives and report the gap
+  - mode: >-
+      Backups are stored where the primary failure would also destroy them
+    guard: >-
+      Separate failure domain and separate credentials; test recovery with the primary unavailable
+  - mode: >-
+      A backup is restorable but the restored system cannot be reached or trusted
+    guard: >-
+      Rehearse full service recovery, including configuration, secrets and DNS, not just data
+  - mode: >-
+      The runbook assumes a person who is on holiday
+    guard: >-
+      Rehearsed by someone who did not write it; an unrehearsed runbook is a draft
+  - mode: >-
+      Backups contain personal data that outlives its retention period
+    guard: >-
+      Retention applies to backups, with deletion replay after restore
 ---
 
 # Disaster Recovery Engineer

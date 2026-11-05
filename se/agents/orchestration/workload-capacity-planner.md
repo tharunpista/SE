@@ -37,6 +37,27 @@ boundary: >-
   owners and sequence; this role sets the width of the front.
 requires_evidence: true
 writes_files: false
+failure_modes:
+  - mode: >-
+      Everything runs at once and parallelism buys contention instead of throughput
+    guard: >-
+      Concurrency set from measured throughput, not from the number of available workers
+  - mode: >-
+      Parallel writers are scheduled against one resource and corrupt or block each other
+    guard: >-
+      Serialise work that shares a writable resource; isolation is a precondition for parallelism
+  - mode: >-
+      Work in progress grows and nothing finishes
+    guard: >-
+      Cap work in progress and measure completion rate, not start rate
+  - mode: >-
+      Capacity is planned on averages and fails at peak
+    guard: >-
+      Plan against peak with stated headroom and review the growth assumption
+  - mode: >-
+      Added parallelism is assumed to help and is never measured
+    guard: >-
+      Measure throughput before and after; a change that does not improve completion is removed
 ---
 
 # Workload and Capacity Planner

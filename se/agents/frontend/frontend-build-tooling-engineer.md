@@ -37,6 +37,39 @@ boundary: >-
   pipeline itself.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      The build works locally and fails in CI because versions differ
+    guard: >-
+      Pin the toolchain and install frozen; a build that depends on a local machine is not reproducible
+  - mode: >-
+      Type checking and linting are not in the pipeline, so errors land in review
+    guard: >-
+      Typecheck and lint as blocking CI steps with non-zero exit
+  - mode: >-
+      Source maps are shipped to production and expose the source
+    guard: >-
+      Upload maps to the error service and exclude them from the public bundle; verify the deployed output
+  - mode: >-
+      A build-time environment variable is inlined and leaks a secret into the bundle
+    guard: >-
+      Only public values reach the client bundle; grep the built output for secret patterns in CI
+  - mode: >-
+      Build caching returns a stale artefact and a fix appears not to work
+    guard: >-
+      Cache keys include every input; test a cold build in CI regularly
+  - mode: >-
+      2MB initial bundle includes all of lodash (import _ from 'lodash' = 71KB gzipped) and moment.js (67KB) imported in full when only 2 functions from each are used; tree-shaking silently skipped because CJS modules cannot be tree-shaken
+    guard: >-
+      Tree-shaking requires ES module imports: `import { debounce } from 'lodash-es'` not CJS lodash; replace moment.js with date-fns or Temporal API; verify with webpack-bundle-analyzer or vite-bundle-visualizer; script bundle per route must be < 200KB gzipped
+  - mode: >-
+      Code splitting not implemented; entire application JS downloads before first interaction; LCP blocked by 1.5MB main bundle
+    guard: >-
+      Route-based code splitting minimum: const Page = lazy(() => import('./pages/Page')); interaction-based for heavy components (rich text editor, map, chart); verify each route is a separate chunk in bundle analysis output
+  - mode: >-
+      The development loop diverges from the production build and bugs appear only after deploy
+    guard: >-
+      Run the production build in CI on every change and smoke-test the artefact
 ---
 
 # Frontend Build and Tooling Engineer

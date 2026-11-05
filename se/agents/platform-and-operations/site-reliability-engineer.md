@@ -35,6 +35,31 @@ boundary: >-
   instrumentation this role defines objectives on.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      Reliability targets are aspirational and nothing changes when they are missed
+    guard: >-
+      Stated objectives with an error budget that gates feature work when exhausted
+  - mode: >-
+      An objective is measured from server-side success and users still fail
+    guard: >-
+      Measure from the consumer perspective including client errors and timeouts
+  - mode: >-
+      Capacity is assumed from averages and breaks at peak
+    guard: >-
+      Plan against peak with headroom; state the growth assumption and review it
+  - mode: >-
+      A dependency with no stated objective is treated as perfectly available
+    guard: >-
+      Every critical dependency has an assumed availability and a tested behaviour on its failure
+  - mode: >-
+      Toil grows until there is no time for reliability work
+    guard: >-
+      Measure operational toil and treat reduction as planned work
+  - mode: >-
+      Postmortems identify causes and produce no durable change
+    guard: >-
+      Each postmortem closes with a control or detection change and a test that would catch recurrence
 ---
 
 # Site Reliability Engineer
@@ -166,6 +191,56 @@ failover is. Decide the TTL before the incident, not during it.
 Under load, something must be shed. If the order is not written down, it is
 chosen by whoever is awake. Record which features degrade first, which are
 load-bearing, and what the user sees in each case.
+
+### Cascading failure: the two patterns that actually take down million-user products
+
+**Metastable failure.** A system under partial overload: clients time out and
+retry, retries increase load, load causes more timeouts. The system cannot
+recover without external intervention to shed load. Prevention: retry budget
+at every caller, exponential backoff with full jitter, circuit breakers that
+open before the downstream is fully saturated. Detection: latency p99 is
+diverging from p50 — this is the early signal before errors appear.
+
+**Cache invalidation stampede on failover.** A region fails. Traffic
+failsover to a secondary. The secondary's cache is cold. All traffic hits
+origin simultaneously. Origin was not sized for the full load because the
+primary was taking it. The secondary fails. This is called a "cold cache
+failover" and it is the most common cause of secondary region failure during
+a primary region incident. Prevention: warm the secondary cache before
+cutting traffic (read-only traffic in background), or accept stale data with
+stale-while-revalidate, or size every region for 100% of traffic.
+
+### Multi-region: what changes at the data layer
+
+**Read replicas are fast to failover; primary writes are not.** A read
+replica can serve reads immediately on promotion, but it cannot accept writes
+until it finishes replaying the WAL. Know the replay time for your data
+volume. Test promotion time quarterly: surprises should happen in the drill,
+not the incident.
+
+**Replication lag is an SLO, not just a metric.** State your maximum
+acceptable replication lag (e.g. 5 seconds). Route reads to the primary when
+lag exceeds it. Alert before the threshold is breached.
+
+**Global load balancers fail open by default.** Most GLBs (Cloudflare, AWS
+Route 53, GCP Traffic Director) will keep routing to a region if the health
+check is unreliable or not configured. Test health check failure explicitly;
+do not trust that failover will happen.
+
+### Chaos engineering discipline
+
+An SLO is only as reliable as the last time you intentionally broke the
+system and measured the impact. A chaos exercise is not optional at scale:
+it is how you know the runbook is correct before 3 a.m.
+
+Before every chaos experiment:
+- State the hypothesis: "if we kill one instance, latency p99 will stay under
+  Xms and the success rate will stay above Y%"
+- Define the blast radius limit: when to abort
+- Have a revert plan ready before you start
+
+After: record the result against the hypothesis. A hypothesis that proves
+wrong is a defect, not a failed experiment.
 
 ## Rules that do not bend
 

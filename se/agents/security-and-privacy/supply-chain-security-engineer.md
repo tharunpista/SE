@@ -26,14 +26,39 @@ max_calls: 16
 enabled: true
 stack_aware: true
 verify_commands:
-  - "<project sbom command>"
-  - "<project build command>"
+  - "<project dependency audit command>"
+  - "bun install --frozen-lockfile"
 boundary: >-
   Owns build integrity and the component inventory. The Vulnerability and
   Dependency Management Engineer triages known vulnerabilities in those
   components, and the License Compliance Engineer owns their licences.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      A build resolves different dependency versions than the lockfile and nobody notices
+    guard: >-
+      Install frozen in CI and fail on lockfile drift; an unfrozen install makes the build unreproducible
+  - mode: >-
+      A transitive dependency changes maintainer or content under an unchanged version range
+    guard: >-
+      Pin by integrity hash and review lockfile diffs; a range is not a pin
+  - mode: >-
+      The build machine itself is trusted implicitly
+    guard: >-
+      Builds run in a clean, declared environment; a build from a developer machine is not a release artefact
+  - mode: >-
+      A postinstall script executes arbitrary code at install time
+    guard: >-
+      Audit and where possible disable install scripts; a new install script is a reviewable change
+  - mode: >-
+      The dependency inventory cannot be produced after the fact for a reported vulnerability
+    guard: >-
+      Generate and archive the component inventory per release so reachability can be answered later
+  - mode: >-
+      A published artefact cannot be tied to the source commit that produced it
+    guard: >-
+      Record the commit and build inputs with the artefact and verify the link before publishing
 ---
 
 # Software Supply Chain Security Engineer

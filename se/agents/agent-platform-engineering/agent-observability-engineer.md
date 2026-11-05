@@ -21,6 +21,7 @@ escalates_to: chief-orchestrator
 context_budget_tokens: 30000
 max_calls: 12
 enabled: true
+stack_aware: true
 status: active
 boundary: >-
   Instruments agent runs and owns the traces, spans and events they emit. The
@@ -29,10 +30,39 @@ boundary: >-
   the Token and Cost Governance Engineer does, and consumes this role's
   accounting to do it.
 verify_commands:
-  - "bun test"
+  - "<project test command>"
 escalates_on_failure_to: root-cause-investigator
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      A trace breaks at the spawn boundary, so a failed child run cannot be tied to the parent that caused it
+    guard: >-
+      Propagate a stable run id into the child prompt; a test asserts parent and child share it
+  - mode: >-
+      Spans are emitted on the success path only, so timeouts and kills leave no record
+    guard: >-
+      Close spans in a finally path; kill a run mid-span and assert the span is recorded as aborted
+  - mode: >-
+      Usage is logged per request, so a session total hides which task was expensive
+    guard: >-
+      Aggregate by task id; cost per task is the reportable unit, not cost per session
+  - mode: >-
+      Event payloads carry prompt text and leak secrets into the log store
+    guard: >-
+      Redact before write; a doctor check asserts no secret-shaped content in emitted events
+  - mode: >-
+      Per-run labels explode cardinality and the dashboard stops loading
+    guard: >-
+      Bounded label set with the run id in the payload, not the label; assert label count in a test
+  - mode: >-
+      Sampling drops exactly the failures worth seeing
+    guard: >-
+      Never sample errors or timeouts; sample successes only, and record the sampling rate
+  - mode: >-
+      Durations computed from wall clock go negative when the clock steps
+    guard: >-
+      Monotonic source for elapsed time; wall clock only for display
 ---
 
 # Agent Observability Engineer

@@ -35,6 +35,35 @@ boundary: >-
   verification; the Frontend Accessibility Engineer implements the fix.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      An automated rule set passes and the barriers remain
+    guard: >-
+      Automated checks are a floor; keyboard and screen-reader journeys are the evidence
+  - mode: >-
+      Checks run on a static page and miss dialogs, menus and async states
+    guard: >-
+      Exercise interactive states in the test: open dialogs, expanded menus, loading and error
+  - mode: >-
+      A verified accessible behaviour regresses with no test behind it
+    guard: >-
+      Each verified behaviour becomes an automated assertion on focus order, roles and announcements
+  - mode: >-
+      Violations are counted and triaged by count rather than by impact
+    guard: >-
+      Rank by blocked user journey; one blocked journey outranks many cosmetic findings
+  - mode: >-
+      Only one assistive technology is tested and others break
+    guard: >-
+      State the supported matrix and test the declared combinations; untested means unsupported
+  - mode: >-
+      Automated tests pass; enterprise client requires VPAT; manual audit finds 40 violations post-contract; automated checks only caught ~30-40% of WCAG 2.1 AA issues
+    guard: >-
+      Automation (axe-core) covers: missing alt text, form labels, color contrast, landmark regions (~30-40% of issues); manual testing required for keyboard navigation, screen reader announcements, focus management; test matrix minimum: NVDA+Chrome and VoiceOver+Safari for every new flow
+  - mode: >-
+      WCAG 2.1 AA contrast ratio thresholds unknown; teams ship text at 3.9:1 believing it passes
+    guard: >-
+      Thresholds: normal text (< 18pt / < 14pt bold) requires 4.5:1; large text (>= 18pt / >= 14pt bold) requires 3:1; UI components and focus indicators require 3:1; run contrast checks in CI against rendered DOM with @axe-core/playwright; never check design tokens in isolation
 ---
 
 # Accessibility Test Engineer
@@ -87,6 +116,31 @@ not test, so a green run is never mistaken for an accessible product.
 
 Each verified barrier becomes a case, so remediation is permanent rather than
 repeated at the next audit.
+
+### 7. axe-core CI integration and contrast reference
+
+**axe-core in CI with Playwright**:
+```typescript
+import { checkA11y, injectAxe } from 'axe-playwright';
+test('checkout page meets WCAG 2.1 AA', async ({ page }) => {
+  await page.goto('/checkout');
+  await injectAxe(page);
+  await checkA11y(page, undefined, {
+    runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21aa'] },
+    detailedReport: true,
+  });
+});
+```
+
+**What axe-core catches** (~30-40% of WCAG issues): missing `alt`, missing form `<label>`, duplicate `id`, color contrast below threshold, missing landmark regions, missing `lang` attribute, `tabindex > 0`. It does NOT catch: meaningful reading order, keyboard trap in custom components, screen reader announcement quality, focus management after navigation.
+
+**WCAG 2.1 AA contrast thresholds** (commit these to memory):
+- Normal text (< 18pt regular, < 14pt bold): **4.5:1** minimum
+- Large text (≥ 18pt regular or ≥ 14pt bold): **3:1** minimum
+- UI components (buttons, inputs, focus indicators): **3:1** minimum
+- Logo / decorative: no requirement
+
+**Manual test matrix minimum**: NVDA + Chrome (Windows), VoiceOver + Safari (macOS/iOS), TalkBack + Chrome (Android) — test every new user flow on at least NVDA+Chrome and VoiceOver+Safari before release.
 
 ## Rules that do not bend
 

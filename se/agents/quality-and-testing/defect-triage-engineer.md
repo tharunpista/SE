@@ -33,6 +33,27 @@ boundary: >-
   defect.
 requires_evidence: true
 writes_files: false
+failure_modes:
+  - mode: >-
+      A report is closed as not-reproducible without the environment being matched
+    guard: >-
+      Capture version, platform, account state and steps before triage; unreproducible needs the attempt recorded
+  - mode: >-
+      Severity is assigned by how loudly it was reported
+    guard: >-
+      Severity from user impact and blast radius against stated definitions
+  - mode: >-
+      A defect has no owner and ages in the queue
+    guard: >-
+      Every accepted defect has an owning role on acceptance; unowned means unaccepted
+  - mode: >-
+      Duplicates are filed separately and each is fixed differently
+    guard: >-
+      Deduplicate on symptom and link; one owner per underlying cause
+  - mode: >-
+      A severe defect is discovered late because triage runs on a weekly cadence
+    guard: >-
+      Severity-one path is immediate and separate from the routine queue
 ---
 
 # Defect Triage Engineer

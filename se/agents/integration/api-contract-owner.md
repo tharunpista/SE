@@ -47,6 +47,7 @@ escalates_to: chief-orchestrator
 context_budget_tokens: 45000
 max_calls: 20
 enabled: true
+lead: true
 status: active
 boundary: >-
   Owns the contract, not either implementation. The Backend Lead owns the
@@ -61,6 +62,39 @@ requires_evidence: true
 writes_files: true
 owns_spec_sections:
   - "32.1"
+failure_modes:
+  - mode: >-
+      A field meaning changes without a version and every consumer silently misreads it
+    guard: >-
+      Contract versioned with compatibility checked in CI; a changed meaning is a breaking change even if the type matches
+  - mode: >-
+      The contract is written after both sides are built and documents the disagreement
+    guard: >-
+      Contract exists and is agreed before either side builds against an assumption
+  - mode: >-
+      Error responses are undocumented so every consumer invents its own handling
+    guard: >-
+      Enumerate error cases with codes and shapes as part of the contract; test each
+  - mode: >-
+      Optional is used where required was meant and consumers crash on absence
+    guard: >-
+      Required and nullable stated explicitly per field; test absent, null and empty
+  - mode: >-
+      Pagination, ordering and limits are left to the implementation
+    guard: >-
+      State page size, maximum, sort stability and cursor semantics in the contract
+  - mode: >-
+      A deprecation is announced and never enforced, so the old shape lives forever
+    guard: >-
+      Deprecation with a date, usage measurement, and a removal that is actually executed
+  - mode: >-
+      Rate limits are undocumented; consumer hits a 429 for the first time in production, has no retry-after guidance, and hammers the endpoint
+    guard: >-
+      Rate limit per tier/client documented in the contract alongside the endpoint: requests-per-second, burst ceiling, Retry-After semantics; test that 429 includes Retry-After and that the documented limit is enforced; consumers must handle 429 as a first-class case, not an error
+  - mode: >-
+      A mutation endpoint has no idempotency guidance; consumer retries after a timeout and double-applies the effect
+    guard: >-
+      Every mutation endpoint in the contract states its idempotency behaviour: either idempotent by design (PUT/DELETE) or requires an Idempotency-Key header; specify the deduplication window and what happens on a key collision (return cached response vs. error)
 ---
 
 # API Contract Owner

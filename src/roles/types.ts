@@ -43,6 +43,26 @@ export interface Role {
   readonly blocked_on: readonly string[];
   /** True when the role must detect and pin the project stack before acting. */
   readonly stack_aware: boolean;
+  /**
+   * True for the one role accountable for a department's work.
+   *
+   * A head is a routing destination, not an extra layer: Atina hires the head
+   * when a task spans several of its workers, and hires a worker directly when
+   * routing already names one. Inferring the head from escalation targets
+   * worked for 12 of 15 departments and silently left 3 with nobody, which is
+   * why it is declared rather than derived.
+   */
+  readonly lead: boolean;
+  /**
+   * Durable domain failure modes: what actually breaks in this role's area,
+   * and the invariant that would have caught it.
+   *
+   * Separate from `body` prose because this is the knowledge that survives a
+   * framework generation. API signatures are read from the lockfile at the
+   * moment of use (see se/engineering/stack-discipline.md); a session-fixation
+   * bug is still a session-fixation bug in five years, so it is written down.
+   */
+  readonly failure_modes: readonly FailureMode[];
 
   /** Markdown body: the human role definition. */
   readonly body: string;
@@ -52,6 +72,13 @@ export interface Role {
   readonly provenance: Readonly<Record<string, LayerName>>;
   /** Content hash over the normalised definition. Part XVII 63. */
   readonly hash: string;
+}
+
+export interface FailureMode {
+  /** What goes wrong, stated as the observable symptom. */
+  readonly mode: string;
+  /** The check or property that catches it. */
+  readonly guard: string;
 }
 
 export type LayerName = "builtin" | "user" | "project";

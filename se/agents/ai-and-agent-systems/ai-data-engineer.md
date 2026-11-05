@@ -35,6 +35,27 @@ boundary: >-
   the ML Engineer owns the training itself.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      A dataset is used with no record of where it came from or what it permits
+    guard: >-
+      Provenance, licence and consent recorded per source before use; unknown provenance means unusable
+  - mode: >-
+      Personal data enters a training or evaluation set without a basis
+    guard: >-
+      Classify before ingestion and record the basis; test an extraction for memorised personal data
+  - mode: >-
+      Deduplication is skipped and the evaluation set overlaps the training set
+    guard: >-
+      Deduplicate across splits and detect contamination; an overlapping split measures nothing
+  - mode: >-
+      A dataset is regenerated and is not reproducible
+    guard: >-
+      Deterministic pipeline with a versioned snapshot per run
+  - mode: >-
+      A deletion request cannot be honoured because the data is already in an artefact
+    guard: >-
+      Record which artefacts derive from which sources so deletion can be propagated or the artefact retired
 ---
 
 # AI Data Engineer

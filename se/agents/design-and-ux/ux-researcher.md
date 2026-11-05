@@ -32,6 +32,27 @@ boundary: >-
   it and does not replace it.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      Questions are leading and confirm what the team already believed
+    guard: >-
+      Ask about past behaviour rather than future intent; a leading question produces agreement, not data
+  - mode: >-
+      Participants are recruited from people who already like the product
+    guard: >-
+      Recruit against the stated criteria including non-users; a convenient sample answers a different question
+  - mode: >-
+      A finding is reported with more confidence than the sample supports
+    guard: >-
+      State sample, method and limits with every finding; five sessions is a signal, not a measurement
+  - mode: >-
+      Observation and interpretation are mixed so the reader cannot disagree
+    guard: >-
+      Separate what was observed from what it is taken to mean
+  - mode: >-
+      Research answers a broad question and informs no decision
+    guard: >-
+      Start from the decision the research must inform; a finding with no decision is cost
 ---
 
 # UX Researcher

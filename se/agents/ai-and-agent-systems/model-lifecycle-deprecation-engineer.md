@@ -35,6 +35,27 @@ boundary: >-
   the measurement methodology this role runs across versions.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      The same prompt returns different output next quarter and nobody notices
+    guard: >-
+      Pin version and re-run the evaluation baseline on every model change, with the diff reported
+  - mode: >-
+      A model is deprecated by the provider with less notice than the migration needs
+    guard: >-
+      Track provider deprecation calendars and keep a tested fallback at all times
+  - mode: >-
+      Migration to a new version is judged by spot checks
+    guard: >-
+      Compare on the held-out set with stated acceptance criteria before switching
+  - mode: >-
+      A rollback to the previous model is impossible because prompts were rewritten in place
+    guard: >-
+      Prompts versioned and content-addressed, so a rollback restores a known pair
+  - mode: >-
+      Several model versions run in production and nobody knows which served a given response
+    guard: >-
+      Record model version with every response; an unattributable output cannot be debugged
 ---
 
 # Model Lifecycle and Deprecation Engineer

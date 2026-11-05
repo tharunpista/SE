@@ -37,6 +37,31 @@ boundary: >-
   does not define the contract, which is the API Contract Owner.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      Every component fetches independently and one screen issues dozens of requests
+    guard: >-
+      Assert request counts for a screen; a count that scales with rendered items is the defect
+  - mode: >-
+      No timeout, so a hung request hangs the screen indefinitely
+    guard: >-
+      Explicit timeout with a stated user-visible outcome; test with a never-resolving request
+  - mode: >-
+      Retries are immediate and multiply load on an already failing server
+    guard: >-
+      Backoff with jitter, a retry cap, and no retry on non-idempotent requests
+  - mode: >-
+      A request that cannot fail is assumed, so the error path is never written
+    guard: >-
+      Handle network failure, non-2xx, malformed body and empty body distinctly; test each
+  - mode: >-
+      Responses are trusted to match the expected shape
+    guard: >-
+      Validate against a schema at the boundary; a shape change should fail loudly, not render undefined
+  - mode: >-
+      Authentication expiry mid-session drops the user with no path back
+    guard: >-
+      Detect expiry, refresh once, and route to re-authentication preserving the in-progress work
 ---
 
 # Frontend Data-Fetching Engineer

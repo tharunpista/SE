@@ -33,6 +33,27 @@ boundary: >-
   vocabulary.
 requires_evidence: true
 writes_files: true
+failure_modes:
+  - mode: >-
+      Labels come from internal vocabulary and users cannot find the thing
+    guard: >-
+      Labels validated against the words users actually use, not the org chart
+  - mode: >-
+      Navigation depth grows until the important thing is four levels down
+    guard: >-
+      State the path length to each primary task and measure it
+  - mode: >-
+      A new section is added wherever it fits and the structure degrades
+    guard: >-
+      Structure has stated rules for where a new thing belongs; an exception is recorded
+  - mode: >-
+      Two labels mean the same thing in different places
+    guard: >-
+      One agreed term per concept across the product, recorded and enforced in content review
+  - mode: >-
+      Structure is validated by the team that built it
+    guard: >-
+      Validate findability with people outside the team; an internal review proves familiarity
 ---
 
 # Information Architect
