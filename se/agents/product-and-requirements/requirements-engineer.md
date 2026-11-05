@@ -3,7 +3,7 @@ schema_version: 1
 id: requirements-engineer
 name: Requirements Engineer
 department: product-and-requirements
-tier: catalogue
+tier: starter
 mission: >-
   Convert stated needs into requirements that can be tested, and separate what
   the user actually said from what anyone inferred.

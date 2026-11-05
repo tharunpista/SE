@@ -536,10 +536,10 @@ describe("memory access is stated, and stated honestly", () => {
       );
       const contents = render(repo, ["mem-shell"]).files[0]!.contents;
 
-      expect(contents).toContain("se memory get");
-      expect(contents).toContain("se memory put");
+      expect(contents).toContain("se_memory_read");
+      expect(contents).toContain("se_memory_write");
       // The whole point is reading memory instead of re-reading source.
-      expect(contents).toContain("before");
+      expect(contents).toContain("Read before");
       // Live source always wins over a summary of it.
       expect(contents).toContain("stale");
       expect(contents).toContain("project");
@@ -559,8 +559,8 @@ describe("memory access is stated, and stated honestly", () => {
         }),
       );
       const contents = render(repo, ["mem-read"]).files[0]!.contents;
-      expect(contents).toContain("se memory get");
-      expect(contents).not.toContain("se memory put");
+      expect(contents).toContain("se_memory_read");
+      expect(contents).not.toContain("se_memory_write");
     } finally {
       repo.dispose();
     }
@@ -579,11 +579,10 @@ describe("memory access is stated, and stated honestly", () => {
       );
       const contents = render(repo, ["mem-noshell"]).files[0]!.contents;
 
-      expect(contents).toContain("unreachable");
-      // It must not be handed commands it cannot run, or it will report a write
-      // that never happened.
+      // MCP memory is always available regardless of shell; the role gets the
+      // standard MCP access path rather than an "unreachable" notice.
+      expect(contents).toContain("se_memory_read");
       expect(contents).not.toContain("- `se memory status`");
-      expect(contents).toContain("do not claim a");
     } finally {
       repo.dispose();
     }

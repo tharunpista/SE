@@ -30,7 +30,7 @@
 | `product-manager` | Product Manager | catalogue | Decide what is built next and in what order, and keep the reason for each decision attached to it so that a later reversal is a decision rather than a surprise. |
 | `product-operations-specialist` | Product Operations Specialist | catalogue | Keep the product's recurring processes running and its feedback loops closed, so that what customers report reaches the role that can act on it and what ships is communicated to the people affected. |
 | `product-strategist` | Product Strategist | catalogue | State who the product is for, what it must be better at than the alternative, and what it deliberately will not do, so that scope decisions later have something to be measured against. |
-| `requirements-engineer` | Requirements Engineer | catalogue | Convert stated needs into requirements that can be tested, and separate what the user actually said from what anyone inferred. |
+| `requirements-engineer` | Requirements Engineer | starter | Convert stated needs into requirements that can be tested, and separate what the user actually said from what anyone inferred. |
 | `user-researcher` | User Researcher | catalogue | Plan studies that could disprove the plan, synthesise what participants actually did and said, and keep the sample's limits attached to every conclusion. |
 
 ## Design & UX (13)
