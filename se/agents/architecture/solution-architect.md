@@ -62,6 +62,14 @@ failure_modes:
       Architecture decision made in a meeting, recorded in a Confluence doc that nobody can find, based on constraints nobody remembers; 6 months later the constraint is violated because nobody knew it existed
     guard: >-
       Every significant architecture decision gets an ADR (Architecture Decision Record) in the repository at docs/decisions/NNNN-title.md. Format: Title, Status (proposed/accepted/deprecated/superseded), Context (the forces at play), Decision (what was decided and why), Consequences (trade-offs, follow-on work, constraints imposed). An ADR is immutable — deprecate it rather than editing it. Store ADRs in Git so the decision history is version-controlled.
+  - mode: >-
+      Architecture uses a "modular monolith" label for a codebase with no enforced module boundaries; the label is aspirational, not structural; modules accumulate cross-dependencies and the system degrades into a coupled monolith with none of the benefits and all of the cost of decomposition
+    guard: >-
+      A modular monolith requires enforced module boundaries, not just directory conventions. Tooling: Dependency Cruiser (JavaScript/TypeScript) — `.dependency-cruiser.js` with forbidden rules that fail CI when a module imports from another module's internals; ArchUnit (Java/JVM) — package dependency rules as tests; Spring Modulith (Spring Boot) — module boundary enforcement with integration testing support. Without a fitness function that runs in CI and fails on boundary violations, there is no modular monolith — there is a monolith with aspirational names.
+  - mode: >-
+      Team topology is not considered when drawing architectural boundaries; Conway's Law produces an architecture that mirrors the actual communication structure rather than the intended one; boundaries drawn on a diagram are ignored in practice because they cross team lines
+    guard: >-
+      Architectural boundaries must align with team boundaries. Before finalizing any architectural decision: map the team structure (Stream-aligned teams own end-to-end vertical slices; Platform teams own shared capabilities; Enabling teams provide expertise without permanent ownership; Complicated Subsystem teams own technically complex components). Each architectural module or service boundary should be owned by exactly one team. A boundary that two teams must cross continuously to ship a feature is the wrong boundary. DORA research confirms: team topology has the largest single effect on deployment frequency and lead time.
 ---
 
 # Solution Architect
@@ -229,6 +237,69 @@ enables tenant isolation without application-layer filtering.
 ```
 
 Store at `docs/decisions/` in the repository. Number sequentially. Link from code with `// see ADR-0023`.
+
+## Architecture fitness functions
+
+A fitness function is an automated check, running in CI, that verifies an
+architectural property. Without fitness functions, all boundary decisions are
+advisory and will drift the moment deadline pressure arrives.
+
+**Types and tooling:**
+
+| Property to enforce | Tool | Language |
+|---|---|---|
+| Module dependency boundaries | Dependency Cruiser | JavaScript/TypeScript |
+| Package dependency rules | ArchUnit | Java/JVM |
+| Module boundaries in Spring | Spring Modulith | Spring Boot |
+| Circular dependency detection | Madge | JavaScript/TypeScript |
+| ADR compliance (custom) | Danger.js or custom CI script | Any |
+
+**Minimum fitness function set for a modular monolith:**
+1. No cross-module internal imports (only the module's public API is importable from outside)
+2. No circular dependencies between modules
+3. Test coverage per module > threshold (enforced per module, not globally)
+4. Each module has a named owner in the catalog
+
+**When a fitness function fails in CI:** it is a build failure. It is not a
+warning, it is not a soft gate, and it is not a TODO. The architectural decision
+produced a constraint; the fitness function enforces that constraint.
+
+## Team Topologies and boundary decisions
+
+Architectural boundaries and team boundaries must align. Conway's Law is not a
+suggestion — it is a prediction. If the architecture diagram contradicts the
+team structure, the team structure wins.
+
+**Four team types (Team Topologies, 2019; DORA 2024 updated capability):**
+
+| Team type | Owns | Architectural implication |
+|---|---|---|
+| Stream-aligned | End-to-end vertical slice (feature) | Each stream team owns its services and data; minimal cross-team dependencies |
+| Platform | Shared internal infrastructure | Platform provides capabilities as a service; stream teams consume via stable API |
+| Enabling | Knowledge transfer | Temporary; does not own systems; leaves practices, not dependencies |
+| Complicated Subsystem | High-complexity technical component | Small team, stable API to consumers; not a dependency on a person |
+
+**Before finalizing an architectural boundary:**
+1. Which team will own each side of this boundary?
+2. If two teams own a shared boundary, does one team depend on the other's release cadence?
+3. Does the boundary require continuous collaboration to ship a feature? If yes: it is in the wrong place.
+
+## DORA metrics as architectural feedback
+
+The four DORA metrics are the evidence that an architecture is working for its
+organization. An architecture that scores poorly is wrong for the team, regardless
+of how correct it looks on a diagram.
+
+| Metric | Elite threshold | What architecture affects |
+|---|---|---|
+| Deployment Frequency | Multiple times per day | Service boundaries too large → slower deploys |
+| Lead Time for Changes | < 1 hour | Coupling, test suite speed, pipeline design |
+| Mean Time to Restore | < 1 hour | Observability, blast radius of failures |
+| Change Failure Rate | < 5% | Test coverage, deployment isolation, feature flags |
+
+Track DORA metrics from the first production deploy. If Lead Time is > 1 day,
+the architecture (or the CI pipeline) is a bottleneck — that is an architectural
+finding, not a process finding.
 
 ## C4 model for architecture communication
 

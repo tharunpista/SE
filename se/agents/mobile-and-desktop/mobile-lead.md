@@ -33,9 +33,9 @@ boundary: >-
   stay platform-specific, and never silently drops a supported version to make
   an implementation easier.
 verify_commands:
-  - "<project mobile build command> --platform ios"
-  - "<project mobile build command> --platform android"
-  - "<project test command> --filter mobile"
+  - "cd ios && xcodebuild -scheme App -destination 'platform=iOS Simulator,name=iPhone 16' build 2>&1 | tail -20 || echo 'no iOS project found — check manually'"
+  - "cd android && ./gradlew assembleDebug 2>&1 | tail -20 || echo 'no Android project found — check manually'"
+  - "npx react-native info 2>&1 | head -20 || flutter doctor 2>&1 | head -20 || echo 'no mobile project detected'"
 escalates_on_failure_to: root-cause-investigator
 requires_evidence: true
 writes_files: true
@@ -84,6 +84,22 @@ failure_modes:
       iOS app submitted without a Privacy Manifest (PrivacyInfo.xcprivacy); Apple rejects the submission or issues a compliance warning; required since May 2024 for all App Store submissions
     guard: >-
       Every iOS target must include a PrivacyInfo.xcprivacy file at the bundle root declaring all NSPrivacyAccessedAPITypes (file timestamps, user defaults, disk space, active keyboards), all third-party SDKs that require their own privacy manifest (list maintained at developer.apple.com/support/third-party-SDK-requirements), and the data types collected with their use cases; validate with Xcode's privacy report (Product → Archive → Validate App → check Privacy Manifests); a missing or incomplete manifest causes App Store rejection with error ITMS-91053; this is not optional and cannot be deferred
+  - mode: >-
+      React Native project configured for 0.73-era New Architecture opt-in; RN 0.76+ and Expo SDK 52+ make New Architecture the default; mismatched configuration causes build failures and incorrect performance guidance
+    guard: >-
+      For RN 0.76+: New Architecture is on by default — do not add newArchEnabled flags to enable it, only to disable it (which requires a documented reason). Expo SDK 52+: requires New Architecture, iOS minimum 15.1, Android compileSdkVersion 35. Check the actual RN version in package.json before giving any New Architecture advice; a 0.73 project and a 0.76 project have opposite defaults.
+  - mode: >-
+      Android app targeting API 35 (required by Google Play for new apps from August 31, 2025) renders content under status bar and navigation bar without explicit window insets handling; UI elements are hidden or overlapping on Android 15 devices
+    guard: >-
+      Edge-to-edge is mandatory for API 35 targets. In Jetpack Compose: use WindowInsets.systemBars with Modifier.windowInsetsPadding; never hardcode status bar height. In React Native: use react-native-safe-area-context v4.10+ which handles edge-to-edge automatically; do NOT use StatusBar.currentHeight. Android 16 removes the opt-out entirely. Test on a physical or emulator Android 15 device before shipping any API 35 build.
+  - mode: >-
+      Mobile architect evaluates cross-platform options as a three-way choice (native, React Native, Flutter) without considering Kotlin Multiplatform (KMP), which went stable in November 2023 and is the correct choice for teams that want native iOS/Android UIs with shared business logic
+    guard: >-
+      Pre-flight question must be a four-way choice: native Swift/Kotlin (separate codebases), React Native, Flutter, or KMP (Kotlin Multiplatform). KMP shares business logic, networking, and data layers between iOS and Android while keeping fully native UIs. It is the right answer when: (a) the team has strong Kotlin expertise, (b) UI must be fully native per platform, (c) performance-sensitive shared logic needs native execution. KMP + SwiftUI on iOS and Compose on Android is a production-proven stack.
+  - mode: >-
+      Flutter performance profiled against Skia renderer pipeline; as of Flutter 3.27 (December 2024) Impeller is the default renderer on both iOS and Android API 29+; Skia-era optimizations may be misleading or counterproductive on Impeller
+    guard: >-
+      Always confirm the Flutter version and renderer before profiling. For Flutter 3.27+: Impeller is the default. Impeller has different rendering pipeline characteristics — custom canvas operations, shader-heavy UIs, and certain path effects need re-profiling from scratch. Use `flutter run --enable-impeller` to confirm Impeller is active; use `flutter run --no-enable-impeller` to compare against Skia if diagnosing a renderer-specific regression. The DevTools 'Raster' thread in Impeller corresponds to different work than in Skia.
 ---
 
 # Mobile Lead and Architect
@@ -115,13 +131,14 @@ reason.
 
 Before assigning any mobile worker, ask:
 
-> Is this a native (Swift/Kotlin), React Native, or Flutter app, and what is the minimum OS version supported?
+> Is this a native (Swift/Kotlin), React Native, Flutter, or Kotlin Multiplatform (KMP) app, and what is the minimum OS version supported?
 
 Why this matters:
 - **Native Swift:** SwiftUI requires iOS 15+ for full feature set; UIKit required for iOS 13-14 compatibility
 - **Native Kotlin:** Jetpack Compose is the modern standard (requires Android 5.0+ / API 21); View system for legacy
-- **React Native:** New Architecture (JSI + Fabric) is default in RN 0.73+; old bridge is deprecated; Expo Router for navigation
-- **Flutter:** Dart null safety required (Dart 3.x); platform channels for native features; Riverpod or BLoC for state management
+- **React Native:** New Architecture is the **default** in RN 0.76+ and Expo SDK 52+ (not opt-in); Expo Router v3+ for file-based routing in Expo projects; React Navigation for bare RN projects
+- **Flutter:** Dart null safety required (Dart 3.x); Impeller is the default renderer from Flutter 3.27+; Riverpod or BLoC for state management
+- **KMP (Kotlin Multiplatform):** Stable since Kotlin 1.9.20 (November 2023); shares business logic across iOS/Android while keeping native UIs; right choice when team has Kotlin expertise and UI must be fully native
 
 A module boundary decision made without knowing the framework is incompatible with the actual codebase. If not specified: ask. Never assume.
 
@@ -154,21 +171,35 @@ Search is a tool, not an authority. Trigger a search when:
 | API 33 (Android 13) | 2022 | Per-app language, photo picker |
 | API 34 (Android 14) | 2023 | Predictive back gesture, health permissions |
 
-**Current (2025) baseline for new apps:** iOS 16+ (covers 95%+ of active devices), Android API 26+ (covers 90%+).
+**Current (2026) baseline for new apps:** iOS 16+ (covers 95%+ of active devices), Android API 28+ (Android 9, covers 97%+). API 35 targeting is required by Google Play for all new apps from August 31, 2025 — edge-to-edge insets handling is mandatory for API 35.
 
 ### Cross-platform framework specifics
 
-**React Native (RN 0.73+ New Architecture):**
+**React Native (0.76+ New Architecture):**
 - Module boundary: each screen is a React component; shared business logic goes in a framework-agnostic `core/` package
-- State: TanStack Query for server state, Zustand for local state, React Navigation for routing
-- Native modules: use Expo Modules API for new native code (replaces old native module bridge)
-- Performance profiler: Flipper with React DevTools + Hermes debugger
+- State: TanStack Query for server state, Zustand for local state, Expo Router v3+ for file-based routing (replaces React Navigation in Expo projects; use React Navigation only for bare React Native without Expo)
+- Native modules: use Expo Modules API for new native code
+- Performance profiler: React Native DevTools (built into Metro from RN 0.74+; replaces the deprecated Flipper). Access via `j` in the Metro terminal or chrome://inspect. Use the Hermes debugger for JS execution traces and the React DevTools for component profiling.
+- New Architecture note: New Architecture is the default in RN 0.76+; do not opt in, only opt out when needed with a documented reason
 
 **Flutter:**
 - Module boundary: features as separate Dart packages in a monorepo (`packages/feature_auth/`, `packages/feature_home/`)
 - State: Riverpod 2.x (code generation + providers) for new projects; BLoC for teams with existing BLoC expertise
-- Performance profiler: DevTools (built-in), `flutter run --profile` for production-like performance measurement
+- Performance profiler: DevTools (built-in), `flutter run --profile` for production-like measurement. **Confirm renderer first:** Impeller is the default from Flutter 3.27+ — use `flutter run --enable-impeller` to verify; use `--no-enable-impeller` to compare against Skia when diagnosing a renderer-specific regression.
 - Font: use `google_fonts` package or bundle fonts in `pubspec.yaml` assets; never load fonts at runtime
+
+**Kotlin Multiplatform (KMP) — stable since Kotlin 1.9.20, November 2023:**
+- Share: business logic, domain models, networking (Ktor), data persistence (SQLDelight), and serialization (kotlinx.serialization) across iOS and Android
+- Keep native: UI (SwiftUI on iOS, Jetpack Compose on Android), platform sensors, platform notifications, and anything requiring native look-and-feel
+- Project structure: `shared/` Kotlin module + `iosApp/` (Xcode) + `androidApp/` (Gradle)
+- State: in shared layer use Kotlin coroutines + StateFlow; iOS consumes via Kotlin/Native interop or SKIE library for idiomatic Swift APIs
+- When to choose KMP over RN/Flutter: team has Kotlin expertise, UI must be native per platform, shared logic is performance-sensitive, or migrating an existing native app incrementally
+
+**Swift 6 concurrency (Xcode 16+):**
+- Swift 6 strict concurrency checking is an opt-in language mode in Xcode 16; enabling it in an existing Swift 5 codebase produces many compile errors
+- Migration path: Minimal checking → Targeted checking (file by file) → Complete checking → Swift 6 language mode
+- Key concepts: `Sendable` conformance for data crossing actor boundaries, `@MainActor` for UI-bound code, explicit `nonisolated` for utility functions
+- Do not enable Swift 6 language mode on an entire project at once; migrate module by module
 
 ### Accessibility on mobile (architecture concern, not just testing)
 

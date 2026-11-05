@@ -80,6 +80,18 @@ failure_modes:
       Timing difference in string comparison reveals valid vs invalid tokens, session ids or credentials
     guard: >-
       Use constant-time comparison for all security-sensitive equality checks; never early-exit on the first byte mismatch
+  - mode: >-
+      Product handles long-lived secrets or regulated data without a post-quantum cryptography (PQC) migration roadmap; a "harvest now, decrypt later" adversary collects ciphertext today and decrypts it once quantum computers mature
+    guard: >-
+      Add a PQC readiness question to every threat model: What is the sensitivity lifetime of this data? If it exceeds ~5 years, begin PQC migration now. For TLS: use X25519Kyber768 hybrid KEM (supported in Chrome 124+, Cloudflare). For long-term signatures: ML-DSA (FIPS 204). Record the decision regardless of what it is. NIST FIPS 203/204/205 were finalized August 13, 2024 — these are not future standards; they are current.
+  - mode: >-
+      An AI feature is reviewed for security using only the original OWASP Top 10; five LLM-specific attack classes in OWASP LLM Top 10 2025 are missed: system prompt leakage (EchoLeak CVE-2025-32711 hit Microsoft 365 Copilot), vector and embedding weaknesses (poisoned embeddings, retrieval manipulation), data and model poisoning, excessive agency (agent tool call blast radius not scoped to minimum), and unbounded consumption (token-flood attacks exhausting API budgets)
+    guard: >-
+      Any product with an AI feature must be reviewed against the full OWASP LLM Top 10 2025, not only the original OWASP Top 10. The five missed entries require: system prompt isolation with extraction tests; embedding input validation and anomaly detection; RAG corpus integrity checks; tool permission scoping to minimum necessary (blast radius analysis before granting any tool to an agent); rate limiting and budget caps on token consumption with per-user and per-session limits.
+  - mode: >-
+      New product ships with password-only authentication in 2025 without a recorded decision to defer passkeys; passkeys are now supported by all major platforms and reduce phishing-category attacks to near zero
+    guard: >-
+      Every new consumer product's threat model must include a passkeys/WebAuthn decision: does it support passkeys (WebAuthn Level 2), and if not, why not and by when? Google, Apple, Microsoft, and Amazon all support passkeys in production. Amazon's rollout produced 175M passkeys with 30% sign-in improvement. Deferral must be recorded as a decision with a review date, not left implicit. For enterprise targets, evaluate FIDO2 device-bound passkeys. The auth boundary section must address this.
 ---
 
 # Security Architect
@@ -247,6 +259,50 @@ A threat model that does not name the current CVE status of its dependencies is 
 5. Verify rotation: confirm the old credential returns 401 from at least one test call
 
 Never rotate out of this order. Rotating downstream before upstream leaves the upstream path open.
+
+### Post-quantum cryptography readiness
+
+NIST finalized three PQC standards in August 2024:
+- FIPS 203: ML-KEM (key encapsulation — replaces RSA and ECDH key exchange)
+- FIPS 204: ML-DSA (digital signatures — replaces RSA-PSS and ECDSA)
+- FIPS 205: SLH-DSA (hash-based signatures — stateless, conservative)
+
+Every threat model must answer: what is the data's sensitivity lifetime? If it
+exceeds ~5 years, the product needs a PQC migration roadmap now. Adversaries are
+already harvesting encrypted data to decrypt later.
+
+**Current migration targets:**
+- TLS: hybrid key exchange (X25519Kyber768) supported in Chrome 124+, Cloudflare
+- Long-lived signatures: ML-DSA (FIPS 204)
+- Conservative/offline signing: SLH-DSA (FIPS 205)
+- Do not migrate PQC symmetric (AES-256 is already quantum-resistant)
+
+This is not a future concern. CISA, NSA, and NIST have all urged immediate
+migration planning for sensitive data.
+
+### OWASP LLM Top 10 2025
+
+Any product with an AI feature is reviewed against both the OWASP Top 10 (web)
+and the OWASP LLM Top 10 (AI-specific). The five entries most commonly missed:
+
+| Entry | Risk | Guard |
+|---|---|---|
+| LLM07 System Prompt Leakage | System prompts extracted via crafted inputs (EchoLeak CVE-2025-32711) | Treat system prompt as confidential; test with extraction probes; never put secrets in the system prompt |
+| LLM08 Vector/Embedding Weaknesses | Poisoned embeddings, retrieval manipulation, adversarial chunks | Input validation on retrieval corpus; anomaly detection on embedding distance; content filtering before assembly |
+| LLM04 Data/Model Poisoning | Training data or RAG corpus injection | Corpus integrity checks; provenance tracking for all retrieved content |
+| LLM06 Excessive Agency | Agent granted permissions beyond minimum; tool call blast radius unscoped | Minimum-privilege tool scoping; blast radius analysis required before any tool is granted to an agent |
+| LLM10 Unbounded Consumption | Token-flood attacks exhausting API budgets | Per-user and per-session token limits; rate limiting on inference endpoints; budget alerts at 2× projected cost |
+
+### Browser-side security: CSP Level 3
+
+Content Security Policy Level 3 is the standard for XSS mitigation in 2025+.
+The older `unsafe-inline` approach is not acceptable for new products.
+
+**Required posture:**
+- Use nonce-based CSP (`strict-dynamic` + per-request nonce)
+- Enable Trusted Types to block DOM XSS sinks
+- Measure with `Content-Security-Policy-Report-Only` before enforcing
+- Target a D or higher on securityheaders.com before launch
 
 ### 6. Record residual risk and put it to the operator
 

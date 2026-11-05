@@ -67,6 +67,18 @@ failure_modes:
     guard: Circuit breaker on latency, not only errors; bulkhead per downstream so one pool cannot consume all threads
   - mode: Backpressure is unimplemented — fast publisher, slow consumer, queue grows unbounded, OOM or lag
     guard: Queue has a stated bound; producer receives 429 or blocks when bound is reached; bound is load-tested
+  - mode: >-
+      Backend is deployed to an edge runtime (Cloudflare Workers, Deno Deploy, Vercel Edge Functions) using traditional server patterns: TCP socket-based database connections, Node.js built-ins, long-running background tasks; all of these fail silently or crash at cold start on edge runtimes
+    guard: >-
+      Edge runtimes (Cloudflare Workers, Deno Deploy, Vercel Edge Functions) have fundamentally different constraints from traditional server environments: no TCP socket connections (no PgBouncer, no standard pg pool) — use HTTP-based database drivers (Neon HTTP driver, Upstash Redis REST API, PlanetScale HTTP, Turso libSQL); no Node.js built-ins (`fs`, `net`, `crypto` polyfilled or unavailable); CPU time budget of 10–50ms, not wall-clock time; no persistent background work. Before writing any backend code, confirm the runtime environment and apply the matching pattern set.
+  - mode: >-
+      Multi-step workflow (payment saga, onboarding flow, AI pipeline, long-running job) is implemented as a queue consumer with hand-rolled retry logic; the state machine for in-progress, retrying, and failed steps lives in a database table managed by application code; this is reliable only until the first partial failure, process restart, or timeout that leaves the saga in an unrecoverable intermediate state
+    guard: >-
+      For workflows that span multiple steps, have long durations, or require durable retry: use a workflow orchestration platform instead of hand-rolled queue consumers. Options: Temporal.io (most capable, in production at Stripe, DoorDash, Netflix, Shopify — Java/Go/TypeScript/Python SDKs); Inngest (TypeScript-first, event-driven, simpler ops); Trigger.dev (TypeScript, open-source, self-hostable). The key benefit is durable execution: a worker process restart or timeout does not lose workflow state. Evaluate Temporal for complex, long-running sagas; evaluate Inngest or Trigger.dev for simpler event-driven flows in TypeScript teams.
+  - mode: >-
+      TypeScript full-stack project (Next.js, Remix, SvelteKit) defines internal APIs as REST or GraphQL, requiring a schema, a type generator, and a client — adding a maintenance burden and a type synchronization failure point that does not exist with tRPC
+    guard: >-
+      For internal TypeScript APIs (not public APIs, not APIs consumed by non-TypeScript clients): evaluate tRPC v11. tRPC provides end-to-end type safety with zero code generation, zero schema files, and zero HTTP client configuration. It integrates natively with TanStack Query v5 and React Server Components. Use tRPC when: (a) all callers are TypeScript, (b) the API is internal, (c) the team values type safety over openness. Use REST+OpenAPI when: (a) the API is public or consumed by non-TypeScript clients, (b) the team needs an OpenAPI spec for documentation or mocking, or (c) the codebase already has REST conventions.
 ---
 
 # Backend Lead
@@ -98,9 +110,49 @@ Search is a tool, not an authority. Trigger a search when:
 ## Framework-specific guidance
 
 **Node.js/TypeScript stack:**
-- ORM: Prisma (type-safe, migration-based) or Drizzle (lightweight, SQL-first)
+- ORM: Prisma (type-safe, migration-based) or Drizzle (lightweight, SQL-first) or Kysely (migration-first, edge-compatible — see below)
 - Connection pool: `pg` with `Pool` (not `Client` per request); `pool_size = floor(postgres_max_connections / num_instances) - 2`
 - Observability: `@opentelemetry/sdk-node` with auto-instrumentation for express/fastify
+
+### Query builder: Kysely
+
+Kysely is the third tier-1 TypeScript query builder alongside Prisma and Drizzle.
+Choose it when:
+- The database schema already exists (migration-first workflow) and Prisma's model-first approach is a poor fit
+- Fine-grained SQL control is needed without Prisma's abstraction overhead
+- The project uses Cloudflare Workers or Deno Deploy (Kysely works in edge runtimes; Prisma's query engine has restrictions)
+- The codebase uses Supabase's server SDK or PlanetScale's TypeScript SDK (both use Kysely internally)
+
+Kysely composes SQL queries as TypeScript, with full type inference on query results.
+It does not generate a client or run migrations — pair it with a migration tool (Atlas, Flyway, or raw SQL migration files).
+
+### Durable workflow orchestration
+
+For workflows that span multiple steps or run longer than a single request:
+
+| Tool | Best for | Ops complexity |
+|---|---|---|
+| Temporal.io | Complex sagas, long-running workflows, compensation logic | High (needs Temporal cluster) |
+| Inngest | TypeScript event-driven flows, simpler sagas, Vercel/edge-compatible | Low (managed service) |
+| Trigger.dev | TypeScript, self-hostable, background jobs | Medium |
+
+**When to use:** Any workflow with more than two steps that must survive a process restart, timeout, or partial failure. Payment processing, user onboarding, AI pipeline coordination, and scheduled jobs with dependencies are the common cases.
+
+**When NOT to use:** Single-step jobs, fire-and-forget notifications, jobs that run in under 30 seconds and can safely retry from the beginning.
+
+### Edge runtime patterns
+
+For backends deployed to Cloudflare Workers, Deno Deploy, or Vercel Edge Functions:
+
+| Traditional pattern | Edge-compatible replacement |
+|---|---|
+| `pg` pool (TCP socket) | Neon HTTP driver (`@neondatabase/serverless`), Supabase Postgres HTTP |
+| Redis `ioredis` (TCP) | Upstash Redis REST API (`@upstash/redis`) |
+| Node.js `fs` module | Not available — use R2, S3, or KV |
+| PgBouncer connection pool | Neon pooled endpoint or Prisma Accelerate |
+| Background jobs (setTimeout) | Cloudflare Queues, Durable Objects, or Trigger.dev |
+
+CPU time limit is ~50ms on Cloudflare Workers. This is CPU time, not wall-clock time — async I/O does not count toward the limit, but synchronous computation does. JSON parsing of a 1MB payload costs ~5ms CPU; plan accordingly.
 
 **Python stack:**
 - ORM: SQLAlchemy 2.x with Alembic for migrations

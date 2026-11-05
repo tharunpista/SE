@@ -68,6 +68,18 @@ failure_modes:
       Team reports 85% coverage as the quality metric; mutation score is 15%; critical bug in payment logic undetected; test exercises the happy path without asserting the computed total
     guard: >-
       Replace coverage % as primary quality metric with mutation score (target > 70% on core business logic) and defect escape rate (bugs found in prod / total bugs found, target < 5%); coverage is secondary: identifies untested paths but not whether assertions are meaningful
+  - mode: >-
+      Test suite migrates to Vitest browser mode (which runs existing tests in a real browser via the Playwright provider) and the existing Stryker mutation testing gate silently breaks; Stryker does not support Vitest browser mode; the CI mutation gate reports zero mutations tested and passes, giving false confidence
+    guard: >-
+      Before configuring Stryker mutation testing on a project using Vitest, check the Vitest runner: `@vitest/browser` and the Playwright provider are incompatible with Stryker's vitest-runner package. The workaround is to run mutation tests against the standard Vitest (jsdom) runner only, or to use a separate jest-based mutation run on the core business logic layer. Document this limitation explicitly: a mutation gate that cannot run is not a mutation gate.
+  - mode: >-
+      Accessibility is treated as a testing concern rather than a testing pipeline artifact; no automated accessibility check runs in CI; WCAG 2.2 violations ship to production and are discovered via user complaints or audits
+    guard: >-
+      Accessibility testing belongs in the CI pipeline, not in a manual audit cadence. Standard 2026 stack: (1) `@axe-core/playwright` integrated into every Playwright test — `await expect(page).toPassAxe()` catches 30-50% of WCAG violations automatically; (2) `lighthouse-ci` configured with `.lighthouserc.json` as a mandatory CI gate — block on accessibility score below 90; (3) Pa11y CI for static pages and server-rendered routes. These three layers together catch the majority of WCAG 2.2 issues before they ship. Manual audit fills the gap for color contrast and cognitive load — not a substitute for automated gates.
+  - mode: >-
+      Test strategy uses only example-based testing; property-based testing is absent; edge cases that are systematically impossible to enumerate (integer overflow, unicode handling, sorting invariants, state machine completeness) are never tested and produce subtle bugs at scale
+    guard: >-
+      Property-based testing must be in the test strategy for core business logic, data processing, and state machines. Standard libraries: `fast-check` (TypeScript/JavaScript — mature, Vitest and Jest compatible), `Hypothesis` (Python — widely used, integrates with pytest). The pattern: state invariants as properties, generate thousands of random inputs, shrink failures to minimal examples. Mandate at least one property-based test file for any module that handles: numeric calculations, string parsing, sorting/ranking, state transitions, or external data deserialization.
 ---
 
 # QA Lead
@@ -161,6 +173,42 @@ npx jest --testNamePattern="suspected test name" --forceExit --runInBand 2>&1 | 
 4. Never retry in CI to make it pass — retries hide flakiness, never fix it
 
 **Root causes to check first:** `setTimeout`/`sleep` in tests, shared mutable state, calls to external services, test-order dependencies.
+
+### Component testing: Vitest browser mode vs Playwright CT
+
+Two viable approaches for component testing in 2025–2026, with different tradeoffs:
+
+| Approach | Tool | Best for | Stryker compatible |
+|---|---|---|---|
+| Vitest browser mode | `@vitest/browser` + Playwright provider | Reusing existing Vitest unit tests in a real browser | No (known incompatibility) |
+| Playwright component testing | `@playwright/test` + `mount()` | Teams already deep in Playwright, need full browser control | Not tested — verify |
+| jsdom-based unit tests | Vitest (default) + jsdom | Pure logic, hooks, no DOM APIs | Yes |
+
+**Decision guidance:**
+- Vitest browser mode: use when you want real browser execution without rewriting tests; incompatible with Stryker — run mutation tests against the jsdom runner in a separate step
+- Playwright CT: use when the team already uses Playwright for E2E and wants a single tool; API is different from Vitest
+- jsdom: appropriate for pure logic tests; not appropriate for tests that depend on layout, scroll, or CSS
+
+### Visual regression testing
+
+| Tool | Integration | Use when |
+|---|---|---|
+| Playwright `toHaveScreenshot()` | Built into Playwright | Already using Playwright, want zero extra tooling |
+| Chromatic | Storybook integration | Design system components, collaborative review in Chromatic UI |
+| Percy (BrowserStack) | CI integration via `@percy/playwright` | Multi-browser visual diffs, accessibility overlay |
+
+Visual regression testing is mandatory for design system components and high-visibility UI. At minimum: Playwright's built-in screenshot comparison on the happy path of key flows.
+
+### Accessibility testing pipeline
+
+| Layer | Tool | Coverage |
+|---|---|---|
+| Automated (component) | `@axe-core/playwright` — `await expect(page).toPassAxe()` | ~30-50% of WCAG violations |
+| Score tracking (CI) | `lighthouse-ci` — gate at accessibility score ≥ 90 | Lighthouse accessibility audit |
+| Static routes | Pa11y CI | Server-rendered pages, PDFs |
+| Manual (complement) | Screen reader testing (VoiceOver/TalkBack), color contrast audit | Cognitive load, keyboard navigation |
+
+WCAG 2.2 is the current standard (October 2023). The automated layers above catch the majority of technical violations; manual testing is a complement, not a substitute, and not a replacement for the CI gate.
 
 ### Security test integration
 
