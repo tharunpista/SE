@@ -77,14 +77,24 @@ export function findCatalogueRoot(from = process.cwd()): string | null {
  * Distinct from the catalogue root. With the CLI installed globally these are
  * usually different directories, and anchoring output on the catalogue root
  * instead would write one project's agents into the catalogue repository.
+ *
+ * The walk never adopts the home directory (or anything above it) as the
+ * project of a directory beneath it: a stray manifest in home would
+ * otherwise claim every folder under it, and memory and rendered output
+ * would land in home. Starting *in* home still finds home's own markers.
  */
-export function findProjectRoot(from = process.cwd()): string {
-  let dir = resolve(from);
+export function findProjectRoot(from = process.cwd(), home = homedir()): string {
+  const start = resolve(from);
+  const stop = resolve(home);
+  const same = (a: string, b: string) =>
+    process.platform === "win32" ? a.toLowerCase() === b.toLowerCase() : a === b;
+  let dir = start;
   for (;;) {
     if (existsSync(join(dir, "package.json")) || existsSync(join(dir, ".git"))) return dir;
     const parent = dirname(dir);
-    // No marker anywhere up the tree: the cwd is the best available answer.
-    if (parent === dir) return resolve(from);
+    // No marker below home (or anywhere up the tree): the cwd is the best
+    // available answer.
+    if (parent === dir || same(parent, stop)) return start;
     dir = parent;
   }
 }

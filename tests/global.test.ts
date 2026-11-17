@@ -85,6 +85,18 @@ describe("catalogue root and project root are different questions", () => {
       t.dispose();
     }
   });
+
+  test("a manifest in the home directory never claims the folders beneath it", () => {
+    // `root` plays the home directory and carries an unrelated package.json.
+    const t = tempTree({ "package.json": "{}" }, ["scratch/deep"]);
+    try {
+      const nested = join(t.root, "scratch", "deep");
+      expect(findProjectRoot(nested, t.root)).toBe(nested);
+      expect(findProjectRoot(t.root, t.root)).toBe(t.root);
+    } finally {
+      t.dispose();
+    }
+  });
 });
 
 describe("host registry", () => {
