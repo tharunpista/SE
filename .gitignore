@@ -64,3 +64,6 @@ Thumbs.db
 
 # Local diagnostics and logs
 debug.log
+
+# The Rust CLI is its own git repository.
+/se-rust/
