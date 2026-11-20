@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/tharunpista/se/schemas/role.schema.json",
+  "$id": "https://github.com/tharunpista/SE/schemas/role.schema.json",
   "title": "se role definition",
   "description": "YAML frontmatter contract for a role file under se/agents/<department>/. Validation is fail-closed: an unknown key is an error, never a warning, so a typo can never silently disable a role. See docs/origin-prompt.md Part IV 7.2.",
   "type": "object",
