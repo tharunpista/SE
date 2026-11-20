@@ -38,10 +38,12 @@ tmp=$(mktemp -d)
   done
 } > "$tmp/mailmap.txt"
 
+paths=()
+for x in $PURGE; do paths+=(--path "$x"); done
+# Drop every Co-Authored-By trailer so no AI tool is listed as a contributor.
+cb='import re
+return re.sub(rb"(?im)^co-authored-by:.*(\r?\n|$)", b"", message).rstrip() + b"\n"'
 git filter-repo --force --replace-text "$tmp/replace.txt" --mailmap "$tmp/mailmap.txt" \
-  --message-callback 'import re; return re.sub(rb"(?im)^co-authored-by:.*(
-?
-|$)", b"", message).rstrip() + b"
-"' \n  $(for x in $PURGE; do printf -- '--path %s ' "$x"; done) --invert-paths
+  --message-callback "$cb" "${paths[@]}" --invert-paths
 rm -rf "$tmp"
 echo "done. Verify: scripts/publish/prepush-check.sh ."
