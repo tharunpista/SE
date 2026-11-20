@@ -67,3 +67,22 @@ debug.log
 
 # The Rust CLI is its own git repository.
 /se-rust/
+
+# Local Claude Code state (also covered by a personal global ignore, which
+# does not travel with the repo -- so it is repeated here).
+.claude/settings.local.json
+.claude/.claude/
+.claude/scheduled_tasks.lock
+.claude/worktrees/
+
+# Local snapshots and scratch backups; never published.
+/archive/
+*.bundle
+
+# Working notes and tool config kept locally, never published.
+/docs/origin-prompt.md
+/docs/catalogue-progress.md
+/docs/audit-2026-10-23.md
+/docs/spec-amendments.md
+/.claude/settings.json
+/.mcp.json

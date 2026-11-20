@@ -53,7 +53,7 @@ boundary: >-
   written is written correctly, or is reported as not written at all.
 verify_commands:
   - "bun test tests/memory 2>&1 | tail -20 || npx jest tests/memory 2>&1 | tail -20 || python -m pytest tests/memory -v 2>&1 | tail -20"
-  - "se memory doctor 2>&1 || echo 'se MCP not registered — run: claude mcp add se bun -- run %USERPROFILE%/SE/src/mcp/server.ts'"
+  - "se memory doctor 2>&1 || echo 'se MCP not registered — run: claude mcp add se bun -- run <path-to-SE>/src/mcp/server.ts'"
   - "bun test tests/memory/crash --rerun-each=20 2>&1 | tail -20 || npx jest tests/memory/crash --runInBand 2>&1 | tail -20"
 escalates_on_failure_to: root-cause-investigator
 requires_evidence: true

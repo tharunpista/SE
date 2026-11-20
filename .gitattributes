@@ -20,3 +20,5 @@
 # reviewer sees that a role quietly took over an artifact.
 se/agents/role-inventory.md   linguist-generated=true
 se/agents/ownership-matrix.md linguist-generated=true
+
+*.sh text eol=lf

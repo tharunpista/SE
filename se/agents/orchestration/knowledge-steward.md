@@ -28,7 +28,7 @@ enabled: true
 blocked_on:
   - "se memory"
 verify_commands:
-  - "se memory query --scope organization --status active 2>&1 || echo 'se MCP not registered — run: claude mcp add se bun -- run %USERPROFILE%/SE/src/mcp/server.ts'"
+  - "se memory query --scope organization --status active 2>&1 || echo 'se MCP not registered — run: claude mcp add se bun -- run <path-to-SE>/src/mcp/server.ts'"
   - "se memory doctor --check stale 2>&1 || echo 'se memory doctor unavailable — MCP not registered'"
   - "se memory query --project current --stale 2>&1 || echo 'se memory unavailable'"
 boundary: >-

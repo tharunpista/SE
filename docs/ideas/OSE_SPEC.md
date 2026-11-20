@@ -44,7 +44,7 @@ each piece is proven.
 - **Cross-platform, stack-agnostic.** OSE does not analyze or care what
   language/framework the target project uses — it shells out and reads exit
   codes. It must run the same way on Windows/macOS/Linux.
-- **Proving ground:** `%USERPROFILE%\nba-research-mvp` is the first real
+- **Proving ground:** a separate research project is the first real
   project OSE is tested against. Not nba-specific logic — just the first
   real codebase used to prove the three commands below actually work on
   something real, including the known gaps already identified there (missing

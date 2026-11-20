@@ -179,7 +179,7 @@ a build requirement conflicting with the performance budget.
 | To | Contract |
 |---|---|
 | `frontend-performance-engineer` | Bundle composition, and budget enforcement hooks |
-| `ci-cd-engineer` | The command set and its exact exit-code semantics |
+| `cicd-engineer` | The command set and its exact exit-code semantics |
 | `developer-experience-engineer` | Measured inner-loop timings and setup friction |
 | `frontend-lead` | Dependency and upgrade decisions |
 

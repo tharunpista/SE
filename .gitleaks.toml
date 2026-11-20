@@ -1,0 +1,16 @@
+# Keep every default gitleaks rule. Only known-fake fixture values are
+# allowlisted: the redaction tests must contain key-shaped strings to prove
+# they get redacted. Real keys never match these stopwords.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "fake credentials used by redaction tests"
+paths = [
+  '''tests/memory/store\.test\.ts''',
+]
+stopwords = [
+  "EXAMPLE",
+  "abcdefghijklmnopqrstuvwxyz",
+  "FAKE",
+]
